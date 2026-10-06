@@ -76,6 +76,12 @@ async def process_one(client=None) -> bool:
     log.info("job %s %s attempt %d", job.id, job.type, job.attempts)
     try:
         await run_job(job, client)
+    except asyncio.CancelledError:
+        # Shutdown (deploy/restart): hand the job back so another worker resumes it now.
+        async with SessionLocal() as session:
+            await asyncio.shield(queue.release(session, job.id))
+        log.info("job %s released on shutdown", job.id)
+        raise
     except Exception as e:  # noqa: BLE001
         log.exception("job %s failed", job.id)
         await on_failure(job, f"{type(e).__name__}: {e}")
@@ -118,7 +124,12 @@ async def main() -> None:
                     pass
 
     log.info("worker started (concurrency=%d)", s.worker_concurrency)
-    await asyncio.gather(*(slot() for _ in range(s.worker_concurrency)))
+    tasks = [asyncio.create_task(slot()) for _ in range(s.worker_concurrency)]
+    await stop.wait()
+    log.info("shutdown: releasing in-flight jobs")
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
 
 if __name__ == "__main__":

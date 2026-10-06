@@ -67,3 +67,15 @@ async def fail(session: AsyncSession, job_id: str, error: str) -> bool:
     job.locked_at = None
     await session.commit()
     return retry
+
+
+async def release(session: AsyncSession, job_id: str) -> None:
+    """Give a job back to the queue without counting the attempt (worker shutdown)."""
+    job = await session.get(Job, job_id)
+    if job is None or job.status != JobStatus.RUNNING:
+        return
+    job.status = JobStatus.QUEUED
+    job.attempts = max(0, job.attempts - 1)
+    job.locked_at = None
+    job.run_after = utcnow()
+    await session.commit()

@@ -116,3 +116,21 @@ async def test_failure_retries_then_fails(auth_client):
     assert (await auth_client.post(f"/sips/{sip_id}/retry")).status_code == 202
     await drain(FakeClient())
     assert (await auth_client.get(f"/sips/{sip_id}")).json()["status"] == "ready"
+
+
+async def test_cancelled_job_is_released(auth_client):
+    import asyncio
+
+    class Slow(FakeClient):
+        async def complete(self, *a, **k):
+            await asyncio.sleep(10)
+
+    await auth_client.post("/sips", json={"input": "taux"})
+    task = asyncio.create_task(worker.process_one(Slow()))
+    await asyncio.sleep(0.5)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    async with SessionLocal() as s:
+        job = (await s.execute(select(Job))).scalar_one()
+    assert job.status == "queued" and job.attempts == 0
+    assert await worker.process_one(FakeClient())
