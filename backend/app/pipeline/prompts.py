@@ -80,6 +80,8 @@ Available block types for the writer:
 - comparison: compare 2-5 items on shared dimensions
 - sequence: ordered process (timeline)
 - cause_effect: causal chain
+- code: short code snippet (max ~20 lines) + what to notice
+- math: display formula (LaTeX) + meaning in words + variables
 - misconception: a plausible false belief, then its correction (true/false interaction)
 - question: comprehension check (single_choice, multiple_choice, true_false, open)
 - application: ask the learner to apply it to their own situation (no single right answer)
@@ -92,6 +94,9 @@ Rules:
 - Start with a hook that creates curiosity or relevance, ideally tied to the learner's
   goals or context.
 - Prefer intuition before formalism. Pick examples that fit the learner's world.
+- Use `code` only for technical topics where the learner codes or the objective is
+  practical; use `math` only when the formula IS the concept and the learner's level
+  allows it. Always build the intuition in words before a formula.
 - Plan 1-3 comprehension checks that test understanding, not recall of wording.
 - `sequence` lists the ordered teaching steps, each prefixed with its block type,
   e.g. "scenario: ...", "concept: ...", "question(true_false): ...". End with "recap".
@@ -114,6 +119,11 @@ Rules:
   Distractors must be plausible. true_false: use `answer`, no options. open: provide
   `expected_answer` with key points.
 - Never introduce a concept before defining it, except known concepts from context.
+- `code`: minimal, idiomatic, runnable when possible, max ~20 lines, no long comments;
+  `explanation` says what to look at. Put code ONLY in code blocks, never in text.
+- `math`: `latex` is the display formula without $ delimiters; explain it in words and
+  define every symbol in `variables`. Inline math in any text uses single dollars,
+  e.g. "la dimension $d_k$". Never put a display formula inside text.
 - The last block is a `recap` (2-5 points, plus `concepts` = concept names acquired).
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
 - `concepts_taught`: the concept names actually taught in this lesson.

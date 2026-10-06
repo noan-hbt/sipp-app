@@ -2,6 +2,9 @@
 
 A block is a pedagogical unit, not a screen: the iOS renderer decides how to
 display it. The Writer only produces these structures.
+
+Inline math: any learner-facing text field may contain inline LaTeX between single
+dollars, e.g. "la clé $k_i$". Display formulas go in a `math` block.
 """
 
 from typing import Annotated, Literal
@@ -103,6 +106,26 @@ class CauseEffectBlock(_Block):
     chain: list[CauseEffectLink] = Field(min_length=2, max_length=8)
 
 
+class CodeBlock(_Block):
+    type: Literal["code"]
+    language: Str = Field(description="e.g. 'python', 'sql', 'bash'.")
+    code: Str = Field(description="Short, runnable when possible, max ~20 lines.")
+    explanation: Str = Field(description="What to notice in this code.")
+    caption: str | None = None
+
+
+class MathVariable(_Block):
+    symbol: Str = Field(description="LaTeX, e.g. 'd_k'.")
+    meaning: Str
+
+
+class MathBlock(_Block):
+    type: Literal["math"]
+    latex: Str = Field(description="Display formula in LaTeX, without $ delimiters.")
+    explanation: Str = Field(description="What the formula says, in words.")
+    variables: list[MathVariable] = Field(default_factory=list, max_length=8)
+
+
 # --- Interactions ------------------------------------------------------------
 
 
@@ -183,6 +206,8 @@ Block = Annotated[
     | ComparisonBlock
     | SequenceBlock
     | CauseEffectBlock
+    | CodeBlock
+    | MathBlock
     | MisconceptionBlock
     | QuestionBlock
     | ApplicationBlock
@@ -199,6 +224,8 @@ BLOCK_TYPES = [
     "comparison",
     "sequence",
     "cause_effect",
+    "code",
+    "math",
     "misconception",
     "question",
     "application",

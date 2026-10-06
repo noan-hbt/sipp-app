@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass, field
 
 from app.pipeline.blocks import (
+    CodeBlock,
     ConceptBlock,
+    MathBlock,
     QuestionBlock,
     RecapBlock,
 )
@@ -89,6 +91,46 @@ def block_words(block) -> int:
     return total
 
 
+def latex_balanced(latex: str) -> bool:
+    depth = 0
+    escaped = False
+    for ch in latex:
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\":
+            escaped = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0
+
+
+def inline_math_unbalanced(block) -> bool:
+    """Odd count of unescaped '$' in any text field (code and math blocks excluded)."""
+    if isinstance(block, (CodeBlock, MathBlock)):
+        return False
+    found = False
+
+    def walk(v):
+        nonlocal found
+        if isinstance(v, str):
+            if (v.count("$") - v.count("\\$")) % 2:
+                found = True
+        elif isinstance(v, dict):
+            for x in v.values():
+                walk(x)
+        elif isinstance(v, list):
+            for x in v:
+                walk(x)
+
+    walk(block.model_dump(exclude={"type"}))
+    return found
+
+
 def estimate_minutes(draft: LessonDraft) -> float:
     words = sum(block_words(b) for b in draft.blocks)
     interactions = sum(1 for b in draft.blocks if b.type in ("question", "misconception", "application"))
@@ -138,6 +180,20 @@ def check_lesson(
     for i, b in enumerate(blocks):
         if b.type == "text" and _words(b.content) > 120:
             res.errors.append(f"block {i} (text) is too long for mobile ({_words(b.content)} words, max ~80)")
+
+    for i, b in enumerate(blocks):
+        if isinstance(b, CodeBlock):
+            lines = len(b.code.strip("\n").splitlines())
+            if lines > 25:
+                res.errors.append(f"block {i} (code) has {lines} lines, max ~20 for mobile")
+        elif isinstance(b, MathBlock):
+            if not latex_balanced(b.latex):
+                res.errors.append(f"block {i} (math) has unbalanced braces in latex")
+            if b.latex.strip().startswith("$"):
+                res.errors.append(f"block {i} (math) latex must not include $ delimiters")
+    for i, b in enumerate(blocks):
+        if inline_math_unbalanced(b):
+            res.errors.append(f"block {i} has an odd number of '$' (unclosed inline math)")
 
     # coverage of planned concepts (soft: wording can differ)
     taught = {normalize(c) for c in draft.concepts_taught}

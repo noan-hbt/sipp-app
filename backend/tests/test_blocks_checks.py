@@ -85,3 +85,25 @@ def test_curriculum_budget_enforced():
         C.model_validate(CURRICULUM)  # 2 + 2 > 3
     assert _bounded_curriculum(12, 15, 4).model_validate(CURRICULUM)
     assert C.model_json_schema()["title"] == "Curriculum"
+
+
+def test_code_and_math_blocks():
+    code = {"type": "code", "language": "python", "code": "import numpy as np\nx = np.ones(3)", "explanation": "x est un vecteur."}
+    math = {"type": "math", "latex": r"\mathrm{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V", "explanation": "e", "variables": [{"symbol": "d_k", "meaning": "dimension des clés"}]}
+    inline = {"type": "text", "content": "La clé $k_i$ et le coût \$5."}
+    d = copy.deepcopy(DRAFT)
+    d["blocks"][1:1] = [code, math, inline]
+    assert check_lesson(LessonDraft.model_validate(d), [], [], 5).ok
+
+    bad = copy.deepcopy(DRAFT)
+    bad["blocks"][1:1] = [
+        {**code, "code": "\n".join(["x = 1"] * 30)},
+        {**math, "latex": r"\frac{a}{b"},
+        {**math, "latex": "$x$", "explanation": "f"},
+        {"type": "text", "content": "la clé $k_i sans fermeture"},
+    ]
+    errors = check_lesson(LessonDraft.model_validate(bad), [], [], 5).errors
+    assert any("(code)" in e for e in errors)
+    assert any("unbalanced braces" in e for e in errors)
+    assert any("$ delimiters" in e for e in errors)
+    assert any("inline math" in e for e in errors)

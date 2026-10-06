@@ -15,6 +15,7 @@ def parse() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("input")
     p.add_argument("--lessons", type=int, default=1)
+    p.add_argument("--keys", default="", help="comma-separated lesson keys, overrides --lessons")
     p.add_argument("--db", default="real.db")
     p.add_argument("--out", default=None, help="write full JSON dump here")
     return p.parse_args()
@@ -58,7 +59,8 @@ async def main() -> None:
             for l in lessons:
                 if l.module_id == m.id:
                     print(f"   {l.key} {l.title} | {', '.join(l.concepts)} | prereq {l.prerequisites}")
-        targets = [l.id for l in lessons[: args.lessons]]
+        keys = [k.strip().upper() for k in args.keys.split(",") if k.strip()]
+        targets = [l.id for l in lessons if l.key in keys] if keys else [l.id for l in lessons[: args.lessons]]
 
     for lid in targets:
         async with SessionLocal() as s:

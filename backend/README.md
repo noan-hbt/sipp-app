@@ -53,7 +53,8 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | GET | `/lessons/{id}` | `blocks` present when `status == "ready"` |
 | POST | `/lessons/{id}/complete` | `{answers: [...]}` (free-form, stored) |
 
-Block shapes: `app/pipeline/blocks.py` (12 V1 primitives, `type` discriminator).
+Block shapes: `app/pipeline/blocks.py` (14 primitives incl. `code` and `math`, `type` discriminator).
+Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); `$` is a literal dollar.
 
 ## Notes
 
