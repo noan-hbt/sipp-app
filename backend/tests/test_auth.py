@@ -24,3 +24,42 @@ async def test_register_login_refresh_logout(client):
 
     assert (await client.post("/auth/logout", json={"refresh_token": new["refresh_token"]})).status_code == 204
     assert (await client.post("/auth/refresh", json={"refresh_token": new["refresh_token"]})).status_code == 401
+
+
+async def test_delete_account_cascades(auth_client):
+    from sqlalchemy import func, select
+
+    from app.db import SessionLocal
+    from app.models import RefreshToken, Sip, User
+
+    await auth_client.post("/sips", json={"input": "taux"})
+    r = await auth_client.request("DELETE", "/auth/me", json={"password": "wrong-pass"})
+    assert r.status_code == 403
+    r = await auth_client.request("DELETE", "/auth/me", json={"password": "password123"})
+    assert r.status_code == 204
+    assert (await auth_client.get("/auth/me")).status_code == 401
+    async with SessionLocal() as s:
+        for model in (User, Sip, RefreshToken):
+            assert await s.scalar(select(func.count()).select_from(model)) == 0
+
+
+async def test_daily_limits(auth_client, monkeypatch):
+    from app.config import get_settings
+    from app.db import SessionLocal
+    from app.models import LLMCall
+
+    monkeypatch.setattr(get_settings(), "max_sips_per_day", 2)
+    for _ in range(2):
+        assert (await auth_client.post("/sips", json={"input": "taux"})).status_code == 202
+    r = await auth_client.post("/sips", json={"input": "taux"})
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "daily_sip_limit"
+
+    sip_id = (await auth_client.get("/sips")).json()[0]["id"]
+    async with SessionLocal() as s:
+        s.add(LLMCall(stage="curriculum", model="m", sip_id=sip_id, cost=5.0))
+        await s.commit()
+    u = (await auth_client.get("/auth/me/usage")).json()
+    assert u["sips_last_24h"] == 2 and u["cost_last_24h_usd"] == 5.0
+    monkeypatch.setattr(get_settings(), "max_sips_per_day", 10)
+    r = await auth_client.post("/sips", json={"input": "taux"})
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "daily_budget_reached"

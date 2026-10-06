@@ -47,6 +47,10 @@ class Settings(BaseSettings):
         "comprehensive": (25, 60),
     }
 
+    # Per-user spending guards (rolling 24h)
+    max_sips_per_day: int = 5
+    max_cost_per_day_usd: float = 1.0
+
     # Worker
     worker_poll_seconds: float = 1.0
     worker_concurrency: int = 3

@@ -45,6 +45,8 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | POST | `/auth/refresh` | `{refresh_token}` → new pair (rotation, old one revoked) |
 | POST | `/auth/logout` | `{refresh_token}` |
 | GET | `/auth/me` | |
+| GET | `/auth/me/usage` | sips and LLM cost over the last 24h vs limits |
+| DELETE | `/auth/me` | `{password}` → deletes the account and all its data |
 | POST | `/sips` | `{input}` → 202, `status: queued → generating (stage) → ready / failed` |
 | GET | `/sips` | list with progress and `next_lesson_id` |
 | GET | `/sips/{id}` | roadmap: profile, modules, lessons with status |
@@ -62,3 +64,5 @@ Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); 
   (the schema is also in the system prompt; outputs are always validated with Pydantic,
   retried once with the error, then escalated to `MODEL_ESCALATION`).
 - Every LLM call (tokens, cost, latency, errors) is logged in `llm_calls`.
+- Per-user guards (rolling 24h): `MAX_SIPS_PER_DAY` (5), `MAX_COST_PER_DAY_USD` (1.0). Over limit →
+  429 with `detail.code` in `daily_sip_limit | daily_budget_reached | too_many_active_builds`.

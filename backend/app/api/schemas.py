@@ -13,6 +13,17 @@ class RefreshIn(BaseModel):
     refresh_token: str
 
 
+class DeleteAccountIn(BaseModel):
+    password: str
+
+
+class UsageOut(BaseModel):
+    sips_last_24h: int
+    max_sips_per_day: int
+    cost_last_24h_usd: float
+    max_cost_per_day_usd: float
+
+
 class TokenOut(BaseModel):
     access_token: str
     refresh_token: str

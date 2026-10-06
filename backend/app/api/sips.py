@@ -18,6 +18,7 @@ from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Sip, SipStatus, User, utcnow
 from app.pipeline import engine
+from app.quota import check_cost, check_new_sip
 
 router = APIRouter(tags=["sips"])
 
@@ -82,7 +83,11 @@ async def create_sip(
         .where(Sip.user_id == user.id, Sip.status.in_([SipStatus.QUEUED, SipStatus.GENERATING]))
     )
     if active >= MAX_ACTIVE_BUILDS:
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "too many sips being generated")
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            {"code": "too_many_active_builds", "message": "too many sips being generated"},
+        )
+    await check_new_sip(session, user)
     sip = Sip(user_id=user.id, input_text=body.input.strip())
     session.add(sip)
     await session.flush()
@@ -209,6 +214,8 @@ async def get_lesson(
 ):
     """Returns the lesson. If not generated yet, generation is queued (poll until `ready`)."""
     lesson = await _own_lesson(session, user, lesson_id)
+    if lesson.status in (LessonStatus.PENDING, LessonStatus.FAILED):
+        await check_cost(session, user)
     if await engine.request_lesson(session, lesson, chain=True):
         await session.commit()
     return await _lesson_out(session, lesson)
