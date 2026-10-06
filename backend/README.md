@@ -54,11 +54,10 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | POST | `/lessons/{id}/complete` | `{answers: [...]}` (free-form, stored) |
 
 Block shapes: `app/pipeline/blocks.py` (14 primitives incl. `code` and `math`, `type` discriminator).
-Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); `$` is a literal dollar.
+Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); `\$` is a literal dollar.
 
 ## Notes
 
-- Model slugs in `config.py` / `.env.example` are placeholders: check exact OpenRouter slugs.
 - If a model rejects `json_schema` structured outputs, set `LLM_RESPONSE_FORMAT=json_object`
   (the schema is also in the system prompt; outputs are always validated with Pydantic,
   retried once with the error, then escalated to `MODEL_ESCALATION`).

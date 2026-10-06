@@ -16,6 +16,7 @@ def parse() -> argparse.Namespace:
     p.add_argument("input")
     p.add_argument("--lessons", type=int, default=1)
     p.add_argument("--keys", default="", help="comma-separated lesson keys, overrides --lessons")
+    p.add_argument("--sip", default="", help="reuse an existing sip id in --db (skips roadmap)")
     p.add_argument("--db", default="real.db")
     p.add_argument("--out", default=None, help="write full JSON dump here")
     return p.parse_args()
@@ -36,17 +37,19 @@ from app.pipeline import engine as pipeline  # noqa: E402
 async def main() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with SessionLocal() as s:
-        user = User(email=f"run-{os.urandom(4).hex()}@local", password_hash="x")
-        s.add(user)
-        await s.flush()
-        sip = Sip(user_id=user.id, input_text=args.input)
-        s.add(sip)
-        await s.commit()
-        sip_id = sip.id
-
-    async with SessionLocal() as s:
-        await pipeline.build_sip(s, make_llm(sip_id=sip_id), sip_id)
+    if args.sip:
+        sip_id = args.sip
+    else:
+        async with SessionLocal() as s:
+            user = User(email=f"run-{os.urandom(4).hex()}@local", password_hash="x")
+            s.add(user)
+            await s.flush()
+            sip = Sip(user_id=user.id, input_text=args.input)
+            s.add(sip)
+            await s.commit()
+            sip_id = sip.id
+        async with SessionLocal() as s:
+            await pipeline.build_sip(s, make_llm(sip_id=sip_id), sip_id)
 
     async with SessionLocal() as s:
         sip = await s.get(Sip, sip_id)
@@ -80,7 +83,7 @@ async def main() -> None:
             select(LLMCall.stage, LLMCall.model, func.count(), func.sum(LLMCall.cost),
                    func.sum(LLMCall.prompt_tokens), func.sum(LLMCall.completion_tokens),
                    func.sum(LLMCall.latency_ms), func.sum(1 - LLMCall.ok))
-            .where(LLMCall.sip_id == sip_id).group_by(LLMCall.stage, LLMCall.model)
+            .where(LLMCall.sip_id == sip_id, LLMCall.lesson_id.in_(targets) if args.sip else True).group_by(LLMCall.stage, LLMCall.model)
         )).all()
         print("\nCOST:")
         total = 0.0
