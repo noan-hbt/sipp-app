@@ -31,6 +31,10 @@ class LearningProfile(_Out):
     goals: list[str] = Field(min_length=1)
     prior_knowledge: list[str] = Field(default_factory=list)
     depth: Literal["overview", "working", "deep", "expert"]
+    scope: Literal["focused", "standard", "comprehensive"] = Field(
+        description="Breadth of the path: focused = one narrow question or skill, "
+        "standard = understand a topic well, comprehensive = master a whole field."
+    )
     context: str | None = Field(default=None, description="Why they learn it, use case.")
     assumptions: list[str] = Field(
         default_factory=list, description="Assumptions made where the input was silent."
@@ -44,6 +48,7 @@ class CurriculumModule(_Out):
     title: str
     role: str = Field(description="Why this module exists in the path.")
     objectives: list[str] = Field(min_length=1, max_length=6)
+    estimated_lessons: int = Field(ge=1, description="Number of ~5-minute lessons needed.")
 
 
 class Curriculum(_Out):
@@ -60,7 +65,7 @@ class MappedLesson(_Out):
     prerequisites: list[str] = Field(
         default_factory=list, description="Keys of earlier lessons, e.g. 'M1L2'."
     )
-    concepts: list[str] = Field(min_length=1, max_length=6)
+    concepts: list[str] = Field(min_length=1, max_length=4)
 
 
 class ModuleMapping(_Out):

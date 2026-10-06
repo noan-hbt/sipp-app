@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Any
 
-from pydantic import Field, create_model
+from pydantic import Field, create_model, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,6 +67,27 @@ async def next_lesson(session: AsyncSession, lesson: Lesson) -> Lesson | None:
 # --- Roadmap ---------------------------------------------------------------------
 
 
+def _bounded_curriculum(max_modules: int, max_per_module: int, max_total: int) -> type[Curriculum]:
+    def _budget(self):
+        total = sum(m.estimated_lessons for m in self.modules)
+        if total > max_total:
+            raise ValueError(
+                f"total estimated_lessons is {total}, budget is at most {max_total}: "
+                "cut side topics or merge modules"
+            )
+        over = [m.title for m in self.modules if m.estimated_lessons > max_per_module]
+        if over:
+            raise ValueError(f"modules over {max_per_module} lessons: {over}")
+        return self
+
+    return create_model(
+        "Curriculum",
+        __base__=Curriculum,
+        __validators__={"_budget": model_validator(mode="after")(_budget)},
+        modules=(list[CurriculumModule], Field(min_length=1, max_length=max_modules)),
+    )
+
+
 async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> None:
     s = get_settings()
     sip = await session.get(Sip, sip_id)
@@ -89,15 +110,16 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
     if sip.curriculum is None:
         sip.stage = "curriculum"
         await session.commit()
-        bounded = create_model(
-            "Curriculum",
-            __base__=Curriculum,
-            modules=(list[CurriculumModule], Field(min_length=1, max_length=s.max_modules)),
-        )
+        budget_min, budget_max = s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
+        bounded = _bounded_curriculum(s.max_modules, s.max_lessons_per_module, budget_max)
         curriculum = await llm.generate(
             "curriculum",
             prompts.CURRICULUM.format(
-                lesson_minutes=s.lesson_minutes, max_modules=s.max_modules, language=profile.language
+                lesson_minutes=s.lesson_minutes,
+                max_modules=s.max_modules,
+                budget_min=budget_min,
+                budget_max=budget_max,
+                language=profile.language,
             ),
             f"Learner's own words:\n{sip.input_text}\n\nLearning profile:\n{_dump(sip.profile)}",
             bounded,
@@ -108,11 +130,6 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
 
     # 3. Mapping (restart from scratch on retry: modules are cheap compared to coherence)
     await session.execute(delete(Module).where(Module.sip_id == sip.id))
-    bounded_mapping = create_model(
-        "ModuleMapping",
-        __base__=ModuleMapping,
-        lessons=(list[MappedLesson], Field(min_length=1, max_length=s.max_lessons_per_module)),
-    )
     overview = "\n".join(
         f"M{i}. {m.title} — {m.role}" for i, m in enumerate(curriculum.modules, start=1)
     )
@@ -130,18 +147,25 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             "Lessons already mapped in previous modules:\n"
             + ("\n".join(previous_lines) if previous_lines else "(none)")
         )
+        max_lessons = min(s.max_lessons_per_module, cm.estimated_lessons + 2)
+        bounded_mapping = create_model(
+            "ModuleMapping",
+            __base__=ModuleMapping,
+            lessons=(list[MappedLesson], Field(min_length=1, max_length=max_lessons)),
+        )
         mapping = await llm.generate(
             "mapping",
             prompts.MAPPING.format(
                 lesson_minutes=s.lesson_minutes,
-                max_lessons=s.max_lessons_per_module,
+                estimated=cm.estimated_lessons,
+                max_lessons=max_lessons,
                 module_key=f"M{mi}",
                 language=profile.language,
             ),
             user,
             bounded_mapping,
         )
-        mapping, res = clean_mapping(mapping, mi, known_keys, s.max_lessons_per_module)
+        mapping, res = clean_mapping(mapping, mi, known_keys, max_lessons)
         for w in res.warnings:
             log.info("sip %s mapping: %s", sip.id, w)
         for li, ml in enumerate(mapping.lessons, start=1):
@@ -316,7 +340,7 @@ async def generate_lesson(
         review_log.append({"checks": {"errors": checks.errors, "warnings": checks.warnings}})
 
     lesson.plan = plan.model_dump()
-    lesson.blocks = [b.model_dump() for b in draft.blocks]
+    lesson.blocks = [b.model_dump(exclude_none=True) for b in draft.blocks]
     lesson.summary = draft.summary
     lesson.concepts_taught = draft.concepts_taught
     lesson.review = {"rounds": review_log, "unresolved_errors": checks.errors}

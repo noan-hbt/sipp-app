@@ -10,12 +10,13 @@ PROFILE = {
     "target_level": "intermediate",
     "goals": ["comprendre l'effet des taux sur l'économie"],
     "depth": "working",
+    "scope": "standard",
 }
 CURRICULUM = {
     "summary": "Un parcours court sur les taux.",
     "modules": [
-        {"title": "Bases", "role": "poser les fondations", "objectives": ["définir un taux"]},
-        {"title": "Effets", "role": "comprendre les effets", "objectives": ["relier taux et inflation"]},
+        {"title": "Bases", "role": "poser les fondations", "objectives": ["définir un taux"], "estimated_lessons": 2},
+        {"title": "Effets", "role": "comprendre les effets", "objectives": ["relier taux et inflation"], "estimated_lessons": 2},
     ],
 }
 MAPPING = {

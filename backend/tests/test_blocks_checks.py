@@ -74,3 +74,14 @@ def test_mapping_prerequisites_must_be_earlier():
     assert res.ok and len(res.warnings) == 2
     _, res = clean_mapping(ModuleMapping.model_validate(MAPPING), 1, [], 1)
     assert not res.ok
+
+
+def test_curriculum_budget_enforced():
+    from app.pipeline.engine import _bounded_curriculum
+    from tests.fakes import CURRICULUM
+
+    C = _bounded_curriculum(max_modules=12, max_per_module=15, max_total=3)
+    with pytest.raises(ValidationError, match="budget"):
+        C.model_validate(CURRICULUM)  # 2 + 2 > 3
+    assert _bounded_curriculum(12, 15, 4).model_validate(CURRICULUM)
+    assert C.model_json_schema()["title"] == "Curriculum"

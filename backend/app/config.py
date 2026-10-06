@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     max_lessons_per_module: int = 15
     lesson_minutes: int = 5
     max_revisions: int = 1
+    # Total lessons budget per profile scope (min, max)
+    lesson_budget: dict[str, tuple[int, int]] = {
+        "focused": (3, 10),
+        "standard": (10, 25),
+        "comprehensive": (25, 60),
+    }
 
     # Worker
     worker_poll_seconds: float = 1.0

@@ -14,8 +14,15 @@ Rules:
   use level_details for that.
 - When the message is silent on something, choose the most plausible option and record
   it in `assumptions`. Never ask questions.
-- `depth`: overview = general culture, working = practical use, deep = solid
-  understanding of mechanisms, expert = specialist-level.
+- `depth`: overview = general culture, working = practical use or clear
+  understanding of how it works, deep = rigorous mastery of mechanisms and edge cases,
+  expert = specialist-level. Default to "working" for "I want to understand X";
+  choose deep/expert only when the learner explicitly asks for rigor, mastery or a
+  professional/academic goal.
+- `scope`: focused = one narrow question or skill ("how does X work", "learn to do Y");
+  standard = understand a topic well with its main mechanisms and uses;
+  comprehensive = master a whole field. Most requests are focused or standard. Never
+  pick comprehensive unless the learner clearly asks for a broad, long path.
 - Goals must be concrete and reachable through ~5-minute lessons.
 - The title is short (max ~6 words), in the learner's language, no emoji."""
 
@@ -31,8 +38,13 @@ Rules:
   assume knowledge they lack.
 - Each module has a clear role in the progression; order modules so each builds on the
   previous ones.
-- The number of modules depends on the goal and depth. Hard limit: {max_modules}
-  modules. This is a guardrail, NOT a target: a narrow goal may need only 2-3 modules.
+- Size the path to the goal, not to the topic. Total lesson budget for this learner:
+  {budget_min} to {budget_max} lessons (sum of `estimated_lessons`). Aim for the LOW end
+  unless the goals truly require more. Teach what serves the goals; drop side topics,
+  history and case studies unless the learner asked for them.
+- Module count follows from that (typically 2-6). Hard limit: {max_modules} modules,
+  a guardrail, never a target.
+- `estimated_lessons` per module: how many ~{lesson_minutes}-minute lessons it needs.
 - Prefer intellectual coherence over exhaustiveness. No filler modules, no generic
   "introduction" or "conclusion" modules unless they carry real content.
 - Write titles, roles, objectives and summary in the learner's language ({language})."""
@@ -42,17 +54,17 @@ You are the lesson mapper of Sipp. You turn ONE module of a curriculum into a se
 of ~{lesson_minutes}-minute micro-lessons.
 
 Rules:
-- One lesson = one focused objective, 1 to 4 tightly related concepts. A lesson must be
+- One lesson = one focused objective, 1 to 3 tightly related concepts. A lesson must be
   teachable in about {lesson_minutes} minutes including questions.
-- Hard limit: {max_lessons} lessons for this module. Guardrail, NOT a target: use only
-  as many lessons as the module objectives require.
+- The curriculum estimated {estimated} lessons for this module. Stay close to it; hard
+  limit {max_lessons}. Use only as many lessons as the module objectives require.
+- Titles are short (max ~7 words) and engaging; concepts are short noun phrases.
 - Lessons of this module will get keys {module_key}L1, {module_key}L2, ... in the order
   you return them.
 - `prerequisites` lists keys of EARLIER lessons (from previous modules or earlier in this
   module) whose concepts this lesson directly depends on. Only real dependencies, no
   chains of everything before.
 - Do not re-teach concepts already covered by earlier lessons; build on them.
-- Concepts are short noun phrases (e.g. "intérêt composé", "attention head").
 - Write in the learner's language ({language})."""
 
 PLANNING = """\
