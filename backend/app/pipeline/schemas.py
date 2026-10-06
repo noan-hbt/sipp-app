@@ -1,0 +1,129 @@
+"""Structured outputs of each pipeline stage."""
+
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.pipeline.blocks import Block
+
+
+class _Out(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+# 1. Interpretation -----------------------------------------------------------
+
+
+class SkillLevel(_Out):
+    area: str
+    level: Literal["none", "beginner", "intermediate", "advanced", "expert"]
+
+
+class LearningProfile(_Out):
+    topic: str
+    title: str = Field(description="Short, catchy title for this Sip, in the learner's language.")
+    language: str = Field(description="ISO 639-1 code of the language to teach in, e.g. 'fr'.")
+    current_level: Literal["none", "beginner", "intermediate", "advanced", "expert"]
+    level_details: list[SkillLevel] = Field(
+        default_factory=list, description="Per-area levels when they differ."
+    )
+    target_level: Literal["beginner", "intermediate", "advanced", "expert"]
+    goals: list[str] = Field(min_length=1)
+    prior_knowledge: list[str] = Field(default_factory=list)
+    depth: Literal["overview", "working", "deep", "expert"]
+    context: str | None = Field(default=None, description="Why they learn it, use case.")
+    assumptions: list[str] = Field(
+        default_factory=list, description="Assumptions made where the input was silent."
+    )
+
+
+# 2. Curriculum ---------------------------------------------------------------
+
+
+class CurriculumModule(_Out):
+    title: str
+    role: str = Field(description="Why this module exists in the path.")
+    objectives: list[str] = Field(min_length=1, max_length=6)
+
+
+class Curriculum(_Out):
+    summary: str = Field(description="2-3 sentence description of the whole path.")
+    modules: list[CurriculumModule] = Field(min_length=1)
+
+
+# 3. Mapping ------------------------------------------------------------------
+
+
+class MappedLesson(_Out):
+    title: str
+    objective: str
+    prerequisites: list[str] = Field(
+        default_factory=list, description="Keys of earlier lessons, e.g. 'M1L2'."
+    )
+    concepts: list[str] = Field(min_length=1, max_length=6)
+
+
+class ModuleMapping(_Out):
+    lessons: list[MappedLesson] = Field(min_length=1)
+
+
+# 4. Planning -----------------------------------------------------------------
+
+
+class PlannedCheck(_Out):
+    kind: Literal["single_choice", "multiple_choice", "true_false", "open"]
+    targets: str = Field(description="What understanding it verifies.")
+
+
+class LessonPlan(_Out):
+    objective: str = Field(description="Precise, observable learning objective.")
+    concepts: list[str] = Field(min_length=1)
+    hook: str = Field(description="How the lesson opens (scenario, question, surprise).")
+    sequence: list[str] = Field(
+        min_length=3, description="Ordered teaching steps, each mapped to a block type."
+    )
+    intuition: str
+    examples: list[str] = Field(default_factory=list)
+    misconceptions: list[str] = Field(default_factory=list)
+    checks: list[PlannedCheck] = Field(min_length=1)
+    application: str | None = None
+    reuses: list[str] = Field(
+        default_factory=list, description="Previously taught concepts to build upon."
+    )
+
+
+# 5. Writing ------------------------------------------------------------------
+
+
+class LessonDraft(_Out):
+    blocks: list[Block] = Field(min_length=3)
+    summary: str = Field(description="2-3 sentences of what was taught, for future lessons.")
+    concepts_taught: list[str] = Field(min_length=1)
+
+
+# 6. Review -------------------------------------------------------------------
+
+
+class ReviewIssue(_Out):
+    severity: Literal["minor", "major", "critical"]
+    category: Literal[
+        "factual",
+        "missing_concept",
+        "contradiction",
+        "repetition",
+        "concept_before_intro",
+        "difficulty",
+        "misleading_example",
+        "objective_missed",
+        "density",
+        "off_topic",
+        "other",
+    ]
+    block_index: int | None = None
+    description: str
+    fix: str
+
+
+class Review(_Out):
+    verdict: Literal["pass", "revise"]
+    issues: list[ReviewIssue] = Field(default_factory=list)
