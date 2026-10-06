@@ -23,12 +23,12 @@ pytest                            # LLM is faked in tests
 
 ## Railway
 
-One repo, root directory `backend`, two services built from the same Dockerfile:
+One repo, root directory `/backend` (watch `/backend/**`), two services built from the same Dockerfile:
 
 | Service | Variables |
 |---|---|
 | `api` | `SERVICE_ROLE=api` (runs migrations, then uvicorn on `$PORT`) |
-| `worker` | `SERVICE_ROLE=worker` |
+| `sipp-worker` | `SERVICE_ROLE=worker` (no domain, no healthcheck) |
 
 Both: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `OPENROUTER_API_KEY`, `ENV=prod`,
 and optional `MODEL_*` overrides (see `.env.example`). Add the Postgres plugin.

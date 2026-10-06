@@ -98,15 +98,22 @@ async def main() -> None:
             pass
 
     async def slot() -> None:
+        failures = 0
         while not stop.is_set():
             try:
                 busy = await process_one(client)
-            except Exception:  # DB hiccup: keep the worker alive
-                log.exception("worker loop error")
+                failures = 0
+            except Exception as e:  # DB down / not migrated yet: keep alive, back off
+                if failures == 0:
+                    log.exception("worker loop error")
+                else:
+                    log.warning("worker loop error (x%d): %s", failures + 1, type(e).__name__)
+                failures += 1
                 busy = False
             if not busy:
+                delay = min(30.0, s.worker_poll_seconds * 2**failures) if failures else s.worker_poll_seconds
                 try:
-                    await asyncio.wait_for(stop.wait(), timeout=s.worker_poll_seconds)
+                    await asyncio.wait_for(stop.wait(), timeout=delay)
                 except TimeoutError:
                     pass
 
