@@ -59,7 +59,6 @@ const DRINKS: ((p: P) => ReactNode)[] = [
     <>
       <path d="M12 13.5h16l-1.9 19.5a2.5 2.5 0 01-2.5 2.2h-7.2a2.5 2.5 0 01-2.5-2.2z" fill={p.bar} />
       <path d="M12.7 20h14.6l-.7 7.5H13.4z" fill={p.ink} />
-      <path d="M20 25.6c-1.9-1-2.5-2.1-1.5-2.7.7-.3 1.2.1 1.5.7.3-.6.8-1 1.5-.7 1 .6.4 1.7-1.5 2.7z" fill="#FFF" opacity=".85" />
       <path d="M13 8.5h14l1.5 5h-17z" fill={p.ink} />
       <rect x="10" y="12" width="20" height="3" rx="1.5" fill={p.ink} />
       <path d="M15 29.5l.3 3" {...GLOSS} />

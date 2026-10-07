@@ -24,7 +24,7 @@ function Eye({ cx, cy }: { cx: number; cy: number }) {
 }
 
 /**
- * Sipp, the cup. Ceramic peach mug with a cream lip, latte-art heart and
+ * Sipp, the cup. Ceramic peach mug with a cream lip, coffee surface and
  * expressive steam. Idle life = steam + blinking only (no bobbing).
  */
 export function Mascot({ mood = 'hello', size = 80 }: { mood?: Mood; size?: number }) {
@@ -73,11 +73,11 @@ export function Mascot({ mood = 'hello', size = 80 }: { mood?: Mood; size?: numb
       {mood === 'bravo' && (
         <>
           <motion.path
-            d="M39.5 17c-6-4-8-8.5-4.2-10.5 2-1 4.2.6 4.2 2.8 0-2.2 2.2-3.8 4.2-2.8 3.8 2 1.8 6.5-4.2 10.5z"
-            fill="#F28B8B"
+            d="M39.5 4l1.8 3.6 3.6 1.8-3.6 1.8-1.8 3.6-1.8-3.6-3.6-1.8 3.6-1.8z"
+            fill="#F2C14E"
             style={{ transformBox: 'fill-box', transformOrigin: 'center' }}
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
+            animate={{ scale: [1, 1.2, 1], rotate: [0, 15, 0] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
           />
           <motion.path
             d="M23 9l1.4 2.8 2.8 1.4-2.8 1.4L23 17.4l-1.4-2.8-2.8-1.4 2.8-1.4zM57 7l1.1 2.2 2.2 1.1-2.2 1.1L57 13.6l-1.1-2.2-2.2-1.1 2.2-1.1z"
@@ -97,10 +97,9 @@ export function Mascot({ mood = 'hello', size = 80 }: { mood?: Mood; size?: numb
       <path d="M16 49c0 13.5 9.5 23 23 23s23-9.5 23-23v-3c0 13.5-9.5 21-23 21S16 59.5 16 46z" fill="#E8925F" opacity=".45" />
       {/* gloss */}
       <path d="M19.8 33v9.5c0 3.8 1 6.8 2.6 9" stroke="#FFF" strokeOpacity=".42" strokeWidth="3" fill="none" strokeLinecap="round" />
-      {/* ceramic lip + coffee + latte heart */}
+      {/* ceramic lip + coffee */}
       <ellipse cx="39" cy="27" rx="23" ry="5.4" fill="#FCEDE0" />
       <ellipse cx="39" cy="27.6" rx="18.6" ry="3.5" fill="#7A4E33" />
-      <path d="M39 29.6c-2.6-1.4-3.4-2.9-2-3.6.9-.4 1.6.2 2 .9.4-.7 1.1-1.3 2-.9 1.4.7.6 2.2-2 3.6z" fill="#E9C9A8" />
 
       {/* faces */}
       {mood === 'hello' && (
