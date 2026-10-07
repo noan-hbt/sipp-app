@@ -1,4 +1,4 @@
-"""Per-user spending guards (rolling 24h window)."""
+"""Per-user spending guard (rolling 24h cost). Sip counts are limited by plans."""
 
 from datetime import timedelta
 
@@ -23,7 +23,6 @@ async def usage(session: AsyncSession, user: User) -> dict:
     )
     return {
         "sips_last_24h": sips or 0,
-        "max_sips_per_day": s.max_sips_per_day,
         "cost_last_24h_usd": round(float(cost or 0), 4),
         "max_cost_per_day_usd": s.max_cost_per_day_usd,
     }
@@ -37,12 +36,3 @@ async def check_cost(session: AsyncSession, user: User) -> dict:
             {"code": "daily_budget_reached", "message": "daily generation budget reached, retry later"},
         )
     return u
-
-
-async def check_new_sip(session: AsyncSession, user: User) -> None:
-    u = await check_cost(session, user)
-    if u["sips_last_24h"] >= u["max_sips_per_day"]:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            {"code": "daily_sip_limit", "message": f"max {u['max_sips_per_day']} new sips per 24h"},
-        )

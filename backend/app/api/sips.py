@@ -21,7 +21,7 @@ from app.models import Lesson, LessonStatus, Module, Sip, SipStatus, User, utcno
 from app.pipeline import engine
 from app.plans import check_plan, count_generation
 from app.progress import stars_for, stats
-from app.quota import check_cost, check_new_sip
+from app.quota import check_cost
 
 router = APIRouter(tags=["sips"])
 
@@ -92,7 +92,7 @@ async def create_sip(
             status.HTTP_429_TOO_MANY_REQUESTS,
             {"code": "too_many_active_builds", "message": "too many sips being generated"},
         )
-    await check_new_sip(session, user)
+    await check_cost(session, user)
     plan = await check_plan(session, user)
     sip = Sip(user_id=user.id, input_text=body.input.strip(), lite=plan["lite"])
     count_generation(user)

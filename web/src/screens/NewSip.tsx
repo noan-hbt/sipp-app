@@ -16,7 +16,6 @@ const IDEAS = [
 ]
 
 const ERRORS: Record<string, string> = {
-  daily_sip_limit: 'Tu as déjà lancé beaucoup de Sips aujourd’hui. Reviens demain !',
   daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
   too_many_active_builds: 'Je construis déjà plusieurs parcours. Attends qu’ils soient prêts.',
   no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',

@@ -50,7 +50,6 @@ class Settings(BaseSettings):
     }
 
     # Per-user spending guards (rolling 24h)
-    max_sips_per_day: int = 5
     max_cost_per_day_usd: float = 1.0
 
     # Plans: library slots (Sips kept at once) and new Sips per calendar month.

@@ -44,22 +44,17 @@ async def test_delete_account_cascades(auth_client):
 
 
 async def test_daily_limits(auth_client, monkeypatch):
-    from app.config import get_settings
     from app.db import SessionLocal
     from app.models import LLMCall
 
-    monkeypatch.setattr(get_settings(), "max_sips_per_day", 2)
-    for _ in range(2):
+    for _ in range(3):  # no daily Sip cap anymore: plans limit generations
         assert (await auth_client.post("/sips", json={"input": "taux"})).status_code == 202
-    r = await auth_client.post("/sips", json={"input": "taux"})
-    assert r.status_code == 429 and r.json()["detail"]["code"] == "daily_sip_limit"
 
     sip_id = (await auth_client.get("/sips")).json()[0]["id"]
     async with SessionLocal() as s:
         s.add(LLMCall(stage="curriculum", model="m", sip_id=sip_id, cost=5.0))
         await s.commit()
     u = (await auth_client.get("/auth/me/usage")).json()
-    assert u["sips_last_24h"] == 2 and u["cost_last_24h_usd"] == 5.0
-    monkeypatch.setattr(get_settings(), "max_sips_per_day", 10)
+    assert u["sips_last_24h"] == 3 and u["cost_last_24h_usd"] == 5.0
     r = await auth_client.post("/sips", json={"input": "taux"})
     assert r.status_code == 429 and r.json()["detail"]["code"] == "daily_budget_reached"
