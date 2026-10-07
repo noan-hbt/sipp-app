@@ -182,7 +182,7 @@ export function SipMap() {
             footer={
               <DeleteButton
                 label={programId ? 'Supprimer ce chapitre' : 'Supprimer ce Sip'}
-                confirm={programId ? 'Supprimer ce chapitre ? Tu pourras le régénérer depuis le programme (une génération).' : 'Supprimer ce Sip ? Ta progression sera perdue.'}
+                confirm={programId ? 'Tu pourras le régénérer depuis le programme (ça coûte une génération).' : 'Ta progression sera perdue. Ça libère un emplacement.'}
                 busy={remove.isPending}
                 onConfirm={() => remove.mutate()}
               />

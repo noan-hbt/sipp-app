@@ -117,8 +117,11 @@ export function Mascot({ mood = 'hello', size = 80 }: { mood?: Mood; size?: numb
             <Eye cx={32.5} cy={42} />
             <Eye cx={48.5} cy={42} />
           </motion.g>
-          <path d="M27.5 34.5l7-1.4M44 33.1l7 1.4" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
-          <path d="M37 52h6" stroke={INK} strokeWidth="2.5" strokeLinecap="round" />
+          {/* curious, not worried: one brow raised, small content smile, warm cheeks */}
+          <path d="M28 34.6q3.5-1.6 7 0M44.5 31.6q3.5-1.9 7-0.2" stroke={INK} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+          <circle cx="25" cy="51" r="3.4" fill="#F07F7F" opacity=".38" />
+          <circle cx="54" cy="51" r="3.4" fill="#F07F7F" opacity=".38" />
+          <path d="M36.5 51.2q3 2.2 6.5 0.2" stroke={INK} strokeWidth="2.5" fill="none" strokeLinecap="round" />
         </>
       )}
       {mood === 'oops' && (

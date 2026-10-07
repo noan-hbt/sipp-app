@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ConfirmSheet } from '../components/ConfirmSheet'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
@@ -167,7 +169,7 @@ export function ProgramView() {
 
           {section(advanced.length ? 'Les bases' : 'Les chapitres', core)}
           {section('Pour aller plus loin', advanced)}
-          <DeleteButton label="Supprimer ce programme" confirm="Supprimer ce programme et tous ses chapitres ? Ta progression sera perdue." busy={remove.isPending} onConfirm={() => remove.mutate()} />
+          <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère un emplacement." busy={remove.isPending} onConfirm={() => remove.mutate()} />
         </motion.div>
       </div>
     </Screen>
@@ -175,14 +177,18 @@ export function ProgramView() {
 }
 
 export function DeleteButton({ label, confirm, busy, onConfirm }: { label: string; confirm: string; busy: boolean; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false)
   return (
-    <button
-      disabled={busy}
-      onClick={() => window.confirm(confirm) && onConfirm()}
-      style={{ alignSelf: 'center', border: 'none', background: 'none', height: 44, padding: '0 12px', fontSize: 14, fontWeight: 800, color: 'var(--rose-ink)' }}
-    >
-      {busy ? '…' : label}
-    </button>
+    <>
+      <button
+        disabled={busy}
+        onClick={() => setOpen(true)}
+        style={{ alignSelf: 'center', border: 'none', background: 'none', height: 44, padding: '0 12px', fontSize: 14, fontWeight: 800, color: 'var(--rose-ink)' }}
+      >
+        {label}
+      </button>
+      <ConfirmSheet open={open} title={`${label} ?`} message={confirm} confirmLabel="Supprimer" busy={busy} onConfirm={onConfirm} onClose={() => setOpen(false)} />
+    </>
   )
 }
 

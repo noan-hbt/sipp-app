@@ -192,6 +192,7 @@ function MatchItem({
       style={{
         minHeight: 56,
         width: '100%',
+        height: '100%',
         padding: '10px 12px',
         borderRadius: 18,
         fontSize: 15,
@@ -279,7 +280,13 @@ function FragmentRow({ children, delay }: { children: ReactNode[]; delay: number
   return (
     <>
       {children.map((c, i) => (
-        <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.1 + delay * 0.07 + i * 0.03 }}>
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.1 + delay * 0.07 + i * 0.03 }}
+          style={{ display: 'flex' }}
+        >
           {c}
         </motion.div>
       ))}
