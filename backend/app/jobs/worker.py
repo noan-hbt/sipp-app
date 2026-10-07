@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
 from app.llm.client import CallRecord, OpenRouterClient, StructuredLLM
-from app.models import Job, Lesson, LessonStatus, LLMCall, Program, Sip, SipStatus
+from app.models import Job, Lesson, LessonStatus, LLMCall, Program, ProgramStatus, Sip, SipStatus
 from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
@@ -46,6 +46,8 @@ async def run_job(job: Job, client=None) -> None:
             await engine.build_sip(session, make_llm(client, sip_id=sip_id), sip_id)
         elif job.type == programs.JOB_EXTEND_PROGRAM:
             await programs.extend_program(session, make_llm(client), job.payload["program_id"])
+        elif job.type == programs.JOB_ADJUST_PROGRAM:
+            await programs.adjust_program(session, make_llm(client), job.payload["program_id"])
         elif job.type == engine.JOB_GENERATE_LESSON:
             lesson_id = job.payload["lesson_id"]
             lesson = await session.get(Lesson, lesson_id)
@@ -71,6 +73,10 @@ async def on_failure(job: Job, error: str) -> None:
                     update(Sip).where(Sip.program_id == program.id).values(program_id=None, chapter=None)
                 )
                 await session.delete(program)
+        elif job.type == programs.JOB_ADJUST_PROGRAM:
+            program = await session.get(Program, job.payload["program_id"])
+            if program and not retry:
+                program.status = ProgramStatus.READY  # keep the current roadmap
         elif job.type == engine.JOB_GENERATE_LESSON:
             lesson = await session.get(Lesson, job.payload["lesson_id"])
             if lesson:

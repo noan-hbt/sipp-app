@@ -221,3 +221,61 @@ async def test_delete_program_removes_its_sips(auth_client):
         assert await s.get(Program, program_id) is None
         assert await s.get(Sip, first["id"]) is None and await s.get(Sip, second_id) is None
         assert await s.scalar(select(Lesson.id).where(Lesson.sip_id.in_([first["id"], second_id]))) is None
+
+
+ADJUSTMENT = {
+    "changed": True,
+    "note": "Tu as eu du mal sur les bases, on consolide avant d'avancer.",
+    "chapters": [
+        {"title": "Consolider les bases", "outcome": "Calculer un taux simple sans hesiter.", "level": "core", "estimated_lessons": 6},
+        {"title": "Taux et inflation", "outcome": "Relier taux directeurs et inflation.", "level": "advanced", "estimated_lessons": 6},
+    ],
+}
+
+
+async def _finish_chapter(c, sip_id):
+    """Marks every lesson ready and completed but the last, then completes it through the API."""
+    async with SessionLocal() as s:
+        lessons = (await s.execute(select(Lesson).where(Lesson.sip_id == sip_id).order_by(Lesson.global_index))).scalars().all()
+        for l in lessons:
+            l.status, l.blocks = "ready", l.blocks or []
+            if l is not lessons[-1]:
+                l.completed_at, l.stars = utcnow(), 1
+        await s.commit()
+        last = lessons[-1].id
+    r = await c.post(f"/lessons/{last}/complete", json={"answers": [], "score": {"correct": 0, "total": 2}})
+    assert r.status_code == 200, r.text
+
+
+async def test_finished_chapter_adjusts_remaining_roadmap(auth_client):
+    fake = FakeClient({**_program_client().queue, "RoadmapAdjustment": [ADJUSTMENT]})
+    sip = await _build_sip(auth_client, fake)
+    pid = sip["program_id"]
+    await _finish_chapter(auth_client, sip["id"])
+
+    program = (await auth_client.get(f"/programs/{pid}")).json()
+    assert program["status"] == "adjusting"
+    r = await auth_client.post(f"/programs/{pid}/chapters/2")
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "program_adjusting"
+
+    await drain(fake)
+    program = (await auth_client.get(f"/programs/{pid}")).json()
+    assert program["status"] == "ready" and program["note"] == ADJUSTMENT["note"]
+    assert [c["title"] for c in program["chapters"]] == [ROADMAP["chapters"][0]["title"]] + [c["title"] for c in ADJUSTMENT["chapters"]]
+    assert program["chapters"][0]["sip"]["id"] == sip["id"]
+
+    r = await auth_client.post(f"/programs/{pid}/chapters/2")
+    assert r.status_code == 202, r.text
+    assert r.json()["title"] == "Consolider les bases"
+    assert (await auth_client.get(f"/programs/{pid}")).json()["note"] is None
+
+
+async def test_unchanged_adjustment_keeps_roadmap(auth_client):
+    keep = {"changed": False, "note": None, "chapters": []}
+    fake = FakeClient({**_program_client().queue, "RoadmapAdjustment": [keep]})
+    sip = await _build_sip(auth_client, fake)
+    await _finish_chapter(auth_client, sip["id"])
+    await drain(fake)
+    program = (await auth_client.get(f"/programs/{sip['program_id']}")).json()
+    assert program["status"] == "ready" and program["note"] is None
+    assert [c["title"] for c in program["chapters"]] == [c["title"] for c in ROADMAP["chapters"]]

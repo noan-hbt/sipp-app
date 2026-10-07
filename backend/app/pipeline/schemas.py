@@ -72,6 +72,18 @@ class RoadmapExtension(_Out):
     )
 
 
+class RoadmapAdjustment(_Out):
+    changed: bool = Field(description="False when the remaining chapters still fit as they are.")
+    note: str | None = Field(
+        default=None,
+        description="When changed: one warm sentence to the learner (tutoiement in French) "
+        "saying what changed and why.",
+    )
+    chapters: list[RoadmapChapter] = Field(
+        default_factory=list, max_length=12, description="The full list of REMAINING chapters, in order."
+    )
+
+
 # 2. Curriculum ---------------------------------------------------------------
 
 

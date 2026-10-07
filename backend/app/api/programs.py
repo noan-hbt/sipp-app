@@ -1,3 +1,5 @@
+from datetime import timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +9,7 @@ from app.api.sips import _lessons, _own_sip, _summary
 from app.auth import current_user
 from app.db import get_session
 from app.jobs.queue import enqueue
-from app.models import Lesson, Program, ProgramStatus, Sip, SipStatus, User
+from app.models import Lesson, Program, ProgramStatus, Sip, SipStatus, User, utcnow
 from app.pipeline import engine, programs
 from app.plans import check_plan, count_generation
 from app.quota import check_cost
@@ -39,6 +41,7 @@ async def _out(session: AsyncSession, program: Program) -> ProgramOut:
         title=program.title,
         summary=program.summary,
         lite=program.lite,
+        note=program.note,
         created_at=program.created_at,
         chapters=[
             ChapterOut(
@@ -95,7 +98,10 @@ async def start_chapter(
 ):
     """Generates a chapter as a new Sip. Costs one monthly generation, no extra slot."""
     program = await _own_program(session, user, program_id)
-    if program.status != ProgramStatus.READY:
+    stale = program.updated_at.replace(tzinfo=timezone.utc) if program.updated_at.tzinfo is None else program.updated_at
+    if program.status == ProgramStatus.ADJUSTING and utcnow() - stale < timedelta(minutes=3):
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "program_adjusting", "message": "roadmap being adjusted"})
+    if program.status not in (ProgramStatus.READY, ProgramStatus.ADJUSTING):
         raise HTTPException(status.HTTP_409_CONFLICT, "program is not ready")
     if not 1 <= position <= len(program.roadmap):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "chapter not found")
@@ -115,6 +121,7 @@ async def start_chapter(
         lite=plan["lite"],
     )
     count_generation(user)
+    program.note = None  # shown until the learner moves on
     session.add(sip)
     await session.flush()
     await enqueue(session, engine.JOB_BUILD_SIP, {"sip_id": sip.id})

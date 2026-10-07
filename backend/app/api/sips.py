@@ -17,8 +17,8 @@ from app.api.schemas import (
 from app.auth import current_user
 from app.db import get_session
 from app.jobs.queue import enqueue
-from app.models import Lesson, LessonStatus, Module, Sip, SipStatus, User, utcnow
-from app.pipeline import engine
+from app.models import Lesson, LessonStatus, Module, Program, ProgramStatus, Sip, SipStatus, User, utcnow
+from app.pipeline import engine, programs
 from app.plans import check_plan, count_generation
 from app.progress import stars_for, stats
 from app.quota import check_cost
@@ -261,6 +261,12 @@ async def complete_lesson(
         after = await engine.next_lesson(session, nxt)
         if after is not None:
             await engine.request_lesson(session, after, chain=False)
+    # Finished a chapter: re-plan the rest of the program in the background.
+    sip = await session.get(Sip, lesson.sip_id)
+    if await programs.should_adjust(session, sip):
+        program = await session.get(Program, sip.program_id)
+        program.status = ProgramStatus.ADJUSTING
+        await enqueue(session, programs.JOB_ADJUST_PROGRAM, {"program_id": program.id})
     await session.commit()
 
     progress, _ = _progress(await _lessons(session, lesson.sip_id))

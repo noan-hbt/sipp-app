@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     model_lite: str = "openai/gpt-6-luna"
     lite_lesson_budget: tuple[int, int] = (3, 5)
     lite_max_modules: int = 2
+    max_program_chapters: int = 15
 
     # Worker
     worker_poll_seconds: float = 1.0

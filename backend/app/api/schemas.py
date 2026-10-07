@@ -120,6 +120,7 @@ class ProgramOut(BaseModel):
     title: str | None
     summary: str | None
     lite: bool
+    note: str | None = None
     chapters: list[ChapterOut]
     created_at: datetime
 

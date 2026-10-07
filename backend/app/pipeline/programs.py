@@ -17,9 +17,10 @@ from app.llm.client import StructuredLLM
 from app.models import Lesson, Module, Program, ProgramStatus, Sip
 from app.pipeline import prompts
 from app.pipeline.checks import normalize
-from app.pipeline.schemas import LearningProfile, Roadmap, RoadmapExtension
+from app.pipeline.schemas import LearningProfile, Roadmap, RoadmapAdjustment, RoadmapExtension
 
 JOB_EXTEND_PROGRAM = "extend_program"
+JOB_ADJUST_PROGRAM = "adjust_program"
 
 
 def _dump(obj: Any) -> str:
@@ -93,6 +94,78 @@ async def extend_program(session: AsyncSession, llm: StructuredLLM, program_id: 
     program.title, program.summary = ext.title, ext.summary
     program.roadmap = [done] + [c.model_dump() for c in ext.chapters]
     program.status, program.error = ProgramStatus.READY, None
+    await session.commit()
+
+
+async def _generated_chapters(session: AsyncSession, program: Program) -> list[Sip]:
+    return list(
+        (await session.execute(select(Sip).where(Sip.program_id == program.id).order_by(Sip.chapter)))
+        .scalars()
+        .all()
+    )
+
+
+async def should_adjust(session: AsyncSession, sip: Sip) -> bool:
+    """A chapter was just finished and chapters remain to be generated."""
+    if sip.program_id is None:
+        return False
+    lessons = await _lessons(session, sip)
+    if not lessons or any(l.completed_at is None for l in lessons):
+        return False
+    program = await session.get(Program, sip.program_id)
+    if program is None or program.status != ProgramStatus.READY:
+        return False
+    generated = await _generated_chapters(session, program)
+    return max(s.chapter or 0 for s in generated) < len(program.roadmap)
+
+
+async def adjust_program(session: AsyncSession, llm: StructuredLLM, program_id: str) -> None:
+    """Re-plan the chapters not generated yet, from what was taught and how the learner did."""
+    s = get_settings()
+    program = await session.get(Program, program_id)
+    if program is None or program.status != ProgramStatus.ADJUSTING:
+        return
+    if program.lite:
+        llm = dataclasses.replace(llm, lite=True)
+    generated = await _generated_chapters(session, program)
+    fixed = max((x.chapter or 0) for x in generated) if generated else 0
+    profile = LearningProfile.model_validate(program.profile)
+
+    lines = [f"PROGRAM: {program.title}\n{program.summary or ''}", "\nCHAPTERS ALREADY GENERATED (fixed):"]
+    by_chapter = {x.chapter: x for x in generated}
+    for i, c in enumerate(program.roadmap[:fixed], start=1):
+        x = by_chapter.get(i)
+        if x is None:
+            lines.append(f"{i}. {c['title']} — {c['outcome']} (skipped by the learner)")
+            continue
+        lessons = await _lessons(session, x)
+        done = [l for l in lessons if l.completed_at]
+        stars = [l.stars for l in done if l.stars]
+        weak = [l.title for l in done if l.stars is not None and l.stars <= 1]
+        lines.append(
+            f"{i}. {c['title']} — {c['outcome']}\n"
+            f"   taught: {', '.join(await _concepts(session, x)) or '(nothing yet)'}\n"
+            f"   progress: {len(done)}/{len(lessons)} lessons, average stars "
+            + (f"{sum(stars) / len(stars):.1f}/3" if stars else "n/a")
+            + (f"\n   struggled with: {'; '.join(weak)}" if weak else "")
+        )
+    lines.append("\nREMAINING CHAPTERS (to re-plan):")
+    for i, c in enumerate(program.roadmap[fixed:], start=fixed + 1):
+        lines.append(f"{i}. [{c['level']}] {c['title']} — {c['outcome']} ({c['estimated_lessons']} lessons)")
+
+    adj = await llm.generate(
+        "roadmap",
+        prompts.ADJUST.format(language=profile.language),
+        f"Learning profile:\n{_dump(program.profile)}\n\n" + "\n".join(lines),
+        RoadmapAdjustment,
+    )
+    await session.refresh(program)
+    still_fixed = max((x.chapter or 0) for x in await _generated_chapters(session, program))
+    room = s.max_program_chapters - fixed
+    if adj.changed and adj.chapters and still_fixed == fixed and room > 0:
+        program.roadmap = program.roadmap[:fixed] + [c.model_dump() for c in adj.chapters[:room]]
+        program.note = adj.note
+    program.status = ProgramStatus.READY
     await session.commit()
 
 

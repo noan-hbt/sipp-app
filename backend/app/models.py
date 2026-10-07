@@ -54,6 +54,7 @@ class RefreshToken(Base):
 
 class ProgramStatus:
     GENERATING = "generating"  # roadmap being written ("go further" on a finished Sip)
+    ADJUSTING = "adjusting"  # remaining chapters being re-planned after a finished chapter
     READY = "ready"
     FAILED = "failed"
 
@@ -72,6 +73,8 @@ class Program(TimestampMixin, Base):
     # [{title, outcome, level: core|advanced, estimated_lessons}], position = index + 1
     roadmap: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     lite: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Learner-facing sentence on the last roadmap adjustment, if it changed anything.
+    note: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)
 
 

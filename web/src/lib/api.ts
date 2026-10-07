@@ -106,11 +106,12 @@ export interface Chapter {
 }
 export interface Program {
   id: string
-  status: 'generating' | 'ready' | 'failed'
+  status: 'generating' | 'adjusting' | 'ready' | 'failed'
   error: string | null
   title: string | null
   summary: string | null
   lite: boolean
+  note?: string | null
   chapters: Chapter[]
   created_at: string
 }

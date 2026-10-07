@@ -11,6 +11,7 @@ import { duration } from '../lib/format'
 import { play } from '../lib/sound'
 
 const ERRORS: Record<string, string> = {
+  program_adjusting: 'J’ajuste encore la suite de ton programme, réessaie dans un instant.',
   monthly_limit: 'Tu as utilisé tes générations du mois. Ce chapitre sera disponible le mois prochain, ou avec un abonnement.',
   daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
 }
@@ -37,7 +38,7 @@ export function ProgramView() {
     queryKey: ['program', programId],
     queryFn: () => Api.program(programId),
     refetchInterval: (q) =>
-      q.state.data?.status === 'generating' || q.state.data?.chapters.some((c) => c.sip && c.sip.status !== 'ready' && c.sip.status !== 'failed') ? 2500 : false,
+      q.state.data?.status === 'generating' || q.state.data?.status === 'adjusting' || q.state.data?.chapters.some((c) => c.sip && c.sip.status !== 'ready' && c.sip.status !== 'failed') ? 2500 : false,
   })
   const start = useMutation({
     mutationFn: (position: number) => Api.startChapter(programId, position),
@@ -61,7 +62,7 @@ export function ProgramView() {
   })
   const p = program.data
 
-  if (!p || p.status !== 'ready') {
+  if (!p || (p.status !== 'ready' && p.status !== 'adjusting')) {
     return (
       <Screen>
         <header className="topbar">
@@ -102,6 +103,7 @@ export function ProgramView() {
             state={chapterState(c, next)}
             last={c.position === p.chapters.length}
             starting={start.isPending && start.variables === c.position}
+            adjusting={p.status === 'adjusting'}
             onOpen={() => c.sip && nav(c.sip.status === 'ready' ? `/sips/${c.sip.id}` : `/sips/${c.sip.id}/building`)}
             onStart={() => start.mutate(c.position)}
           />
@@ -140,6 +142,23 @@ export function ProgramView() {
             </div>
           </motion.div>
 
+          {p.status === 'adjusting' ? (
+            <motion.div variants={item} className="card" style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Mascot mood="think" size={44} />
+              <p style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.4 }}>J’ajuste la suite de ton programme selon ce que tu viens d’apprendre…</p>
+            </motion.div>
+          ) : (
+            p.note && (
+              <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lavender)' }}>
+                <Mascot mood="hello" size={44} />
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--lavender-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Programme ajusté</span>
+                  <p style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4, color: 'var(--ink)' }}>{p.note}</p>
+                </div>
+              </motion.div>
+            )
+          )}
+
           {err && (
             <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="well" style={{ borderRadius: 18, padding: '12px 14px', fontSize: 15, fontWeight: 800, color: 'var(--rose-ink)' }}>
               {err}
@@ -172,6 +191,7 @@ function ChapterCard({
   state,
   last,
   starting,
+  adjusting,
   onOpen,
   onStart,
 }: {
@@ -179,6 +199,7 @@ function ChapterCard({
   state: ChapterState
   last: boolean
   starting: boolean
+  adjusting: boolean
   onOpen: () => void
   onStart: () => void
 }) {
@@ -241,8 +262,8 @@ function ChapterCard({
         )}
         {state === 'next' && (
           <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-            <Button onClick={onStart} disabled={starting} sound="pop" style={{ height: 50, fontSize: 16 }}>
-              {starting ? <Mascot mood="think" size={30} /> : 'Préparer ce chapitre'}
+            <Button onClick={onStart} disabled={starting || adjusting} sound="pop" style={{ height: 50, fontSize: 16 }}>
+              {starting || adjusting ? <Mascot mood="think" size={30} /> : 'Préparer ce chapitre'}
             </Button>
           </div>
         )}
