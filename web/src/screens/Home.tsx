@@ -39,7 +39,6 @@ export function Home() {
     <Screen>
       <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 22px 6px', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Mascot size={52} />
           <div>
             <span className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
               {greeting()}
