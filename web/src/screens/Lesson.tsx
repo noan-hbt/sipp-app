@@ -118,7 +118,7 @@ export function Lesson() {
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
             <Button variant={isLast ? 'peach' : 'dark'} onClick={next} disabled={complete.isPending} sound={null}>
-              {complete.isPending ? <Mascot mood="think" size={36} bob={false} /> : isLast ? 'Terminer la leçon' : currentAnswer ? 'Continuer' : 'Continuer'}
+              {complete.isPending ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : currentAnswer ? 'Continuer' : 'Continuer'}
             </Button>
           </motion.div>
         )}
@@ -148,7 +148,7 @@ export function Lesson() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={52} bob={false} />
+              <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={52} />
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}

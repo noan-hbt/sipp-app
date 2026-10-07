@@ -22,8 +22,13 @@ function audio() {
     if (!AC) return null
     ctx = new AC()
     master = ctx.createGain()
-    master.gain.value = 0.32
-    master.connect(ctx.destination)
+    master.gain.value = 0.4
+    // Warm everything up: roll off harsh highs.
+    const lowpass = ctx.createBiquadFilter()
+    lowpass.type = 'lowpass'
+    lowpass.frequency.value = 1800
+    lowpass.Q.value = 0.5
+    master.connect(lowpass).connect(ctx.destination)
   }
   if (ctx.state === 'suspended') void ctx.resume()
   return ctx
@@ -58,41 +63,43 @@ function noise(start: number, dur: number, gain = 0.12) {
   src.buffer = buf
   const filter = c.createBiquadFilter()
   filter.type = 'bandpass'
-  filter.frequency.setValueAtTime(600, t)
-  filter.frequency.exponentialRampToValueAtTime(2400, t + dur)
+  filter.frequency.setValueAtTime(400, t)
+  filter.frequency.exponentialRampToValueAtTime(1400, t + dur)
   const g = c.createGain()
   g.gain.value = gain
   src.connect(filter).connect(g).connect(master)
   src.start(t)
 }
 
-const C5 = 523.25, E5 = 659.25, G5 = 783.99, C6 = 1046.5, A4 = 440, D5 = 587.33
+// One octave lower than a typical UI kit: rounder, less piercing.
+const A3 = 220, C4 = 261.63, D4 = 293.66, E4 = 329.63, G4 = 392, C5 = 523.25, E5 = 659.25
 
 const SOUNDS: Record<SoundName, () => void> = {
-  tap: () => tone(880, 0, 0.05, { type: 'triangle', gain: 0.18, to: 660 }),
-  pop: () => tone(520, 0, 0.09, { gain: 0.35, to: 900 }),
-  reveal: () => tone(700, 0, 0.12, { type: 'triangle', gain: 0.12, to: 980 }),
+  tap: () => tone(360, 0, 0.06, { type: 'sine', gain: 0.22, to: 280 }),
+  pop: () => tone(260, 0, 0.11, { type: 'sine', gain: 0.4, to: 440 }),
+  reveal: () => tone(330, 0, 0.14, { type: 'sine', gain: 0.16, to: 420 }),
   correct: () => {
-    tone(E5, 0, 0.14, { type: 'triangle', gain: 0.4 })
-    tone(C6, 0.09, 0.28, { type: 'triangle', gain: 0.38 })
+    tone(E4, 0, 0.16, { type: 'triangle', gain: 0.38 })
+    tone(C5, 0.1, 0.3, { type: 'triangle', gain: 0.34 })
   },
   wrong: () => {
-    tone(D5, 0, 0.16, { type: 'sine', gain: 0.32, to: 440 })
-    tone(A4, 0.12, 0.22, { type: 'sine', gain: 0.26, to: 370 })
+    tone(D4, 0, 0.18, { type: 'sine', gain: 0.34, to: 247 })
+    tone(A3, 0.13, 0.26, { type: 'sine', gain: 0.28, to: 196 })
   },
   star: () => {
-    tone(G5 * 1.5, 0, 0.18, { type: 'sine', gain: 0.22 })
-    tone(C6 * 1.5, 0.04, 0.25, { type: 'sine', gain: 0.16 })
+    tone(E5, 0, 0.2, { type: 'sine', gain: 0.2 })
+    tone(G4 * 2, 0.05, 0.26, { type: 'sine', gain: 0.14 })
   },
   complete: () => {
-    ;[C5, E5, G5, C6].forEach((f, i) => tone(f, i * 0.09, 0.32, { type: 'triangle', gain: 0.34 }))
+    ;[C4, E4, G4, C5].forEach((f, i) => tone(f, i * 0.1, 0.36, { type: 'triangle', gain: 0.34 }))
   },
   unlock: () => {
-    tone(G5, 0, 0.1, { type: 'triangle', gain: 0.3 })
-    tone(C6, 0.08, 0.22, { type: 'triangle', gain: 0.3 })
+    tone(G4, 0, 0.12, { type: 'triangle', gain: 0.3 })
+    tone(C5, 0.09, 0.26, { type: 'triangle', gain: 0.28 })
   },
-  whoosh: () => noise(0, 0.22, 0.1),
+  whoosh: () => noise(0, 0.24, 0.09),
 }
+
 
 export function play(name: SoundName) {
   if (!enabled) return

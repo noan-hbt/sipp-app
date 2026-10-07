@@ -7,14 +7,14 @@
 @import '@fontsource/jetbrains-mono/600.css';
 
 :root {
-  --bg: #eee6da;
-  --bg-deep: #e5dbcb;
+  --bg: #f1ede7;
+  --bg-deep: #e7e1d8;
   --ink: #2b2620;
-  --ink-soft: #4a4238;
-  --muted: #6e6458;
-  --faint: #9a8e7e;
-  --shadow-dark: #d2c6b4;
-  --shadow-light: #fffaf2;
+  --ink-soft: #47423b;
+  --muted: #6b645b;
+  --faint: #9b948a;
+  --shadow-dark: #d9d2c7;
+  --shadow-light: #ffffff;
 
   --peach: #f4a574;
   --peach-lip: #d27a45;
@@ -148,7 +148,7 @@ h1, h2, h3, p { margin: 0; }
   right: 0;
   bottom: 0;
   padding: 34px 22px calc(var(--safe-bottom) + 22px);
-  background: linear-gradient(rgba(238, 230, 218, 0), var(--bg) 38%);
+  background: linear-gradient(rgba(241, 237, 231, 0), var(--bg) 38%);
   pointer-events: none;
 }
 .bottom-fade > * { pointer-events: auto; }
@@ -178,7 +178,7 @@ h1, h2, h3, p { margin: 0; }
 .code .hljs-keyword, .code .hljs-built_in, .code .hljs-literal { color: #c9bcf2; }
 .code .hljs-string { color: #9fd9b6; }
 .code .hljs-number { color: #f8c29e; }
-.code .hljs-comment { color: #9a8e7e; font-style: italic; }
+.code .hljs-comment { color: #9b948a; font-style: italic; }
 .code .hljs-title, .code .hljs-function { color: #f6e7b0; }
 .code .hljs-params, .code .hljs-attr { color: #f8c29e; }
 
@@ -191,10 +191,6 @@ h1, h2, h3, p { margin: 0; }
 @keyframes blink {
   0%, 92%, 100% { transform: scaleY(1); }
   95% { transform: scaleY(0.1); }
-}
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
 }
 @keyframes shimmer {
   0% { background-position: -200px 0; }

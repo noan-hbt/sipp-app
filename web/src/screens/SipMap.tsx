@@ -14,6 +14,7 @@ const TOP_PAD = 210
 const BOTTOM_PAD = 120
 const NODE = 68
 const NODE_NOW = 86
+const MASCOT = 50
 
 const MODULE_COLORS = [
   ['var(--lavender)', 'var(--lavender-ink)'],
@@ -134,7 +135,7 @@ export function SipMap() {
         ) : (
           <div style={{ position: 'relative', height, width: '100%' }}>
             <svg width={width} height={height} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
-              <path d={fullPath} fill="none" stroke="#E3D8C8" strokeWidth="24" strokeLinecap="round" />
+              <path d={fullPath} fill="none" stroke="#E2DCD2" strokeWidth="24" strokeLinecap="round" />
               <motion.path
                 d={donePath}
                 fill="none"
@@ -146,7 +147,7 @@ export function SipMap() {
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.2, ease: 'easeInOut' }}
               />
-              <path d={todoPath} fill="none" stroke="#C9BCA8" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 16" />
+              <path d={todoPath} fill="none" stroke="#C8C0B4" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 16" />
               {lastSeg && (
                 <motion.path
                   d={lastSeg}
@@ -181,7 +182,7 @@ export function SipMap() {
         )}
       </div>
 
-      <header style={{ position: 'absolute', left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(238,230,218,0))' }}>
+      <header style={{ position: 'absolute', left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(241,237,231,0))' }}>
         <IconButton label="Retour" onClick={() => nav('/')}>
           {Icon.back}
         </IconButton>
@@ -252,6 +253,10 @@ function MapNode({
   const spaceLeft = node.x - size / 2 - 16 - 12
   const bubbleRight = spaceRight >= spaceLeft
   const bubbleW = Math.min(200, Math.max(spaceRight, spaceLeft))
+  const mascotLeft = Math.min(
+    Math.max(4, bubbleRight ? node.x - size / 2 - MASCOT - 2 : node.x + size / 2 + 2),
+    width - MASCOT - 4,
+  )
   const preparing = node.lesson.status !== 'ready'
 
   const common = {
@@ -336,18 +341,27 @@ function MapNode({
     <>
       <motion.div
         aria-hidden="true"
-        style={{ position: 'absolute', left: node.x - 62, top: top - 40, pointerEvents: 'none' }}
-        initial={unlocking ? { opacity: 0, y: 20 } : { opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 16, delay: unlocking ? 1.25 : 0.3 }}
+        style={{ position: 'absolute', left: mascotLeft, top: node.y - 34, pointerEvents: 'none' }}
+        initial={{ opacity: 0, x: bubbleRight ? 12 : -12, scale: 0.6 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 16, delay: unlocking ? 1.25 : 0.3 }}
       >
-        <Mascot mood={unlocking ? 'bravo' : 'hello'} size={54} />
+        <Mascot mood={unlocking ? 'bravo' : 'hello'} size={MASCOT} />
       </motion.div>
       <motion.span
         aria-hidden="true"
-        style={{ position: 'absolute', left: left - 10, top: top - 10, width: size + 20, height: size + 20, borderRadius: (size + 20) / 2, border: '3px solid var(--peach)' }}
-        animate={{ scale: [1, 1.18], opacity: [0.7, 0] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut' }}
+        style={{
+          position: 'absolute',
+          left: node.x - (size + 16) / 2,
+          top: node.y + 3.5 - (size + 16) / 2,
+          width: size + 16,
+          height: size + 16,
+          borderRadius: '50%',
+          background: 'var(--peach)',
+          transformOrigin: '50% 50%',
+        }}
+        animate={{ scale: [0.92, 1.32], opacity: [0.35, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
       />
       <motion.button
         aria-label={`Commencer : ${node.lesson.title}`}
@@ -360,7 +374,7 @@ function MapNode({
           haptic()
           onOpen()
         }}
-        style={{ ...common, background: 'var(--peach)', boxShadow: '0 7px 0 var(--peach-lip), 8px 14px 22px #CDBFA9, -6px -6px 14px var(--shadow-light)' }}
+        style={{ ...common, background: 'var(--peach)', boxShadow: '0 7px 0 var(--peach-lip), 8px 14px 22px #D3CBBF, -6px -6px 14px var(--shadow-light)' }}
       >
         {Icon.play}
       </motion.button>

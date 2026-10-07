@@ -169,7 +169,7 @@ export const Icon = {
     </svg>
   ),
   lock: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A89A86" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A39C91" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="11" width="14" height="9" rx="3" />
       <path d="M8 11V8a4 4 0 018 0v3" />
     </svg>

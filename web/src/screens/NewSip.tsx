@@ -70,7 +70,7 @@ export function NewSip() {
             onChange={(e) => setText(e.target.value)}
             style={{ fontSize: 18, lineHeight: 1.45 }}
           />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#8E8272' }}>Astuce : ton niveau et ton objectif m’aident à viser juste.</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#8B8478' }}>Astuce : ton niveau et ton objectif m’aident à viser juste.</span>
         </motion.div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -99,7 +99,7 @@ export function NewSip() {
 
       <div className="bottom-bar">
         <Button disabled={text.trim().length < 3 || create.isPending} onClick={() => create.mutate(text.trim())} sound="pop">
-          {create.isPending ? <Mascot mood="think" size={36} bob={false} /> : 'Construis mon parcours'}
+          {create.isPending ? <Mascot mood="think" size={36} /> : 'Construis mon parcours'}
         </Button>
       </div>
     </Screen>

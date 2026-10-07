@@ -189,7 +189,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
           Comparer
         </Tag>
         {b.items.length > 1 && (
-          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 800, color: '#8E8272' }}>
+          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 800, color: '#8B8478' }}>
             Glisse →
           </motion.span>
         )}
@@ -224,7 +224,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
             </span>
             {b.dimensions.map((d, j) => (
               <div key={j} className="inset" style={{ borderRadius: 18, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: '#8E8272', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: '#8B8478', textTransform: 'uppercase' }}>
                   <RichText text={d} />
                 </span>
                 <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4 }}>
@@ -364,7 +364,7 @@ function Code({ b }: { b: B.CodeBlock }) {
             {['var(--rose)', 'var(--butter)', 'var(--mint)'].map((c) => (
               <span key={c} style={{ width: 10, height: 10, borderRadius: 5, background: c }} />
             ))}
-            <span style={{ marginLeft: 8, fontFamily: 'var(--mono)', fontSize: 12, color: '#9A8E7E' }}>{b.language}</span>
+            <span style={{ marginLeft: 8, fontFamily: 'var(--mono)', fontSize: 12, color: '#9B948A' }}>{b.language}</span>
           </span>
           <motion.button
             whileTap={{ scale: 0.9 }}

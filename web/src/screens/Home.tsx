@@ -158,7 +158,7 @@ function SipCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
       className={building ? 'inset' : 'raised'}
       style={{ border: 'none', textAlign: 'left', borderRadius: 26, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: failed ? 'var(--rose-soft)' : 'var(--bg)' }}
     >
-      {building ? <Mascot mood="think" size={48} bob={false} /> : failed ? <Mascot mood="oops" size={48} bob={false} /> : <SipIcon id={sip.id} />}
+      {building ? <Mascot mood="think" size={48} /> : failed ? <Mascot mood="oops" size={48} /> : <SipIcon id={sip.id} />}
       <span style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.25 }}>{sip.title ?? sip.input_text}</span>
       {building ? (
         <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
