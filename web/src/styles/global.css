@@ -231,3 +231,11 @@ h1, h2, h3, p { margin: 0; }
 
 .display { font-family: var(--display); font-weight: 700; letter-spacing: -0.03em; }
 .pill-tag { align-self: flex-start; padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+
+/* Lesson reading: light body text, ink only where it matters */
+.lx-p { font-size: 17px; line-height: 1.62; font-weight: 400; color: var(--ink-soft); }
+.lx-p strong { color: var(--ink); font-weight: 600 !important; }
+.lx-lead { font-size: 17px; line-height: 1.55; font-weight: 500; color: var(--ink); }
+.lx-small { font-size: 15px; line-height: 1.5; font-weight: 400; color: var(--muted); }
+.lx-h { font-family: var(--display); font-size: 22px; font-weight: 700; line-height: 1.22; letter-spacing: -0.02em; }
+.lx-card { background: var(--surface); border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
