@@ -2,7 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.schemas import Credentials, DeleteAccountIn, RefreshIn, TokenOut, UsageOut, UserOut
+from app.api.schemas import (
+    Credentials,
+    DeleteAccountIn,
+    RefreshIn,
+    StatsOut,
+    TokenOut,
+    UsageOut,
+    UserOut,
+)
 from app.auth import (
     current_user,
     hash_password,
@@ -13,6 +21,7 @@ from app.auth import (
 )
 from app.db import get_session
 from app.models import User
+from app.progress import stats
 from app.quota import usage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -57,6 +66,14 @@ async def me(user: User = Depends(current_user)):
 @router.get("/me/usage", response_model=UsageOut)
 async def me_usage(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
     return await usage(session, user)
+
+
+@router.get("/me/stats", response_model=StatsOut)
+async def me_stats(
+    tz: str = "UTC", user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
+):
+    """Streak and stars. `tz` is the device's IANA timezone (e.g. Europe/Paris)."""
+    return await stats(session, user, tz)
 
 
 @router.delete("/me", status_code=204)

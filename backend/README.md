@@ -30,6 +30,7 @@ One repo, root directory `/backend` (watch `/backend/**`), two services built fr
 | `api` | `SERVICE_ROLE=api` (runs migrations, then uvicorn on `$PORT`) |
 | `sipp-worker` | `SERVICE_ROLE=worker` (no domain, no healthcheck) |
 
+API also: `CORS_ORIGINS` = comma-separated PWA origins.
 Both: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `OPENROUTER_API_KEY`, `ENV=prod`,
 and optional `MODEL_*` overrides (see `.env.example`). Add the Postgres plugin.
 Health check path: `/health`.
@@ -45,6 +46,7 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | POST | `/auth/refresh` | `{refresh_token}` → new pair (rotation, old one revoked) |
 | POST | `/auth/logout` | `{refresh_token}` |
 | GET | `/auth/me` | |
+| GET | `/auth/me/stats?tz=Europe/Paris` | streak days, stars, lessons completed |
 | GET | `/auth/me/usage` | sips and LLM cost over the last 24h vs limits |
 | DELETE | `/auth/me` | `{password}` → deletes the account and all its data |
 | POST | `/sips` | `{input}` → 202, `status: queued → generating (stage) → ready / failed` |
@@ -53,7 +55,7 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | POST | `/sips/{id}/retry` | if failed |
 | DELETE | `/sips/{id}` | |
 | GET | `/lessons/{id}` | `blocks` present when `status == "ready"` |
-| POST | `/lessons/{id}/complete` | `{answers: [...]}` (free-form, stored) |
+| POST | `/lessons/{id}/complete?tz=…` | `{answers: [...], score: {correct, total}}` → stars (best kept) + streak |
 
 Block shapes: `app/pipeline/blocks.py` (14 primitives incl. `code` and `math`, `type` discriminator).
 Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); `\$` is a literal dollar.

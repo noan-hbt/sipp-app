@@ -18,6 +18,7 @@ from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Sip, SipStatus, User, utcnow
 from app.pipeline import engine
+from app.progress import stars_for, stats
 from app.quota import check_cost, check_new_sip
 
 router = APIRouter(tags=["sips"])
@@ -151,6 +152,7 @@ async def get_sip(
                     prerequisites=l.prerequisites,
                     status=l.status,
                     completed=l.completed_at is not None,
+                    stars=l.stars,
                 )
                 for l in lessons
                 if l.module_id == m.id
@@ -204,6 +206,7 @@ async def _lesson_out(session: AsyncSession, lesson: Lesson) -> LessonOut:
         summary=lesson.summary,
         concepts_taught=lesson.concepts_taught,
         completed_at=lesson.completed_at,
+        stars=lesson.stars,
         next_lesson_id=nxt.id if nxt else None,
     )
 
@@ -225,6 +228,7 @@ async def get_lesson(
 async def complete_lesson(
     lesson_id: str,
     body: CompleteIn,
+    tz: str = "UTC",
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ):
@@ -234,6 +238,8 @@ async def complete_lesson(
     if lesson.completed_at is None:
         lesson.completed_at = utcnow()
     lesson.answers = body.answers
+    stars = stars_for(body.score)
+    lesson.stars = max(lesson.stars or 0, stars)
 
     # Keep the next lesson (and the one after) warm.
     nxt = await engine.next_lesson(session, lesson)
@@ -244,4 +250,11 @@ async def complete_lesson(
     await session.commit()
 
     progress, _ = _progress(await _lessons(session, lesson.sip_id))
-    return CompleteOut(lesson_id=lesson.id, next_lesson_id=nxt.id if nxt else None, progress=progress)
+    st = await stats(session, user, tz)
+    return CompleteOut(
+        lesson_id=lesson.id,
+        next_lesson_id=nxt.id if nxt else None,
+        progress=progress,
+        stars=lesson.stars,
+        streak_days=st["streak_days"],
+    )

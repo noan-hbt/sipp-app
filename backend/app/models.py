@@ -118,6 +118,7 @@ class Lesson(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
 
     answers: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
+    stars: Mapped[int | None] = mapped_column(Integer)  # best result, 1-3
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     module: Mapped[Module] = relationship(back_populates="lessons")

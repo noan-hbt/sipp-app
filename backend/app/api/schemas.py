@@ -69,6 +69,7 @@ class LessonBrief(BaseModel):
     prerequisites: list[str]
     status: str
     completed: bool
+    stars: int | None
 
 
 class ModuleOut(BaseModel):
@@ -100,16 +101,32 @@ class LessonOut(BaseModel):
     summary: str | None
     concepts_taught: list[str] | None
     completed_at: datetime | None
+    stars: int | None
     next_lesson_id: str | None
+
+
+class Score(BaseModel):
+    correct: int = Field(ge=0)
+    total: int = Field(ge=0)
 
 
 class CompleteIn(BaseModel):
     answers: list[dict[str, Any]] = Field(
         default_factory=list, description="Free-form per-block answers, stored as-is."
     )
+    score: Score | None = Field(default=None, description="Graded questions only (not open ones).")
 
 
 class CompleteOut(BaseModel):
     lesson_id: str
     next_lesson_id: str | None
     progress: Progress
+    stars: int
+    streak_days: int
+
+
+class StatsOut(BaseModel):
+    streak_days: int
+    completed_today: bool
+    lessons_completed: int
+    total_stars: int
