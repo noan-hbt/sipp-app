@@ -97,7 +97,6 @@ function Example({ b }: { b: B.ExampleBlock }) {
 }
 
 function Scenario({ b }: { b: B.ScenarioBlock }) {
-  const initial = (b.setting.trim()[0] ?? '?').toUpperCase()
   return (
     <article style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
       <motion.span
@@ -106,7 +105,10 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
         transition={{ type: 'spring', stiffness: 500, damping: 15 }}
         style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--rose)', color: 'var(--rose-ink)', fontWeight: 900, display: 'grid', placeItems: 'center', fontSize: 16, flexShrink: 0 }}
       >
-        {initial}
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" />
+          <path d="M8.5 12h.01M12 12h.01M15.5 12h.01" />
+        </svg>
       </motion.span>
       <motion.div
         initial={{ scale: 0.8, originX: 0, originY: 1 }}

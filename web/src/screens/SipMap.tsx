@@ -248,7 +248,10 @@ function MapNode({
   const size = node.state === 'now' ? NODE_NOW : NODE
   const left = node.x - size / 2
   const top = node.y - size / 2
-  const bubbleRight = node.x < width / 2
+  const spaceRight = width - (node.x + size / 2 + 16) - 12
+  const spaceLeft = node.x - size / 2 - 16 - 12
+  const bubbleRight = spaceRight >= spaceLeft
+  const bubbleW = Math.min(200, Math.max(spaceRight, spaceLeft))
   const preparing = node.lesson.status !== 'ready'
 
   const common = {
@@ -373,8 +376,8 @@ function MapNode({
         style={{
           position: 'absolute',
           top: node.y - 38,
-          ...(bubbleRight ? { left: node.x + size / 2 + 16 } : { right: width - (node.x - size / 2 - 16) }),
-          width: Math.min(196, width - node.x - 40 > 150 || !bubbleRight ? 196 : 160),
+          left: bubbleRight ? node.x + size / 2 + 16 : node.x - size / 2 - 16 - bubbleW,
+          width: bubbleW,
           border: 'none',
           borderRadius: 22,
           padding: '12px 14px',
