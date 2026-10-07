@@ -28,6 +28,7 @@ One repo, root directory `/backend` (watch `/backend/**`), two services built fr
 | Service | Variables |
 |---|---|
 | `api` | `SERVICE_ROLE=api` (runs migrations, then uvicorn on `$PORT`) |
+| `sipp-web` | root `/web`, `VITE_API_URL` (build arg), Caddy serves the PWA |
 | `sipp-worker` | `SERVICE_ROLE=worker` (no domain, no healthcheck) |
 
 API also: `CORS_ORIGINS` = comma-separated PWA origins.
