@@ -99,6 +99,7 @@ class ModuleOut(BaseModel):
 class SipDetail(SipSummary):
     summary: str | None
     profile: dict[str, Any] | None
+    outline: list[str] = Field(default_factory=list, description="Module titles, known before mapping ends.")
     modules: list[ModuleOut]
 
 

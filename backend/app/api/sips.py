@@ -167,7 +167,11 @@ async def get_sip(
         for m in modules
     ]
     return SipDetail(
-        **_summary(sip, lessons), summary=sip.summary, profile=sip.profile, modules=out_modules
+        **_summary(sip, lessons),
+        summary=sip.summary,
+        profile=sip.profile,
+        outline=[m.get("title", "") for m in (sip.curriculum or {}).get("modules", [])],
+        modules=out_modules,
     )
 
 

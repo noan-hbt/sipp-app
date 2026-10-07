@@ -60,6 +60,7 @@ export interface Profile {
 export interface SipDetail extends SipSummary {
   summary: string | null
   profile: Profile | null
+  outline?: string[]
   modules: ModuleOut[]
 }
 export interface LessonOut {
