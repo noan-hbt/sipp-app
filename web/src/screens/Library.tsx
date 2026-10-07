@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Screen } from '../components/Screen'
-import { SipCard, itemVariants as item, listVariants as list } from '../components/SipCard'
-import { Icon } from '../components/ui'
 import { Mascot } from '../components/Mascot'
-import { SipIcon, sipPalette } from '../components/SipIcon'
-import { Api, type Plan, type Program } from '../lib/api'
-import { chapterState, nextChapter } from './ProgramView'
+import { Screen } from '../components/Screen'
+import { LibraryRow, SipCard, itemVariants as item, listVariants as list } from '../components/SipCard'
+import { illustration } from '../components/SipIcon'
+import { Icon } from '../components/ui'
+import { Api, type Plan, type Program, type SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
+import { chapterState, nextChapter } from './ProgramView'
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
@@ -17,9 +18,21 @@ function nextMonth() {
   return `1er ${MONTHS[(d.getMonth() + 1) % 12]}`
 }
 
-/** The library: one tile per slot. Filled slots hold a Sip, free ones invite a new Sip. */
+type Filter = 'all' | 'progress' | 'programs' | 'done'
+const FILTERS: [Filter, string][] = [
+  ['all', 'Tout'],
+  ['progress', 'En cours'],
+  ['programs', 'Programmes'],
+  ['done', 'Terminés'],
+]
+
+const sipDone = (s: SipSummary) => s.progress.total > 0 && s.progress.completed >= s.progress.total
+const progDone = (p: Program) => p.chapters.length > 0 && p.chapters.every((c) => chapterState(c, nextChapter(p)) === 'done')
+
+/** The library: a slot gauge, filters, then one row per Sip or program. Free slots invite a new Sip. */
 export function Library() {
   const nav = useNavigate()
+  const [filter, setFilter] = useState<Filter>('all')
   const sips = useQuery({
     queryKey: ['sips'],
     queryFn: Api.sips,
@@ -36,79 +49,113 @@ export function Library() {
   const progs = programs.data ?? []
   const p = plan.data
   const kept = all.filter((s) => s.status !== 'failed').length + progs.length
-  const free = p ? (p.slots >= 1000 ? 1 : Math.max(0, Math.min(p.slots - kept, 12))) : 0
+  const unlimited = p ? p.slots >= 1000 : false
+  const free = p ? (unlimited ? 1 : Math.max(0, Math.min(p.slots - kept, 12))) : 0
   const genLeft = p ? Math.max(0, p.sips_per_month - p.sips_this_month) : 0
+  const shownProgs = progs.filter((pr) => (filter === 'done' ? progDone(pr) : filter === 'progress' ? !progDone(pr) : true))
+  const shownSips = filter === 'programs' ? [] : all.filter((s) => (filter === 'done' ? sipDone(s) : filter === 'progress' ? !sipDone(s) : true))
+  const loading = sips.isLoading || plan.isLoading || programs.isLoading
 
   return (
     <Screen kind="fade">
-      <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 22px 6px', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 900 }}>Bibliothèque</h1>
-        {p && (
-          <span className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
-            {kept}/{p.slots >= 1000 ? '∞' : p.slots} emplacements · {p.sips_per_month >= 1000 ? 'générations illimitées' : `${genLeft} génération${genLeft > 1 ? 's' : ''} restante${genLeft > 1 ? 's' : ''}`}
-          </span>
-        )}
+      <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 4px' }}>
+        <h1 className="display" style={{ fontSize: 30 }}>
+          Bibliothèque
+        </h1>
       </header>
 
-      <div className="scroll" style={{ padding: '18px 22px 130px' }}>
-        <motion.div variants={list} initial="hidden" animate={sips.isLoading || plan.isLoading || programs.isLoading ? 'hidden' : 'show'} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-          {progs.map((pr) => (
-            <ProgramCard key={pr.id} program={pr} onOpen={() => nav(`/programs/${pr.id}`)} />
+      <div className="scroll" style={{ padding: '10px 16px 130px' }}>
+        {p && (
+          <div style={{ borderRadius: 22, background: 'var(--lavender)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)' }}>
+              <span>{unlimited ? `${kept} Sips gardés` : `${kept} place${kept > 1 ? 's' : ''} sur ${p.slots}`}</span>
+              <span style={{ fontWeight: 500 }}>{p.sips_per_month >= 1000 ? 'Créations illimitées' : `${genLeft} création${genLeft > 1 ? 's' : ''} ce mois`}</span>
+            </div>
+            {!unlimited && (
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(p.slots, 15)}, minmax(0, 1fr))`, gap: 5 }}>
+                {Array.from({ length: Math.min(p.slots, 15) }, (_, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 0.05 * i }}
+                    style={{ height: 10, borderRadius: 5, background: i < kept ? 'var(--lavender-strong)' : '#fff' }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, margin: '14px -16px 0', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {FILTERS.map(([k, label]) => (
+            <motion.button
+              key={k}
+              whileTap={{ scale: 0.94 }}
+              onClick={() => {
+                play('tap')
+                setFilter(k)
+              }}
+              style={{
+                height: 38,
+                padding: '0 15px',
+                borderRadius: 19,
+                border: 'none',
+                whiteSpace: 'nowrap',
+                fontSize: 14,
+                fontWeight: 600,
+                background: filter === k ? 'var(--ink)' : 'var(--surface)',
+                color: filter === k ? '#fff' : 'var(--ink)',
+              }}
+            >
+              {label}
+            </motion.button>
           ))}
-          {all.map((s) => (
+        </div>
+
+        <motion.div key={filter} variants={list} initial="hidden" animate={loading ? 'hidden' : 'show'} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+          {shownProgs.map((pr) => (
+            <ProgramRow key={pr.id} program={pr} onOpen={() => nav(`/programs/${pr.id}`)} />
+          ))}
+          {shownSips.map((s) => (
             <SipCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
           ))}
-          {Array.from({ length: free }, (_, i) => (
-            <EmptySlot key={`free-${i}`} canGenerate={genLeft > 0} onClick={() => nav('/new')} />
-          ))}
-          {p && <UpsellSlot plan={p} onClick={() => nav('/profile', { replace: true })} />}
+          {!loading && filter !== 'all' && shownProgs.length + shownSips.length === 0 && (
+            <motion.div variants={item} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '24px 0', textAlign: 'center' }}>
+              <img src={illustration('scene-empty')} alt="" width={150} height={150} />
+              <span className="muted" style={{ fontSize: 15 }}>
+                Rien ici pour l’instant.
+              </span>
+            </motion.div>
+          )}
+          {filter === 'all' && Array.from({ length: free }, (_, i) => <EmptySlot key={`free-${i}`} canGenerate={genLeft > 0} onClick={() => nav('/new')} />)}
+          {filter === 'all' && p && <UpsellSlot plan={p} onClick={() => nav('/profile', { replace: true })} />}
         </motion.div>
       </div>
     </Screen>
   )
 }
 
-function ProgramCard({ program: p, onOpen }: { program: Program; onOpen: () => void }) {
+function ProgramRow({ program: p, onOpen }: { program: Program; onOpen: () => void }) {
   const next = nextChapter(p)
   const done = p.chapters.filter((c) => chapterState(c, next) === 'done').length
-  const pal = sipPalette(p.id)
+  const current = p.chapters.find((c) => chapterState(c, next) !== 'done')
+  const generating = p.status === 'generating'
   return (
-    <motion.button
-      variants={item}
-      whileTap={{ scale: 0.96 }}
-      onClick={() => {
-        play('tap')
-        onOpen()
-      }}
-      className="raised"
-      style={{ border: 'none', textAlign: 'left', borderRadius: 26, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--bg)', position: 'relative' }}
-    >
-      {p.status === 'generating' ? <Mascot mood="think" size={48} /> : <SipIcon id={p.id} />}
-      <span className="chip" style={{ position: 'absolute', top: 14, right: 12, background: pal.bg, color: pal.ink, fontSize: 11, padding: '4px 9px' }}>
-        Programme
-      </span>
-      <span style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.25 }}>{p.title}</span>
-      {p.status === 'generating' ? (
-        <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
-          Je dessine la suite…
-        </span>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {p.chapters.map((c) => {
-            const st = chapterState(c, next)
-            return (
-              <span
-                key={c.position}
-                style={{ flex: 1, height: 8, borderRadius: 4, background: st === 'done' ? pal.bar : st === 'current' || st === 'building' ? 'var(--peach)' : 'var(--track)' }}
-              />
-            )
-          })}
-          <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)', marginLeft: 4 }}>
-            {done}/{p.chapters.length}
+    <LibraryRow
+      name={p.title ?? 'Programme'}
+      stacked
+      onOpen={onOpen}
+      icon={
+        generating ? (
+          <span style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
+            <Mascot mood="think" size={46} />
           </span>
-        </div>
-      )}
-    </motion.button>
+        ) : undefined
+      }
+      meta={generating ? 'Je dessine la suite…' : `Programme · ${current ? `chapitre ${current.position} sur ${p.chapters.length}` : 'terminé'}`}
+      progress={generating ? null : done / Math.max(1, p.chapters.length)}
+    />
   )
 }
 
@@ -116,32 +163,31 @@ function EmptySlot({ canGenerate, onClick }: { canGenerate: boolean; onClick: ()
   return (
     <motion.button
       variants={item}
-      whileTap={canGenerate ? { scale: 0.96 } : undefined}
+      whileTap={canGenerate ? { scale: 0.97 } : undefined}
       disabled={!canGenerate}
       onClick={() => {
         play('pop')
         onClick()
       }}
-      className="well"
       style={{
-        minHeight: 150,
-        border: '2px dashed rgba(43,38,32,.14)',
-        borderRadius: 26,
-        padding: 16,
+        border: '2px dashed var(--line-strong)',
+        background: 'transparent',
+        borderRadius: 24,
+        padding: 10,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        textAlign: 'center',
+        gap: 12,
+        textAlign: 'left',
         color: 'var(--muted)',
       }}
     >
-      <span style={{ width: 40, height: 40, borderRadius: 20, background: canGenerate ? 'var(--ink)' : 'var(--track)', color: canGenerate ? 'var(--bg)' : 'var(--muted)', display: 'grid', placeItems: 'center' }}>
+      <span style={{ width: 56, height: 56, borderRadius: 18, background: canGenerate ? 'var(--primary)' : 'var(--bg-deep)', color: canGenerate ? '#fff' : 'var(--faint)', display: 'grid', placeItems: 'center' }}>
         {Icon.plus}
       </span>
-      <span style={{ fontSize: 14, fontWeight: 900, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? 'Nouveau Sip' : 'Emplacement libre'}</span>
-      {!canGenerate && <span style={{ fontSize: 12, fontWeight: 700 }}>Nouvelle génération le {nextMonth()}</span>}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: 16, fontWeight: 600, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? 'Nouveau Sip' : 'Place libre'}</span>
+        <span style={{ fontSize: 13 }}>{canGenerate ? 'Une place t’attend' : `Nouvelle création le ${nextMonth()}`}</span>
+      </div>
     </motion.button>
   )
 }
@@ -151,26 +197,15 @@ function UpsellSlot({ plan, onClick }: { plan: Plan; onClick: () => void }) {
   return (
     <motion.button
       variants={item}
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      style={{
-        minHeight: 150,
-        border: 'none',
-        borderRadius: 26,
-        padding: 16,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        textAlign: 'center',
-        background: 'var(--lavender)',
-        color: 'var(--lavender-ink)',
-      }}
+      style={{ border: 'none', borderRadius: 24, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', background: 'var(--butter)', color: 'var(--butter-ink)' }}
     >
-      <span style={{ display: 'grid' }}>{Icon.lock}</span>
-      <span style={{ fontSize: 14, fontWeight: 900 }}>Plus d’emplacements</span>
-      <span style={{ fontSize: 12, fontWeight: 700 }}>{plan.trial_available ? `Essai gratuit ${plan.trial_days} jours` : 'Avec un abonnement'}</span>
+      <img src={illustration('scene-full')} alt="" width={56} height={56} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>Plus de places</span>
+        <span style={{ fontSize: 13 }}>{plan.trial_available ? `Essai gratuit de ${plan.trial_days} jours` : 'Avec un abonnement'}</span>
+      </div>
     </motion.button>
   )
 }

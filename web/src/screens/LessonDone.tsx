@@ -1,9 +1,9 @@
 import { motion } from 'motion/react'
 import { useEffect, useMemo } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { RichText } from '../components/RichText'
+import { illustration } from '../components/SipIcon'
 import { Button, Icon, Star } from '../components/ui'
 import type { CompleteOut } from '../lib/api'
 import { play } from '../lib/sound'
@@ -19,7 +19,7 @@ type DoneState = CompleteOut & {
   action?: string | null
 }
 
-const CONFETTI = ['var(--peach)', 'var(--lavender-strong)', 'var(--mint-strong)', 'var(--star)', '#8DB8E0', '#E79AAA']
+const CONFETTI = ['#FFD7BD', 'var(--lavender-strong)', 'var(--mint-strong)', 'var(--star)', 'var(--sky-strong)', '#fff']
 
 function Confetti() {
   const bits = useMemo(
@@ -36,7 +36,7 @@ function Confetti() {
     [],
   )
   return (
-    <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: 210, pointerEvents: 'none', zIndex: 3 }}>
+    <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: 170, pointerEvents: 'none', zIndex: 3 }}>
       {bits.map((b, i) => (
         <motion.span
           key={i}
@@ -75,31 +75,31 @@ export function Takeaways({
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 220, damping: 20, delay }}
       className="card"
-      style={{ borderRadius: 26, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}
+      style={{ borderRadius: 22, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 900, color: mastered ? 'var(--mint-ink)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: mastered ? 'var(--mint-ink)' : 'var(--muted)' }}>
           {mastered ? <>{Icon.check(14)} Objectif atteint</> : 'Objectif de la leçon'}
         </span>
-        <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.4 }}>
+        <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>
           <RichText text={objective} />
         </p>
       </div>
       {points.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>À retenir</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>À retenir</span>
           {points.map((p) => (
-            <p key={p} style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45, color: 'var(--ink-soft)', paddingLeft: 14, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 0, top: 9, width: 6, height: 6, borderRadius: 3, background: 'var(--peach)' }} />
+            <p key={p} style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--ink-soft)', paddingLeft: 14, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 0, top: 9, width: 6, height: 6, borderRadius: 3, background: 'var(--primary)' }} />
               <RichText text={p} />
             </p>
           ))}
         </div>
       )}
       {action && (
-        <div className="well" style={{ borderRadius: 18, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--lavender-ink)' }}>À essayer aujourd’hui</span>
-          <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45 }}>
+        <div style={{ borderRadius: 18, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--lavender)' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>À essayer aujourd’hui</span>
+          <p style={{ fontSize: 15, lineHeight: 1.45 }}>
             <RichText text={action} />
           </p>
         </div>
@@ -120,106 +120,109 @@ export function LessonDone() {
 
   if (!s) return <Navigate to="/" replace />
 
+  const pct = Math.round((s.progress.completed / Math.max(1, s.progress.total)) * 100)
   return (
-    <Screen kind="fade">
+    <Screen kind="fade" bg="var(--primary)">
       <Confetti />
-      <div className="scroll" style={{ padding: 'calc(var(--safe-top) + 40px) 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center' }}>
-          <div aria-label={`${s.stars} étoiles sur 3`} style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 70 }}>
+      <div className="scroll" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ position: 'relative', padding: 'calc(var(--safe-top) + 24px) 22px 26px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textAlign: 'center', color: '#fff' }}>
+          <motion.img
+            src={illustration('scene-celebrate')}
+            alt=""
+            width={220}
+            height={220}
+            initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 13, delay: 0.1 }}
+          />
+          <div aria-label={`${s.stars} étoiles sur 3`} style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52, marginTop: -8 }}>
             <span style={{ transform: 'rotate(-12deg)' }}>
-              <Star size={44} filled={s.stars >= 1} animate delay={0.35} />
+              <Star size={34} filled={s.stars >= 1} animate delay={0.35} />
             </span>
-            <span style={{ marginBottom: 14 }}>
-              <Star size={58} filled={s.stars >= 2} animate delay={0.6} />
+            <span style={{ marginBottom: 10 }}>
+              <Star size={44} filled={s.stars >= 2} animate delay={0.6} />
             </span>
             <span style={{ transform: 'rotate(12deg)' }}>
-              <Star size={44} filled={s.stars >= 3} animate delay={0.85} />
+              <Star size={34} filled={s.stars >= 3} animate delay={0.85} />
             </span>
           </div>
-          <motion.div initial={{ scale: 0, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.15 }}>
-            <Mascot mood="bravo" size={96} />
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="title-xl">
+          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="display" style={{ fontSize: 36, lineHeight: 1.05 }}>
             {s.stars === 3 ? 'Sans faute !' : s.stars === 2 ? 'Bien joué !' : 'Leçon bouclée !'}
           </motion.h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} className="muted" style={{ fontSize: 15, fontWeight: 700 }}>
-            {s.total ? `${s.correct} bonne${s.correct > 1 ? 's' : ''} réponse${s.correct > 1 ? 's' : ''} sur ${s.total}` : s.title}
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} style={{ fontSize: 16, color: 'rgba(255,255,255,.85)' }}>
+            {s.title}
           </motion.p>
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 20, delay: 1.1 }}
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}
+          initial={{ y: 80 }}
+          animate={{ y: 0 }}
+          transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.5 }}
+          style={{ flex: 1, borderRadius: '32px 32px 0 0', background: 'var(--bg)', padding: '22px 16px calc(var(--safe-bottom) + 22px)', display: 'flex', flexDirection: 'column', gap: 12 }}
         >
-          <div className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <motion.span initial={{ scale: 0 }} animate={{ scale: [0, 1.4, 1] }} transition={{ delay: 1.3, duration: 0.5 }} style={{ display: 'grid' }}>
-              {Icon.flame}
-            </motion.span>
-            <span style={{ fontSize: 26, fontWeight: 900 }}>{s.streak_days}</span>
-            <span className="muted" style={{ fontSize: 13, fontWeight: 800 }}>
-              jour{s.streak_days > 1 ? 's' : ''} d’affilée
-            </span>
-          </div>
-          <div className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#B5582A' }}>Parcours</span>
-            <span style={{ fontSize: 26, fontWeight: 900 }}>
-              {s.progress.completed}/{s.progress.total}
-            </span>
-            <div style={{ width: '100%', height: 10, borderRadius: 5, padding: 2, background: 'var(--track)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+            {[
+              [s.total ? `${s.correct}/${s.total}` : '✓', s.total ? 'bonnes réponses' : 'leçon lue', 'var(--mint)'],
+              [`${s.streak_days} j`, 'de série', 'var(--peach-soft)'],
+              [`${pct} %`, 'du parcours', 'var(--lavender)'],
+            ].map(([v, l, bg], i) => (
               <motion.div
-                initial={{ width: `${((s.progress.completed - 1) / Math.max(1, s.progress.total)) * 100}%` }}
-                animate={{ width: `${(s.progress.completed / Math.max(1, s.progress.total)) * 100}%` }}
-                transition={{ delay: 1.5, type: 'spring', stiffness: 80, damping: 14 }}
-                style={{ height: '100%', borderRadius: 4, background: 'var(--peach)' }}
-              />
-            </div>
+                key={l}
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 16, delay: 0.8 + i * 0.1 }}
+                style={{ borderRadius: 20, background: bg, padding: '12px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+              >
+                <span className="display" style={{ fontSize: 21 }}>
+                  {v}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>{l}</span>
+              </motion.div>
+            ))}
           </div>
+
+          {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1} />}
+
+          {s.concepts.length > 0 && (
+            <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="card" style={{ borderRadius: 22, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>Dans ta poche</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {s.concepts.map((c, i) => (
+                  <motion.span
+                    key={c}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 14, delay: 1.25 + i * 0.08 }}
+                    className="chip"
+                    style={{ background: ['var(--peach-soft)', 'var(--lavender)', 'var(--mint)', 'var(--sky)'][i % 4], color: ['var(--peach-ink)', 'var(--lavender-ink)', 'var(--mint-ink)', 'var(--sky-ink)'][i % 4] }}
+                  >
+                    + {c}
+                  </motion.span>
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 1.3 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 6 }}
+          >
+            <Button variant="dark" sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
+              {s.next_lesson_id ? 'Leçon suivante' : 'Voir mon parcours'}
+            </Button>
+            {!mastered(s.correct, s.total) && (
+              <Button variant="soft" onClick={() => nav(`/lessons/${lessonId}`, { replace: true })}>
+                Refaire la leçon
+              </Button>
+            )}
+            <Button variant="ghost" style={{ height: 44, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
+              J’arrête là pour aujourd’hui
+            </Button>
+          </motion.div>
         </motion.div>
-
-        {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1.2} />}
-
-        {s.concepts.length > 0 && (
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }} className="well" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 900 }}>Dans ta poche</span>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {s.concepts.map((c, i) => (
-                <motion.span
-                  key={c}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 14, delay: 1.45 + i * 0.08 }}
-                  className="chip"
-                  style={{ background: ['var(--peach-soft)', 'var(--lavender)', 'var(--mint)', 'var(--sky)'][i % 4], color: ['var(--peach-ink)', 'var(--lavender-ink)', 'var(--mint-ink)', 'var(--sky-ink)'][i % 4] }}
-                >
-                  + {c}
-                </motion.span>
-              ))}
-            </div>
-          </motion.section>
-        )}
       </div>
-
-      <motion.div
-        initial={{ y: 60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 1.6 }}
-        className="bottom-bar"
-        style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-      >
-        <Button sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
-          {s.next_lesson_id ? 'Niveau suivant' : 'Voir mon parcours'}
-        </Button>
-        {!mastered(s.correct, s.total) && (
-          <Button variant="soft" onClick={() => nav(`/lessons/${lessonId}`, { replace: true })}>
-            Refaire la leçon
-          </Button>
-        )}
-        <Button variant="ghost" style={{ height: 48, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
-          J’arrête là pour aujourd’hui
-        </Button>
-      </motion.div>
     </Screen>
   )
 }

@@ -54,11 +54,11 @@ function Text({ b }: { b: B.TextBlock }) {
 function Concept({ b }: { b: B.ConceptBlock }) {
   return (
     <article style={{ borderLeft: '4px solid var(--lavender-strong)', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--lavender-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
-      <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.25 }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--lavender-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
+      <h2 style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.25 }}>
         <RichText text={b.name} />
       </h2>
-      <p style={{ fontSize: 17, lineHeight: 1.55, fontWeight: 800 }}>
+      <p style={{ fontSize: 17, lineHeight: 1.55, fontWeight: 600 }}>
         <RichText text={b.definition} />
       </p>
       <p style={{ fontSize: 17, lineHeight: 1.6, fontWeight: 600, color: 'var(--ink-soft)' }}>
@@ -72,7 +72,7 @@ function Example({ b }: { b: B.ExampleBlock }) {
   return (
     <article className="well" style={{ borderRadius: 24, padding: '16px 18px', display: 'flex', gap: 12 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 900, color: '#8A6A12' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#8A6A12' }}>
           Exemple · <RichText text={b.title} />
         </span>
         <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.55 }}>
@@ -90,7 +90,7 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-        style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--rose)', color: 'var(--rose-ink)', fontWeight: 900, display: 'grid', placeItems: 'center', fontSize: 16, flexShrink: 0 }}
+        style={{ width: 40, height: 40, borderRadius: 20, background: 'var(--rose)', color: 'var(--rose-ink)', fontWeight: 700, display: 'grid', placeItems: 'center', fontSize: 16, flexShrink: 0 }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z" />
@@ -104,14 +104,14 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
         className="card"
         style={{ borderRadius: '24px 24px 24px 6px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}
       >
-        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--rose-ink)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--rose-ink)' }}>
           <RichText text={b.setting} />
         </span>
         <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
           <RichText text={b.narrative} />
         </p>
         {b.prompt && (
-          <p style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.45 }}>
+          <p style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>
             <RichText text={b.prompt} />
           </p>
         )}
@@ -126,7 +126,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
       <Tag bg="var(--sky)" ink="var(--sky-ink)">
         Analogie
       </Tag>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 900, fontSize: 17 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: 17 }}>
         <span style={{ flex: 1 }}>
           <RichText text={b.source} />
         </span>
@@ -144,7 +144,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={stagger(i)}
-            style={{ display: 'flex', gap: 8, padding: '8px 10px', fontSize: 14, fontWeight: 700, borderTop: i ? '1px dashed var(--shadow-dark)' : 'none' }}
+            style={{ display: 'flex', gap: 8, padding: '8px 10px', fontSize: 14, fontWeight: 500, borderTop: i ? '1px dashed var(--shadow-dark)' : 'none' }}
           >
             <span style={{ flex: 1 }}>
               <RichText text={m.source} />
@@ -158,7 +158,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
       </div>
       <P>{b.explanation}</P>
       {b.limits && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--muted)' }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>
           Limite : <RichText text={b.limits} />
         </p>
       )}
@@ -176,7 +176,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
           Comparer
         </Tag>
         {b.items.length > 1 && (
-          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)' }}>
+          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
             Glisse →
           </motion.span>
         )}
@@ -206,15 +206,15 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
             className="card"
             style={{ flex: '0 0 76%', scrollSnapAlign: 'center', borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}
           >
-            <span style={{ fontSize: 18, fontWeight: 900 }}>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>
               <RichText text={it.name} />
             </span>
             {b.dimensions.map((d, j) => (
               <div key={j} className="well" style={{ borderRadius: 18, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>
                   <RichText text={d} />
                 </span>
-                <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4 }}>
+                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>
                   <RichText text={it.values[j] ?? ''} />
                 </span>
               </div>
@@ -233,7 +233,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
         ))}
       </div>
       {b.takeaway && (
-        <p style={{ padding: '4px 22px 0', fontSize: 16, fontWeight: 800, lineHeight: 1.5 }}>
+        <p style={{ padding: '4px 22px 0', fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
           <RichText text={b.takeaway} />
         </p>
       )}
@@ -260,12 +260,12 @@ function Chain({ items, tag }: { items: { title: string; text?: string }[]; tag:
                     width: 36,
                     height: 36,
                     borderRadius: 18,
-                    fontWeight: 900,
+                    fontWeight: 700,
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
-                    background: last ? 'var(--peach)' : 'var(--bg)',
-                    boxShadow: last ? '0 3px 0 var(--peach-lip)' : undefined,
+                    background: last ? 'var(--primary)' : 'var(--surface)',
+                    color: last ? '#fff' : undefined,
                   }}
                 >
                   {i + 1}
@@ -361,7 +361,7 @@ function Code({ b }: { b: B.CodeBlock }) {
               play('pop')
               setTimeout(() => setCopied(false), 1500)
             }}
-            style={{ height: 32, padding: '0 12px', borderRadius: 16, border: 'none', background: copied ? 'var(--mint)' : '#3E372F', color: copied ? 'var(--mint-ink)' : '#F7F1E8', fontSize: 13, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6, transition: 'background .25s' }}
+            style={{ height: 32, padding: '0 12px', borderRadius: 16, border: 'none', background: copied ? 'var(--mint)' : '#3E372F', color: copied ? 'var(--mint-ink)' : '#F7F1E8', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, transition: 'background .25s' }}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span key={String(copied)} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -8, opacity: 0 }} transition={{ duration: 0.15 }}>
@@ -373,7 +373,7 @@ function Code({ b }: { b: B.CodeBlock }) {
         <pre className="code scroll" style={{ margin: 0, padding: '6px 18px 18px', overflowX: 'auto', whiteSpace: 'pre' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
       {b.caption && (
-        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)', padding: '0 4px' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', padding: '0 4px' }}>
           <RichText text={b.caption} />
         </span>
       )}
@@ -397,7 +397,7 @@ function MathB({ b }: { b: B.MathBlock }) {
       {!!b.variables?.length && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {b.variables.map((v, i) => (
-            <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 16, delay: 0.25 + i * 0.06 }} className="chip" style={{ background: 'var(--bg-deep)', fontWeight: 700 }}>
+            <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 16, delay: 0.25 + i * 0.06 }} className="chip" style={{ background: 'var(--bg-deep)', fontWeight: 500 }}>
               <RichText text={`$${v.symbol}$`} /> {v.meaning}
             </motion.span>
           ))}
@@ -421,11 +421,11 @@ function ChoiceButton({
   disabled?: boolean
 }) {
   const styles = {
-    idle: { background: 'var(--bg)', color: 'var(--ink)', boxShadow: 'var(--raised-sm)', border: '2px solid transparent' },
-    selected: { background: 'var(--peach-soft)', color: 'var(--ink)', boxShadow: '0 4px 0 #EBC09F', border: '2px solid var(--peach)' },
-    correct: { background: 'var(--mint)', color: '#1F5136', boxShadow: '0 4px 0 #8CCBA4', border: '2px solid #8CCBA4' },
-    wrong: { background: 'var(--rose)', color: '#6E2236', boxShadow: 'var(--inset-sm)', border: '2px solid #E79AAA' },
-    faded: { background: 'var(--bg)', color: 'var(--faint)', boxShadow: 'none', border: '2px solid transparent' },
+    idle: { background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'none', border: '2px solid var(--line)' },
+    selected: { background: 'var(--primary-soft)', color: 'var(--ink)', boxShadow: 'none', border: '2px solid var(--primary)' },
+    correct: { background: 'var(--mint)', color: 'var(--mint-ink)', boxShadow: 'none', border: '2px solid var(--mint-strong)' },
+    wrong: { background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none', border: '2px solid var(--coral)' },
+    faded: { background: 'var(--surface)', color: 'var(--faint)', boxShadow: 'none', border: '2px solid transparent' },
   }[state]
   return (
     <motion.button
@@ -512,7 +512,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
           </Button>
         )}
         {b.kind === 'multiple_choice' && !answered && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', textAlign: 'center' }}>Plusieurs réponses possibles</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)', textAlign: 'center' }}>Plusieurs réponses possibles</span>
         )}
       </div>
     )
@@ -545,7 +545,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
       <Tag bg="var(--sky)" ink="var(--sky-ink)">
         Question
       </Tag>
-      <h2 style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.3 }}>
+      <h2 style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.3 }}>
         <RichText text={b.prompt} />
       </h2>
       {body}
@@ -575,10 +575,10 @@ function Misconception({ b, answer, onAnswer }: { b: B.MisconceptionBlock; answe
       <Tag bg="var(--rose)" ink="var(--rose-ink)">
         Idée reçue ?
       </Tag>
-      <motion.p initial={{ scale: 0.95 }} animate={{ scale: 1 }} style={{ fontSize: 19, fontWeight: 900, lineHeight: 1.35 }}>
+      <motion.p initial={{ scale: 0.95 }} animate={{ scale: 1 }} style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.35 }}>
         « <RichText text={b.statement} /> »
       </motion.p>
-      <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--muted)' }}>Vrai ou faux ?</span>
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)' }}>Vrai ou faux ?</span>
       <TrueFalse
         chosen={answer ? (answer.value as boolean) : null}
         truth={b.is_true}
@@ -600,11 +600,11 @@ function Application({ b }: { b: B.ApplicationBlock }) {
       <Tag bg="var(--mint)" ink="var(--mint-ink)">
         À toi
       </Tag>
-      <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.3 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.3 }}>
         <RichText text={b.prompt} />
       </h2>
       {b.guidance && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--muted)' }}>
+        <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>
           <RichText text={b.guidance} />
         </p>
       )}
@@ -626,7 +626,7 @@ function Recap({ b }: { b: B.RecapBlock }) {
   ]
   return (
     <section className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <span style={{ fontSize: 16, fontWeight: 900 }}>À retenir</span>
+      <span style={{ fontSize: 16, fontWeight: 700 }}>À retenir</span>
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {b.points.map((p, i) => (
           <motion.li key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={stagger(i)} style={{ display: 'flex', gap: 10, fontSize: 15, fontWeight: 600, lineHeight: 1.45 }}>

@@ -63,7 +63,7 @@ export function RichText({ text }: { text: string }) {
               {p.value}
             </code>
           )
-        if (p.kind === 'bold') return <strong key={i} style={{ fontWeight: 900 }}>{p.value}</strong>
+        if (p.kind === 'bold') return <strong key={i} style={{ fontWeight: 700 }}>{p.value}</strong>
         return <Fragment key={i}>{p.value}</Fragment>
       })}
     </>

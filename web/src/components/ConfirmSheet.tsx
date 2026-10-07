@@ -33,7 +33,7 @@ export function ConfirmSheet({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={busy ? undefined : onClose}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(43,38,32,.28)', zIndex: 40 }}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(29,26,23,.45)', zIndex: 40 }}
           />
           <motion.div
             key="sheet"
@@ -62,17 +62,17 @@ export function ConfirmSheet({
               alignItems: 'center',
               gap: 12,
               textAlign: 'center',
-              boxShadow: '0 -10px 30px rgba(120,90,60,.18)',
+              boxShadow: 'none',
             }}
           >
             <span style={{ width: 44, height: 5, borderRadius: 3, background: 'var(--shadow-dark)' }} />
             <Mascot mood="think" size={64} />
             <h2 className="title-m">{title}</h2>
-            <p className="muted" style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.45, maxWidth: 320 }}>
+            <p className="muted" style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.45, maxWidth: 320 }}>
               {message}
             </p>
             <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-              <Button onClick={onConfirm} disabled={busy} style={{ background: 'var(--rose-ink)', color: '#fff', boxShadow: '0 5px 0 #6E2236' }}>
+              <Button onClick={onConfirm} disabled={busy} style={{ background: 'var(--rose-ink)', color: '#fff' }}>
                 {busy ? '…' : confirmLabel}
               </Button>
               <Button variant="ghost" onClick={onClose} disabled={busy} style={{ height: 48, fontSize: 16 }}>

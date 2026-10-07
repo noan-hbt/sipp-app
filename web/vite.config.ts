@@ -16,8 +16,8 @@ export default defineConfig({
         start_url: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#F1EDE7',
-        theme_color: '#F1EDE7',
+        background_color: '#FBF5EE',
+        theme_color: '#FBF5EE',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -28,6 +28,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         runtimeCaching: [
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/illustrations/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'sipp-illustrations', expiration: { maxEntries: 80 } },
+          },
           {
             urlPattern: ({ url, request, sameOrigin }) => !sameOrigin && request.method === 'GET' && (
               url.pathname.startsWith('/sips') ||

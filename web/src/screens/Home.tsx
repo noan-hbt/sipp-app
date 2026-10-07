@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
-import { SipIcon, sipPalette } from '../components/SipIcon'
+import { illustration, SipIcon, sipPalette } from '../components/SipIcon'
 import { Button, Icon } from '../components/ui'
 import { Api, type SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
@@ -13,6 +13,13 @@ function greeting() {
   const h = new Date().getHours()
   return h < 6 ? 'Encore debout ?' : h < 12 ? 'Bonjour' : h < 18 ? 'Salut' : 'Bonsoir'
 }
+
+const today = () => {
+  const s = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+const isDone = (s: SipSummary) => s.progress.total > 0 && s.progress.completed >= s.progress.total
 
 export function Home() {
   const nav = useNavigate()
@@ -25,99 +32,64 @@ export function Home() {
 
   const all = sips.data ?? []
   const resume = all.find((s) => s.status === 'ready' && s.progress.completed < s.progress.total)
-  // Other Sips worth a glance today: in progress or being built, most recent first.
-  const others = all.filter((s) => s !== resume && !(s.progress.total > 0 && s.progress.completed >= s.progress.total)).slice(0, 3)
+  // The topics grid: in progress or being built first, then finished ones.
+  const rest = all.filter((s) => s !== resume)
+  const topics = [...rest.filter((s) => !isDone(s)), ...rest.filter(isDone)].slice(0, 4)
+  const open = (s: SipSummary) => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)
 
   return (
     <Screen>
-      <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 22px 6px', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div>
-            <span className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
-              {greeting()}
-            </span>
-            <h1 style={{ fontSize: 28, fontWeight: 900 }}>Aujourd’hui</h1>
-          </div>
+      <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 4px', justifyContent: 'space-between' }}>
+        <div>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)' }}>{today()}</span>
+          <h1 className="display" style={{ fontSize: 30, lineHeight: 1.05 }}>
+            {greeting()}
+          </h1>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <motion.div
-            className="card"
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
-            style={{ height: 44, padding: '0 14px', borderRadius: 22, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 900 }}
-            aria-label={`Série de ${stats.data?.streak_days ?? 0} jours`}
+        <motion.div
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
+          className="display"
+          style={{ height: 42, padding: '0 14px', borderRadius: 21, display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, background: 'var(--primary-soft)', color: 'var(--primary-ink)' }}
+          aria-label={`Série de ${stats.data?.streak_days ?? 0} jours`}
+        >
+          <motion.span
+            animate={stats.data?.completed_today ? { scale: [1, 1.18, 1], rotate: [0, -6, 6, 0] } : { opacity: 0.45 }}
+            transition={{ duration: 1.6, repeat: stats.data?.completed_today ? Infinity : 0, repeatDelay: 1.2 }}
+            style={{ display: 'grid', filter: stats.data?.completed_today ? 'none' : 'grayscale(1)' }}
           >
-            <motion.span
-              animate={stats.data?.completed_today ? { scale: [1, 1.18, 1], rotate: [0, -6, 6, 0] } : { opacity: 0.45 }}
-              transition={{ duration: 1.6, repeat: stats.data?.completed_today ? Infinity : 0, repeatDelay: 1.2 }}
-              style={{ display: 'grid', filter: stats.data?.completed_today ? 'none' : 'grayscale(1)' }}
-            >
-              {Icon.flame}
-            </motion.span>
-            {stats.data?.streak_days ?? 0}
-          </motion.div>
-        </div>
+            {Icon.flame}
+          </motion.span>
+          {stats.data?.streak_days ?? 0}
+        </motion.div>
       </header>
 
-      <div className="scroll" style={{ padding: '18px 22px 130px' }}>
+      <div className="scroll" style={{ padding: '14px 16px 130px' }}>
+        <Week week={stats.data?.week} />
         {sips.isLoading ? (
           <Skeleton />
         ) : all.length === 0 ? (
           <Empty onStart={() => nav('/new')} />
         ) : (
-          <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {resume && (
-              <motion.section variants={item} className="raised" style={{ borderRadius: 30, padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <SipIcon id={resume.id} size={58} />
-                  <div>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>{resume.chapter ? `On reprend · chapitre ${resume.chapter}` : 'On reprend ?'}</span>
-                    <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.2 }}>{resume.title}</h2>
-                  </div>
-                </div>
-                {resume.next_lesson_title && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)' }}>
-                      Prochaine leçon · {resume.progress.completed + 1} sur {resume.progress.total}
-                    </span>
-                    <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>{resume.next_lesson_title}</p>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(resume.progress.completed / Math.max(1, resume.progress.total)) * 100}%` }}
-                      transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.3 }}
-                      style={{ height: '100%', borderRadius: 5, background: 'var(--peach)' }}
-                    />
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--muted)' }}>
-                    {resume.progress.completed}/{resume.progress.total}
-                  </span>
-                </div>
-                <Button onClick={() => nav(`/sips/${resume.id}`)}>{resume.progress.completed > 0 ? 'Reprendre' : 'C’est parti'} · 5 min</Button>
-              </motion.section>
-            )}
+          <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
+            {resume ? <Hero sip={resume} onGo={() => nav(`/sips/${resume.id}`)} /> : <NewCard onGo={() => nav('/new')} />}
 
-            {others.length > 0 && (
-              <motion.div variants={item} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '6px 4px 0' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 900 }}>{resume ? 'Aussi en cours' : 'En cours'}</h3>
-                <button onClick={() => nav('/library', { replace: true })} style={{ border: 'none', background: 'none', fontSize: 14, fontWeight: 900, color: '#9c4a22' }}>
+            {topics.length > 0 && (
+              <motion.div variants={item} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '12px 6px 0' }}>
+                <h3 className="display" style={{ fontSize: 20 }}>
+                  Tes sujets
+                </h3>
+                <button onClick={() => nav('/library', { replace: true })} style={{ border: 'none', background: 'none', fontSize: 15, fontWeight: 600, color: 'var(--primary)' }}>
                   Tout voir
                 </button>
               </motion.div>
             )}
-            {others.map((s) => (
-              <MiniCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
-            ))}
-            <motion.div variants={item} style={{ marginTop: 4 }}>
-              <Button variant="soft" onClick={() => nav('/new')} sound="pop">
-                <span style={{ width: 32, height: 32, borderRadius: 16, background: 'var(--ink)', color: 'var(--bg)', display: 'grid', placeItems: 'center' }}>{Icon.plus}</span>
-                Apprendre autre chose
-              </Button>
-            </motion.div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+              {topics.map((s) => (
+                <TopicTile key={s.id} sip={s} onOpen={() => open(s)} />
+              ))}
+            </div>
           </motion.div>
         )}
       </div>
@@ -125,39 +97,133 @@ export function Home() {
   )
 }
 
-function MiniCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
-  const building = sip.status === 'queued' || sip.status === 'generating'
-  const failed = sip.status === 'failed'
-  const pal = sipPalette(sip.id)
+/** Monday → Sunday: filled when a lesson was done that day, ring on today. */
+function Week({ week }: { week?: boolean[] }) {
+  const todayIdx = (new Date().getDay() + 6) % 7
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '0 4px' }}>
+      {'LMMJVSD'.split('').map((l, i) => {
+        const done = week?.[i] ?? false
+        const isToday = i === todayIdx
+        return (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <motion.span
+              initial={done ? { scale: 0.4 } : false}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 14, delay: 0.1 + i * 0.04 }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                display: 'grid',
+                placeItems: 'center',
+                background: done ? 'var(--primary)' : 'var(--surface)',
+                boxShadow: done ? 'none' : isToday ? 'inset 0 0 0 2.5px var(--primary)' : 'inset 0 0 0 2px var(--line)',
+              }}
+            >
+              {done && Icon.check(14, '#fff')}
+            </motion.span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: isToday ? 'var(--ink)' : '#B3A99F' }}>{l}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Hero({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
+  return (
+    <motion.section
+      variants={item}
+      style={{ borderRadius: 30, padding: 20, background: 'var(--primary)', color: '#fff', position: 'relative', overflow: 'hidden' }}
+    >
+      <span style={{ position: 'absolute', right: -30, top: -30, width: 150, height: 150, borderRadius: 75, background: 'rgba(255,255,255,.1)' }} />
+      <motion.div
+        style={{ position: 'absolute', right: 10, top: 30 }}
+        animate={{ rotate: [0, -4, 0, 4, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Mascot size={104} />
+      </motion.div>
+      <div style={{ position: 'relative', maxWidth: '62%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span className="pill-tag" style={{ background: 'rgba(255,255,255,.2)' }}>
+          {sip.chapter ? `Chapitre ${sip.chapter}` : 'On reprend'} · {sip.progress.completed + 1} sur {sip.progress.total}
+        </span>
+        <h2 className="display" style={{ fontSize: 23, lineHeight: 1.12 }}>
+          {sip.next_lesson_title ?? sip.title}
+        </h2>
+        {sip.next_lesson_title && <span style={{ fontSize: 14, color: 'rgba(255,255,255,.82)' }}>{sip.title}</span>}
+      </div>
+      <div style={{ position: 'relative', marginTop: 16, height: 8, borderRadius: 4, background: 'rgba(255,255,255,.22)', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${(sip.progress.completed / Math.max(1, sip.progress.total)) * 100}%` }}
+          transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.3 }}
+          style={{ height: '100%', borderRadius: 4, background: '#fff' }}
+        />
+      </div>
+      <Button variant="soft" onClick={onGo} style={{ position: 'relative', marginTop: 14, boxShadow: 'none' }}>
+        {sip.progress.completed > 0 ? 'Reprendre' : 'Commencer'} · 5 min
+      </Button>
+    </motion.section>
+  )
+}
+
+function NewCard({ onGo }: { onGo: () => void }) {
   return (
     <motion.button
       variants={item}
       whileTap={{ scale: 0.97 }}
+      onClick={onGo}
+      style={{ border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, background: 'var(--peach-soft)', display: 'flex', alignItems: 'center', gap: 14 }}
+    >
+      <Mascot size={72} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span className="display" style={{ fontSize: 20 }}>
+          Tout est bouclé !
+        </span>
+        <span style={{ fontSize: 15, color: 'var(--primary-ink)' }}>Qu’est-ce qu’on apprend ensuite ?</span>
+      </div>
+    </motion.button>
+  )
+}
+
+function TopicTile({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
+  const building = sip.status === 'queued' || sip.status === 'generating'
+  const failed = sip.status === 'failed'
+  const name = sip.title ?? sip.input_text
+  const pal = sipPalette(name)
+  const meta = building
+    ? 'Je prépare…'
+    : failed
+      ? 'Raté, touche pour réessayer'
+      : isDone(sip)
+        ? 'Terminé'
+        : sip.chapter
+          ? `Chapitre ${sip.chapter} · ${sip.progress.completed}/${sip.progress.total}`
+          : `${sip.progress.completed} / ${sip.progress.total} leçons`
+  return (
+    <motion.button
+      variants={item}
+      whileTap={{ scale: 0.96 }}
       onClick={() => {
         play('tap')
         onOpen()
       }}
-      className="card"
-      style={{ border: 'none', textAlign: 'left', borderRadius: 24, padding: 12, display: 'flex', alignItems: 'center', gap: 12, background: failed ? 'var(--rose-soft)' : undefined }}
+      style={{
+        border: 'none',
+        textAlign: 'left',
+        borderRadius: 24,
+        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        background: failed ? 'var(--rose-soft)' : building ? 'var(--surface)' : pal.bg,
+      }}
     >
-      {building ? <Mascot mood="think" size={44} /> : failed ? <Mascot mood="oops" size={44} /> : <SipIcon id={sip.id} size={44} />}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sip.title ?? sip.input_text}</span>
-        {building ? (
-          <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>Je trace ton chemin…</span>
-        ) : failed ? (
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--rose-ink)' }}>Raté, touche pour réessayer</span>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--track)' }}>
-              <div style={{ width: `${(sip.progress.completed / Math.max(1, sip.progress.total)) * 100}%`, height: '100%', borderRadius: 3, background: pal.bar }} />
-            </div>
-            <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)' }}>
-              {sip.progress.completed}/{sip.progress.total}
-            </span>
-          </div>
-        )}
-      </div>
+      {building ? <Mascot mood="think" size={60} /> : failed ? <Mascot mood="oops" size={60} /> : <SipIcon text={name} size={64} radius={0} />}
+      <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{name}</span>
+      <span style={{ fontSize: 13, color: failed ? 'var(--rose-ink)' : 'var(--muted)' }}>{meta}</span>
     </motion.button>
   )
 }
@@ -167,16 +233,16 @@ function Empty({ onStart }: { onStart: () => void }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center', paddingTop: 60 }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center', paddingTop: 28 }}
     >
-      <div className="raised" style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center' }}>
-        <Mascot size={110} />
+      <div style={{ width: 230, height: 230, borderRadius: 115, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
+        <img src={illustration('scene-welcome')} alt="" width={200} height={200} />
       </div>
-      <h2 className="title-m">Qu’est-ce qu’on apprend ?</h2>
-      <p className="muted" style={{ fontSize: 16, maxWidth: 280 }}>
+      <h2 className="title-l">Qu’est-ce qu’on apprend ?</h2>
+      <p className="muted" style={{ fontSize: 16, maxWidth: 290, lineHeight: 1.45 }}>
         N’importe quel sujet. Je construis le parcours, tu avances cinq minutes à la fois.
       </p>
-      <div style={{ width: '100%', maxWidth: 300, marginTop: 8 }}>
+      <div style={{ width: '100%', maxWidth: 300, marginTop: 6 }}>
         <Button onClick={onStart}>Mon premier Sip</Button>
       </div>
     </motion.div>
@@ -185,14 +251,13 @@ function Empty({ onStart }: { onStart: () => void }) {
 
 function Skeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {[220, 140].map((h, i) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 18 }}>
+      {[230, 150].map((h, i) => (
         <motion.div
           key={i}
-          className="raised"
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
-          style={{ height: h, borderRadius: 30 }}
+          style={{ height: h, borderRadius: 30, background: 'var(--bg-deep)' }}
         />
       ))}
     </div>

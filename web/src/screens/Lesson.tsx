@@ -173,12 +173,15 @@ export function LessonPlayer({
           {Icon.close}
         </IconButton>
         <ProgressBar value={revealed / blocks.length} />
+        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)', minWidth: 34, textAlign: 'right' }}>
+          {revealed}/{blocks.length}
+        </span>
       </header>
 
       <div
         ref={scrollRef}
         className="scroll"
-        style={{ padding: '6px 22px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
+        style={{ padding: '6px 20px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
       >
         <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 20 }}>
           <RichText text={title} />
@@ -209,7 +212,7 @@ export function LessonPlayer({
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
-            <Button variant={isLast ? 'peach' : 'dark'} onClick={next} disabled={finishing} sound={null}>
+            <Button onClick={next} disabled={finishing} sound={null}>
               {finishing ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : 'Continuer'}
             </Button>
           </motion.div>
@@ -230,35 +233,37 @@ export function LessonPlayer({
               right: 0,
               bottom: 0,
               zIndex: 10,
-              borderRadius: '34px 34px 0 0',
-              padding: '22px 22px calc(var(--safe-bottom) + 24px)',
+              borderRadius: '32px 32px 0 0',
+              padding: '20px 18px calc(var(--safe-bottom) + 22px)',
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
-              background: tone === 'good' ? '#DDF0E3' : tone === 'bad' ? 'var(--rose-soft)' : '#E1ECF7',
-              boxShadow: '0 -8px 24px rgba(160,110,90,.15)',
+              background: tone === 'good' ? 'var(--mint)' : tone === 'bad' ? 'var(--rose)' : 'var(--sky)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={52} />
+              <span style={{ width: 58, height: 58, borderRadius: 29, background: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={46} />
+              </span>
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 14, delay: 0.1 }}
-                style={{ fontSize: 22, fontWeight: 900, color: tone === 'good' ? '#245E40' : tone === 'bad' ? 'var(--rose-ink)' : 'var(--sky-ink)' }}
+                className="display"
+                style={{ fontSize: 24, color: tone === 'good' ? 'var(--mint-ink)' : tone === 'bad' ? 'var(--rose-ink)' : 'var(--sky-ink)' }}
               >
                 {tone === 'good' ? PRAISE[revealed % PRAISE.length] : tone === 'bad' ? ALMOST[revealed % ALMOST.length] : 'Voilà ce que j’attendais'}
               </motion.span>
             </div>
             {fb.expected && (
-              <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
                 <RichText text={fb.expected} />
               </p>
             )}
-            <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.55, color: tone === 'bad' ? '#4A2430' : 'var(--ink-soft)' }}>
+            <p style={{ fontSize: 15, lineHeight: 1.55, color: tone === 'good' ? '#2E5A43' : tone === 'bad' ? '#6B2A1A' : '#22496B' }}>
               <RichText text={fb.explanation} />
             </p>
-            <Button variant={tone === 'good' ? 'mint' : 'dark'} onClick={next} style={{ marginTop: 6 }}>
+            <Button variant={tone === 'good' ? 'mint' : tone === 'bad' ? 'peach' : 'dark'} onClick={next} style={{ marginTop: 4 }}>
               {isLast ? 'Terminer la leçon' : tone === 'bad' ? 'Compris' : 'Continuer'}
             </Button>
           </motion.section>
@@ -277,22 +282,22 @@ function Preparing({ failed, title, onClose }: { failed: boolean; title?: string
         </IconButton>
       </header>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '0 32px 80px', textAlign: 'center' }}>
-        <div className="raised" style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center' }}>
+        <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
           <Mascot mood={failed ? 'oops' : 'think'} size={104} />
         </div>
         <h1 className="title-l">{failed ? 'Cette leçon m’a résisté' : 'Je prépare ta leçon…'}</h1>
         {title && (
-          <p className="muted" style={{ fontSize: 16, fontWeight: 800 }}>
+          <p className="muted" style={{ fontSize: 16 }}>
             {title}
           </p>
         )}
         {!failed && (
           <div style={{ width: 200 }}>
-            <motion.div className="inset" style={{ height: 14, borderRadius: 7, padding: 3, overflow: 'hidden' }}>
+            <motion.div style={{ height: 10, borderRadius: 5, overflow: 'hidden', background: 'var(--track)' }}>
               <motion.div
                 animate={{ x: ['-100%', '220%'] }}
                 transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ width: '45%', height: '100%', borderRadius: 4, background: 'var(--peach)' }}
+                style={{ width: '45%', height: '100%', borderRadius: 5, background: 'var(--primary)' }}
               />
             </motion.div>
           </div>

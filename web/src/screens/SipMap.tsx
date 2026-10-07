@@ -1,114 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { SipIcon, sipPalette } from '../components/SipIcon'
+import { itemVariants as item, listVariants as list } from '../components/SipCard'
 import { Button, Icon, IconButton, Star } from '../components/ui'
-import { Api, ApiError, type LessonBrief, type ModuleOut } from '../lib/api'
+import { Api, ApiError, type LessonBrief } from '../lib/api'
 import { duration, LESSON_MINUTES } from '../lib/format'
 import { haptic, play } from '../lib/sound'
-import { DeleteButton } from './ProgramView'
+import { Confetti, DeleteButton } from './ProgramView'
 
-const GAP = 104
-const BANNER_GAP = 92
-const TOP_PAD = 210
-const BOTTOM_PAD = 120
-const NODE = 68
-const NODE_NOW = 86
-const MASCOT = 50
+type LessonState = 'done' | 'now' | 'locked'
 
-const MODULE_COLORS = [
-  ['var(--lavender)', 'var(--lavender-ink)'],
-  ['var(--mint)', 'var(--mint-ink)'],
-  ['var(--sky)', 'var(--sky-ink)'],
-  ['var(--butter)', 'var(--butter-ink)'],
-  ['var(--rose)', 'var(--rose-ink)'],
-  ['var(--peach-soft)', 'var(--peach-ink)'],
-]
-
-interface Node {
-  lesson: LessonBrief
-  module: ModuleOut
-  index: number
-  x: number
-  y: number
-  firstOfModule: boolean
-  state: 'done' | 'now' | 'locked'
-}
-
-function layout(modules: ModuleOut[], width: number) {
-  const flat = modules.flatMap((m) => m.lessons.map((l, i) => ({ l, m, first: i === 0 })))
-  const amp = Math.min(96, (width - 130) / 2)
-  const cx = width / 2
-  let acc = BOTTOM_PAD
-  const fromBottom: number[] = []
-  flat.forEach((f) => {
-    if (f.first) acc += BANNER_GAP
-    fromBottom.push(acc)
-    acc += GAP
-  })
-  const height = acc - GAP + TOP_PAD
-  const nowIdx = flat.findIndex((f) => !f.l.completed)
-  const nodes: Node[] = flat.map((f, i) => ({
-    lesson: f.l,
-    module: f.m,
-    index: i,
-    x: cx + amp * Math.sin(i * 1.05 + 0.4),
-    y: height - fromBottom[i],
-    firstOfModule: f.first,
-    state: nowIdx === -1 || i < nowIdx ? 'done' : i === nowIdx ? 'now' : 'locked',
-  }))
-  return { nodes, height, nowIdx }
-}
-
-function pathThrough(pts: { x: number; y: number }[]) {
-  if (!pts.length) return ''
-  let d = `M${pts[0].x} ${pts[0].y}`
-  for (let i = 1; i < pts.length; i++) {
-    const a = pts[i - 1]
-    const b = pts[i]
-    const my = (a.y + b.y) / 2
-    d += ` C${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`
-  }
-  return d
-}
-
+/** A Sip: colored header, then its lessons grouped by module. The current lesson is the big caramel card. */
 export function SipMap() {
   const { sipId = '' } = useParams()
   const nav = useNavigate()
   const loc = useLocation() as { state?: { completed?: string; fresh?: boolean } }
   const justCompleted = loc.state?.completed
-  const fresh = loc.state?.fresh
-  const scroller = useRef<HTMLDivElement>(null)
-  const [view, setView] = useState<'map' | 'list'>(() => {
-    try {
-      return sessionStorage.getItem('sipp.view') === 'list' ? 'list' : 'map'
-    } catch {
-      return 'map'
-    }
-  })
-  const toggleView = () => {
-    const v = view === 'map' ? 'list' : 'map'
-    setView(v)
-    try {
-      sessionStorage.setItem('sipp.view', v)
-    } catch {
-      /* ignore */
-    }
-  }
-  const [width, setWidth] = useState(() => Math.min(window.innerWidth, 480))
   const sip = useQuery({
     queryKey: ['sip', sipId],
     queryFn: () => Api.sip(sipId),
     refetchInterval: (q) => (q.state.data?.modules.some((m) => m.lessons.some((l) => l.status === 'queued' || l.status === 'generating')) ? 4000 : false),
   })
-
-  useEffect(() => {
-    const onResize = () => setWidth(Math.min(window.innerWidth, 480))
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   const qc = useQueryClient()
   const extend = useMutation({
@@ -136,131 +52,135 @@ export function SipMap() {
       nav(programId ? `/programs/${programId}` : '/library', { replace: true })
     },
   })
+
   const modules = useMemo(() => sip.data?.modules ?? [], [sip.data])
-  const { nodes, height, nowIdx } = useMemo(() => layout(modules, width), [modules, width])
-  const now = nodes[nowIdx]
-  const totalStars = nodes.reduce((s, n) => s + (n.lesson.stars ?? 0), 0)
-  const doneUpTo = nowIdx === -1 ? nodes.length - 1 : nowIdx
+  const flat = useMemo(() => modules.flatMap((m) => m.lessons), [modules])
+  const nowIdx = flat.findIndex((l) => !l.completed)
+  const now = flat[nowIdx]
+  const stateOf = (l: LessonBrief): LessonState => {
+    const i = flat.indexOf(l)
+    return nowIdx === -1 || i < nowIdx ? 'done' : i === nowIdx ? 'now' : 'locked'
+  }
+  const done = nowIdx === -1 ? flat.length : nowIdx
+  const totalStars = flat.reduce((s, l) => s + (l.stars ?? 0), 0)
+  const name = sip.data?.title ?? sip.data?.input_text ?? ''
+  const pal = sipPalette(name)
 
-  const donePath = pathThrough(nodes.slice(0, Math.max(doneUpTo, 0)).map((n) => n))
-  const lastSeg = doneUpTo > 0 ? pathThrough([nodes[doneUpTo - 1], nodes[doneUpTo]]) : ''
-  const todoPath = pathThrough(nodes.slice(Math.max(doneUpTo, 0)))
-  const fullPath = pathThrough(nodes)
-
-  // Center the current lesson on open.
+  // Bring the current lesson into view on open.
+  const nowRef = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
-    const el = scroller.current
-    if (!el || !nodes.length) return
-    const target = (now ?? nodes[nodes.length - 1]).y - el.clientHeight * 0.55
-    el.scrollTop = justCompleted && nowIdx > 0 ? nodes[nowIdx - 1].y - el.clientHeight * 0.55 : target
-    if (justCompleted) {
-      const t = setTimeout(() => el.scrollTo({ top: target, behavior: 'smooth' }), 350)
-      return () => clearTimeout(t)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes.length, width])
+    if (nowIdx > 2) nowRef.current?.scrollIntoView({ block: 'center' })
+  }, [nowIdx, sip.isSuccess])
 
   useEffect(() => {
     if (!justCompleted || !now) return
     const t = setTimeout(() => {
       play('unlock')
       haptic(15)
-    }, 1150)
+    }, 500)
     return () => clearTimeout(t)
   }, [justCompleted, now])
 
+  if (sip.isLoading || !sip.data) {
+    return (
+      <Screen>
+        <div style={{ flex: 1, display: 'grid', placeItems: 'center' }}>
+          <Mascot mood="think" size={90} />
+        </div>
+      </Screen>
+    )
+  }
+
   return (
     <Screen>
-      <AnimatePresence>
-        {view === 'list' && sip.data && (
-          <ProgramList
-            key="list"
-            modules={modules}
-            nodes={nodes}
-            summary={sip.data.summary}
-            onOpen={(id) => nav(`/lessons/${id}`)}
-            footer={
-              <DeleteButton
-                label={programId ? 'Supprimer ce chapitre' : 'Supprimer ce Sip'}
-                confirm={programId ? 'Tu pourras le régénérer depuis le programme (ça coûte une génération).' : 'Ta progression sera perdue. Ça libère un emplacement.'}
-                busy={remove.isPending}
-                onConfirm={() => remove.mutate()}
-              />
-            }
-          />
-        )}
-      </AnimatePresence>
-      <div ref={scroller} className="scroll" style={{ position: 'relative', visibility: view === 'list' ? 'hidden' : undefined }}>
-        {sip.isLoading ? (
-          <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
-            <Mascot mood="think" size={90} />
+      <div className="scroll" style={{ paddingBottom: nowIdx === -1 ? 220 : 48 }}>
+        <div style={{ position: 'relative', borderRadius: '0 0 40px 40px', background: pal.bg, padding: 'calc(var(--safe-top) + 14px) 20px 22px', overflow: 'hidden' }}>
+          <Confetti seed={2} />
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <IconButton label="Retour" onClick={() => nav(programId ? `/programs/${programId}` : '/')}>
+              {Icon.back}
+            </IconButton>
+            <span className="display" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 16, padding: '0 12px', height: 36, borderRadius: 18, background: 'rgba(255,255,255,.7)' }}>
+              <Star size={16} />
+              {totalStars}
+            </span>
           </div>
-        ) : (
-          <div style={{ position: 'relative', height, width: '100%' }}>
-            <svg width={width} height={height} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
-              <path d={fullPath} fill="none" stroke="#E2DCD2" strokeWidth="24" strokeLinecap="round" />
-              <motion.path
-                d={donePath}
-                fill="none"
-                stroke="var(--peach)"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeDasharray="1 16"
-                initial={fresh ? { pathLength: 0 } : false}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 1.2, ease: 'easeInOut' }}
-              />
-              <path d={todoPath} fill="none" stroke="#D3CCC1" strokeWidth="7" strokeLinecap="round" strokeDasharray="1 16" />
-              {lastSeg && (
-                <motion.path
-                  d={lastSeg}
-                  fill="none"
-                  stroke="var(--peach)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray="1 16"
-                  initial={justCompleted ? { pathLength: 0 } : false}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.7, delay: 0.45, ease: 'easeInOut' }}
-                />
-              )}
-            </svg>
-
-            {nodes.map((n) =>
-              n.firstOfModule ? <ModuleBanner key={`b${n.module.id}`} node={n} width={width} fresh={!!fresh} /> : null,
-            )}
-
-            {nodes.map((n) => (
-              <MapNode
-                key={n.lesson.id}
-                node={n}
-                width={width}
-                appearDelay={fresh ? 0.2 + n.index * 0.05 : 0}
-                unlocking={!!justCompleted && n.state === 'now'}
-                onOpen={() => nav(`/lessons/${n.lesson.id}`)}
-                lockedHint={now?.lesson.title}
-              />
-            ))}
+          <div style={{ position: 'relative', marginTop: 12, display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {sip.data.chapter && <span style={{ fontSize: 13, fontWeight: 600, color: pal.ink }}>Chapitre {sip.data.chapter}</span>}
+              <h1 className="display" style={{ fontSize: 26, lineHeight: 1.08 }}>
+                {name}
+              </h1>
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'rgba(255,255,255,.7)', overflow: 'hidden' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(done / Math.max(1, flat.length)) * 100}%` }}
+                    transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.2 }}
+                    style={{ height: '100%', borderRadius: 5, background: 'var(--primary)' }}
+                  />
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: pal.ink }}>
+                  {done} / {flat.length}
+                </span>
+              </div>
+            </div>
+            <motion.div initial={{ scale: 0.6, rotate: 10 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 14 }}>
+              <SipIcon text={name} size={104} radius={0} />
+            </motion.div>
           </div>
+        </div>
+
+        {sip.data.summary && (
+          <p style={{ padding: '16px 24px 0', fontSize: 15, lineHeight: 1.5, color: 'var(--muted)' }}>
+            {sip.data.summary} <span style={{ whiteSpace: 'nowrap' }}>· {duration(flat.length)}</span>
+          </p>
         )}
+
+        <motion.div variants={list} initial="hidden" animate="show" style={{ padding: '6px 12px 0', display: 'flex', flexDirection: 'column' }}>
+          {modules.map((m) => (
+            <motion.section key={m.id} variants={item} style={{ display: 'flex', flexDirection: 'column', marginTop: 14 }}>
+              <span style={{ padding: '0 12px 6px', fontSize: 13, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', color: m.lessons.some((l) => stateOf(l) !== 'locked') ? 'var(--faint)' : '#C4BAB0' }}>
+                Module {m.position} · {m.title} · {m.lessons.length * LESSON_MINUTES} min
+              </span>
+              {m.lessons.map((l) => {
+                const st = stateOf(l)
+                return st === 'now' ? (
+                  <NowCard key={l.id} ref={nowRef} lesson={l} index={flat.indexOf(l)} unlocking={!!justCompleted} onOpen={() => nav(`/lessons/${l.id}`)} />
+                ) : (
+                  <LessonRow key={l.id} lesson={l} index={flat.indexOf(l)} state={st} hint={now?.title} onOpen={() => nav(`/lessons/${l.id}`)} />
+                )
+              })}
+            </motion.section>
+          ))}
+          <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center' }}>
+            <DeleteButton
+              label={programId ? 'Supprimer ce chapitre' : 'Supprimer ce Sip'}
+              confirm={programId ? 'Tu pourras le régénérer depuis le programme (ça coûte une création).' : 'Ta progression sera perdue. Ça libère une place.'}
+              busy={remove.isPending}
+              onConfirm={() => remove.mutate()}
+            />
+          </div>
+        </motion.div>
       </div>
 
       <AnimatePresence>
-        {view === 'map' && nodes.length > 0 && nowIdx === -1 && (
+        {flat.length > 0 && nowIdx === -1 && (
           <motion.div
             key="finished"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 26, delay: justCompleted ? 1.2 : 0.3 }}
-            className="card"
-            style={{ position: 'absolute', zIndex: 3, left: 16, right: 16, bottom: 'calc(var(--safe-bottom) + 16px)', borderRadius: 28, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 26, delay: justCompleted ? 0.6 : 0.3 }}
+            style={{ position: 'absolute', zIndex: 3, left: 16, right: 16, bottom: 'calc(var(--safe-bottom) + 16px)', borderRadius: 28, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--surface)', boxShadow: '0 10px 30px rgba(29,26,23,.12)' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <Mascot mood="bravo" size={52} />
               <div>
-                <span style={{ fontSize: 17, fontWeight: 900 }}>{programId ? 'Chapitre terminé !' : 'Sip terminé !'}</span>
-                <p className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
+                <span className="display" style={{ fontSize: 18 }}>
+                  {programId ? 'Chapitre terminé !' : 'Sip terminé !'}
+                </span>
+                <p className="muted" style={{ fontSize: 14 }}>
                   {programId ? 'La suite de ton programme t’attend.' : 'Envie d’aller plus loin sur ce sujet ?'}
                 </p>
               </div>
@@ -277,379 +197,116 @@ export function SipMap() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <header style={{ position: 'absolute', zIndex: 2, left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(241,237,231,0))' }}>
-        <IconButton label="Retour" onClick={() => nav(programId ? `/programs/${programId}` : '/')}>
-          {Icon.back}
-        </IconButton>
-        <div className="card" style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 23, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
-          <span style={{ fontWeight: 900, fontSize: 15, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {sip.data?.chapter && <span style={{ color: 'var(--muted)' }}>Ch. {sip.data.chapter} · </span>}
-            {sip.data?.title ?? ''}
-          </span>
-          <motion.span key={totalStars} initial={{ scale: 1.5 }} animate={{ scale: 1 }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 900, fontSize: 14 }}>
-            <Star size={16} />
-            {totalStars}
-          </motion.span>
-        </div>
-        <IconButton label={view === 'map' ? 'Voir le programme' : 'Voir la carte'} onClick={toggleView}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span
-              key={view}
-              initial={{ scale: 0.4, rotate: -40, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              exit={{ scale: 0.4, rotate: 40, opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              style={{ display: 'grid' }}
-            >
-              {view === 'map' ? Icon.list : Icon.map}
-            </motion.span>
-          </AnimatePresence>
-        </IconButton>
-      </header>
     </Screen>
   )
 }
 
-function ProgramList({
-  modules,
-  nodes,
-  summary,
-  onOpen,
-  footer,
-}: {
-  modules: ModuleOut[]
-  nodes: Node[]
-  summary: string | null
-  onOpen: (lessonId: string) => void
-  footer?: ReactNode
-}) {
-  const byId = new Map(nodes.map((n) => [n.lesson.id, n]))
+function NowCard({ ref, lesson, index, unlocking, onOpen }: { ref: React.Ref<HTMLDivElement>; lesson: LessonBrief; index: number; unlocking: boolean; onOpen: () => void }) {
+  const preparing = lesson.status !== 'ready'
   return (
     <motion.div
-      className="scroll"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 16 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        zIndex: 1,
-        background: 'var(--bg)',
-        padding: 'calc(var(--safe-top) + 88px) 20px 60px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 26,
-      }}
+      ref={ref}
+      initial={unlocking ? { scale: 0.8, opacity: 0 } : false}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 14, delay: unlocking ? 0.4 : 0 }}
+      style={{ margin: '4px 0' }}
     >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 4px' }}>
-        {[`${nodes.length} leçons`, duration(nodes.length), `${modules.length} module${modules.length > 1 ? 's' : ''}`].map((t) => (
-          <span key={t} className="chip" style={{ background: 'var(--surface)', color: 'var(--ink-soft)', boxShadow: '0 0 0 1px rgba(43,38,32,.06)' }}>
-            {t}
-          </span>
-        ))}
-      </div>
-      {summary && (
-        <p className="muted" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, padding: '0 4px' }}>
-          {summary}
-        </p>
-      )}
-      {modules.map((m) => {
-        const [bg, ink] = MODULE_COLORS[(m.position - 1) % MODULE_COLORS.length]
-        const done = m.lessons.filter((l) => l.completed).length
-        return (
-          <section key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
-              <span className="chip" style={{ background: bg, color: ink, flexShrink: 0 }}>
-                Module {m.position}
-              </span>
-              <h2 style={{ fontSize: 17, fontWeight: 900, lineHeight: 1.3, flex: 1 }}>{m.title}</h2>
-              <span className="muted" style={{ fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
-                {done}/{m.lessons.length} · {m.lessons.length * LESSON_MINUTES} min
-              </span>
-            </div>
-            <div className="card" style={{ borderRadius: 24, padding: 6, display: 'flex', flexDirection: 'column' }}>
-              {m.lessons.map((l) => {
-                const n = byId.get(l.id)
-                const state = n?.state ?? 'locked'
-                const open = state !== 'locked'
-                return (
-                  <motion.button
-                    key={l.id}
-                    disabled={!open}
-                    aria-label={open ? undefined : `${l.title} (verrouillée)`}
-                    onClick={() => {
-                      play('tap')
-                      onOpen(l.id)
-                    }}
-                    whileTap={open ? { scale: 0.98 } : undefined}
-                    style={{
-                      border: 'none',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      padding: 12,
-                      borderRadius: 18,
-                      background: state === 'now' ? 'var(--peach-soft)' : 'transparent',
-                      cursor: open ? 'pointer' : 'default',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 17,
-                        flexShrink: 0,
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: 14,
-                        fontWeight: 900,
-                        background: state === 'done' ? 'var(--mint)' : state === 'now' ? 'var(--peach)' : 'var(--track)',
-                        color: state === 'done' ? 'var(--mint-ink)' : 'var(--ink)',
-                      }}
-                    >
-                      {state === 'done' ? (
-                        Icon.check(16)
-                      ) : state === 'now' ? (
-                        (n?.index ?? 0) + 1
-                      ) : (
-                        <span style={{ transform: 'scale(.75)', display: 'grid' }}>{Icon.lock}</span>
-                      )}
-                    </span>
-                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.3, color: open ? 'var(--ink)' : 'var(--muted)' }}>{l.title}</span>
-                      <span className="muted" style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>
-                        {l.objective}
-                      </span>
-                    </span>
-                    {state === 'done' && (
-                      <span style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
-                        {[1, 2, 3].map((i) => (
-                          <Star key={i} size={12} filled={(l.stars ?? 0) >= i} />
-                        ))}
-                      </span>
-                    )}
-                  </motion.button>
-                )
-              })}
-            </div>
-          </section>
-        )
-      })}
-      {footer}
-    </motion.div>
-  )
-}
-
-function ModuleBanner({ node, width, fresh }: { node: Node; width: number; fresh: boolean }) {
-  const [bg, ink] = MODULE_COLORS[(node.module.position - 1) % MODULE_COLORS.length]
-  const reached = node.state !== 'locked'
-  return (
-    <motion.div
-      initial={fresh ? { opacity: 0, scale: 0.8 } : false}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: fresh ? 0.15 + node.index * 0.05 : 0 }}
-      style={{ position: 'absolute', left: 0, width, top: node.y + 58, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}
-    >
-      <span
-        className={reached ? undefined : 'well'}
-        style={{
-          maxWidth: width - 60,
-          padding: '8px 16px',
-          borderRadius: 18,
-          background: reached ? bg : undefined,
-          color: reached ? ink : 'var(--muted)',
-          fontSize: 13,
-          fontWeight: 900,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        Module {node.module.position} · {node.module.title}
-      </span>
-    </motion.div>
-  )
-}
-
-function MapNode({
-  node,
-  width,
-  appearDelay,
-  unlocking,
-  onOpen,
-  lockedHint,
-}: {
-  node: Node
-  width: number
-  appearDelay: number
-  unlocking: boolean
-  onOpen: () => void
-  lockedHint?: string
-}) {
-  const shake = useAnimationControls()
-  const [hint, setHint] = useState(false)
-  const size = node.state === 'now' ? NODE_NOW : NODE
-  const left = node.x - size / 2
-  const top = node.y - size / 2
-  const spaceRight = width - (node.x + size / 2 + 16) - 12
-  const spaceLeft = node.x - size / 2 - 16 - 12
-  const bubbleRight = spaceRight >= spaceLeft
-  const bubbleW = Math.min(200, Math.max(spaceRight, spaceLeft))
-  const mascotLeft = Math.min(
-    Math.max(4, bubbleRight ? node.x - size / 2 - MASCOT - 2 : node.x + size / 2 + 2),
-    width - MASCOT - 4,
-  )
-  const preparing = node.lesson.status !== 'ready'
-
-  const common = {
-    position: 'absolute' as const,
-    left,
-    top,
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    border: 'none',
-    display: 'grid',
-    placeItems: 'center',
-  }
-
-  if (node.state === 'locked') {
-    return (
-      <>
-        <motion.button
-          aria-label={`${node.lesson.title} (verrouillée)`}
-          className="inset"
-          animate={shake}
-          initial={appearDelay ? { scale: 0 } : false}
-          whileInView={{ scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ type: 'spring', stiffness: 400, damping: 18, delay: appearDelay }}
-          onClick={() => {
-            play('wrong')
-            haptic(20)
-            setHint(true)
-            void shake.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.35 } })
-            setTimeout(() => setHint(false), 1800)
-          }}
-          style={{ ...common, background: 'var(--bg)' }}
-        >
-          {Icon.lock}
-        </motion.button>
-        <AnimatePresence>
-          {hint && (
-            <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 4 }}
-              className="raised-sm"
-              style={{ position: 'absolute', top: top - 54, left: Math.min(Math.max(12, node.x - 110), width - 232), width: 220, borderRadius: 16, padding: '8px 12px', fontSize: 13, fontWeight: 800, textAlign: 'center', zIndex: 5 }}
-            >
-              Termine d’abord « {lockedHint} »
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </>
-    )
-  }
-
-  if (node.state === 'done') {
-    return (
-      <>
-        <motion.button
-          aria-label={`${node.lesson.title}, terminée, ${node.lesson.stars ?? 0} étoiles`}
-          initial={appearDelay ? { scale: 0 } : false}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 16, delay: appearDelay }}
-          whileTap={{ scale: 0.9, y: 4 }}
-          onClick={() => {
-            play('tap')
-            onOpen()
-          }}
-          style={{ ...common, background: 'var(--mint)', boxShadow: '0 6px 0 var(--mint-lip), 6px 10px 16px var(--shadow-dark), -6px -6px 14px var(--shadow-light)' }}
-        >
-          {Icon.check(26, '#2F7A52')}
-        </motion.button>
-        <div aria-hidden="true" style={{ position: 'absolute', left: node.x - 30, top: top + size + 6, width: 60, display: 'flex', justifyContent: 'center', gap: 2 }}>
-          {[0, 1, 2].map((i) => (
-            <Star key={i} size={15} filled={(node.lesson.stars ?? 0) > i} />
-          ))}
-        </div>
-      </>
-    )
-  }
-
-  // current lesson
-  return (
-    <>
-      <motion.div
-        aria-hidden="true"
-        style={{ position: 'absolute', left: mascotLeft, top: node.y - 34, pointerEvents: 'none' }}
-        initial={{ opacity: 0, x: bubbleRight ? 12 : -12, scale: 0.6 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 16, delay: unlocking ? 1.25 : 0.3 }}
-      >
-        <Mascot mood={unlocking ? 'bravo' : 'hello'} size={MASCOT} />
-      </motion.div>
-      <span
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          left: node.x - (size + 16) / 2,
-          top: node.y + 3.5 - (size + 16) / 2,
-          width: size + 16,
-          height: size + 16,
-          borderRadius: '50%',
-          background: 'var(--peach)',
-          opacity: 0,
-          animation: 'halo 2s ease-out infinite',
-        }}
-      />
       <motion.button
-        aria-label={`Commencer : ${node.lesson.title}`}
-        initial={unlocking ? { scale: 0, rotate: -30 } : appearDelay ? { scale: 0 } : false}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 12, delay: unlocking ? 1.1 : appearDelay }}
-        whileTap={{ scale: 0.92, y: 6 }}
+        whileTap={{ scale: 0.97 }}
         onClick={() => {
           play('pop')
           haptic()
           onOpen()
         }}
-        style={{ ...common, background: 'var(--peach)', boxShadow: '0 7px 0 var(--peach-lip), 8px 14px 22px #D3CBBF, -6px -6px 14px var(--shadow-light)' }}
+        aria-label={`Commencer : ${lesson.title}`}
+        style={{ width: '100%', border: 'none', textAlign: 'left', borderRadius: 24, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--primary)', color: '#fff', position: 'relative', overflow: 'hidden' }}
       >
-        {Icon.play}
-      </motion.button>
-      <motion.button
-        onClick={() => {
-          play('tap')
-          onOpen()
-        }}
-        initial={{ opacity: 0, x: bubbleRight ? -14 : 14, scale: 0.9 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20, delay: unlocking ? 1.35 : 0.35 }}
-        className="raised"
-        style={{
-          position: 'absolute',
-          top: node.y - 38,
-          left: bubbleRight ? node.x + size / 2 + 16 : node.x - size / 2 - 16 - bubbleW,
-          width: bubbleW,
-          border: 'none',
-          borderRadius: 22,
-          padding: '12px 14px',
-          textAlign: 'left',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 900, color: '#B5582A', textTransform: 'uppercase', letterSpacing: '.05em' }}>
-          Leçon {node.index + 1} · {preparing ? 'je la prépare' : '5 min'}
+        <span style={{ position: 'absolute', right: -24, top: -24, width: 90, height: 90, borderRadius: 45, background: 'rgba(255,255,255,.12)' }} />
+        <span style={{ position: 'relative', width: 44, height: 44, borderRadius: 22, background: '#fff', color: 'var(--primary)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <span style={{ position: 'absolute', inset: -6, borderRadius: '50%', background: '#fff', opacity: 0, animation: 'halo 2s ease-out infinite' }} />
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 4l13 8-13 8z" fill="currentColor" />
+          </svg>
         </span>
-        <span style={{ fontWeight: 900, fontSize: 15, lineHeight: 1.25 }}>{node.lesson.title}</span>
+        <span style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,.82)' }}>
+            Leçon {index + 1} · {preparing ? 'je la prépare' : `${LESSON_MINUTES} min`}
+          </span>
+          <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>{lesson.title}</span>
+        </span>
+        <span style={{ position: 'relative', display: 'grid' }}>
+          <Mascot size={40} />
+        </span>
       </motion.button>
-    </>
+    </motion.div>
+  )
+}
+
+function LessonRow({ lesson, index, state, hint, onOpen }: { lesson: LessonBrief; index: number; state: LessonState; hint?: string; onOpen: () => void }) {
+  const shake = useAnimationControls()
+  const [showHint, setShowHint] = useState(false)
+  const done = state === 'done'
+  return (
+    <div style={{ position: 'relative' }}>
+      <motion.button
+        animate={shake}
+        whileTap={{ scale: 0.98 }}
+        aria-label={done ? undefined : `${lesson.title} (verrouillée)`}
+        onClick={() => {
+          if (done) {
+            play('tap')
+            onOpen()
+            return
+          }
+          play('wrong')
+          haptic(20)
+          setShowHint(true)
+          void shake.start({ x: [0, -6, 6, -4, 4, 0], transition: { duration: 0.35 } })
+          setTimeout(() => setShowHint(false), 1800)
+        }}
+        style={{ width: '100%', border: 'none', background: 'transparent', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 18 }}
+      >
+        <span
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            flexShrink: 0,
+            display: 'grid',
+            placeItems: 'center',
+            background: done ? 'var(--mint)' : 'var(--bg-deep)',
+            color: done ? 'var(--mint-ink)' : 'var(--faint)',
+            fontFamily: 'var(--display)',
+            fontWeight: 700,
+            fontSize: 15,
+          }}
+        >
+          {done ? Icon.check(16) : index + 1}
+        </span>
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, color: done ? 'var(--ink)' : '#A39A90' }}>{lesson.title}</span>
+          <span style={{ fontSize: 13, color: 'var(--faint)' }}>{done ? 'Revoir' : `${LESSON_MINUTES} min`}</span>
+        </span>
+        {done && (
+          <span style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+            {[1, 2, 3].map((i) => (
+              <Star key={i} size={13} filled={(lesson.stars ?? 0) >= i} />
+            ))}
+          </span>
+        )}
+      </motion.button>
+      <AnimatePresence>
+        {showHint && hint && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4 }}
+            style={{ position: 'absolute', zIndex: 4, left: 60, right: 12, top: -30, borderRadius: 14, padding: '8px 12px', fontSize: 13, fontWeight: 500, background: 'var(--ink)', color: '#fff' }}
+          >
+            Termine d’abord « {hint} »
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

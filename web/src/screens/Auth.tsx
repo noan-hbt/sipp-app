@@ -49,23 +49,25 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           {Icon.back}
         </IconButton>
       </header>
-      <div className="scroll" style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 26 }}>
+      <div className="scroll" style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         >
-          <div className="raised" style={{ width: 140, height: 140, borderRadius: 70, display: 'grid', placeItems: 'center' }}>
-            <Mascot mood={error ? 'oops' : 'hello'} size={104} />
+          <div style={{ width: 104, height: 104, borderRadius: 32, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
+            <Mascot mood={error ? 'oops' : 'hello'} size={80} />
           </div>
-          <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.02em' }}>Sipp</h1>
-          <p className="muted" style={{ fontSize: 17, fontWeight: 700, maxWidth: 280 }}>
-            {mode === 'register' ? 'Crée ton compte pour garder ton parcours et ta progression.' : 'Content de te revoir !'}
+          <h1 className="display" style={{ fontSize: 30, lineHeight: 1.08, marginTop: 8 }}>
+            {mode === 'register' ? 'Garde ton Sip au chaud' : 'Content de te revoir !'}
+          </h1>
+          <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
+            {mode === 'register' ? 'Crée ton compte pour retrouver ta leçon et continuer ton parcours.' : 'Connecte-toi pour reprendre là où tu en étais.'}
           </p>
         </motion.div>
 
-        <div className="inset" style={{ display: 'flex', borderRadius: 26, padding: 5, position: 'relative' }}>
+        <div style={{ display: 'flex', borderRadius: 26, padding: 4, position: 'relative', background: 'var(--bg-deep)' }}>
           {(['register', 'login'] as const).map((m) => (
             <button
               key={m}
@@ -81,7 +83,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
                 border: 'none',
                 background: 'transparent',
                 fontSize: 15,
-                fontWeight: 900,
+                fontWeight: 600,
                 position: 'relative',
                 color: mode === m ? 'var(--ink)' : 'var(--muted)',
               }}
@@ -89,8 +91,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
               {mode === m && (
                 <motion.span
                   layoutId="auth-pill"
-                  className="raised-sm"
-                  style={{ position: 'absolute', inset: 0, borderRadius: 22 }}
+                  style={{ position: 'absolute', inset: 0, borderRadius: 22, background: 'var(--surface)' }}
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
@@ -116,7 +117,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
             />
           </div>
           {error && (
-            <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ color: 'var(--rose-ink)', fontWeight: 800, fontSize: 15, textAlign: 'center' }}>
+            <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ color: 'var(--rose-ink)', fontWeight: 600, fontSize: 15, textAlign: 'center' }}>
               {error}
             </motion.p>
           )}

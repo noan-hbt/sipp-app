@@ -174,3 +174,4 @@ class StatsOut(BaseModel):
     completed_today: bool
     lessons_completed: int
     total_stars: int
+    week: list[bool] = Field(default_factory=list, description="Active days of the current week, Monday first.")

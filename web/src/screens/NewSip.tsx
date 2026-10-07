@@ -4,16 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { SipIcon } from '../components/SipIcon'
+import { Confetti } from './ProgramView'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
 
 const IDEAS = [
-  { label: 'La photo au smartphone', hint: 'Cadrer, la lumière, retoucher', text: 'Je veux apprendre les bases de la photo avec mon téléphone', bg: 'var(--lavender)', ink: 'var(--lavender-ink)' },
-  { label: 'Lire un bilan', hint: 'Actif, passif, résultat', text: 'Je veux savoir lire le bilan comptable d’une entreprise, je pars de zéro', bg: 'var(--mint)', ink: 'var(--mint-ink)' },
-  { label: 'Mieux dormir', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir', bg: 'var(--sky)', ink: 'var(--sky-ink)' },
-  { label: 'La Rome antique', hint: 'De la fondation à la chute', text: 'Je veux connaître les grandes étapes de l’histoire de la Rome antique', bg: 'var(--butter)', ink: 'var(--butter-ink)' },
-  { label: 'Créer sa boîte', hint: 'Un vrai programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise', bg: 'var(--peach-soft)', ink: 'var(--peach-ink)' },
+  { label: 'Créer sa boîte', hint: 'Un vrai programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise' },
+  { label: 'Lire un bilan', hint: 'Actif, passif, résultat', text: 'Je veux savoir lire le bilan comptable d’une entreprise, je pars de zéro' },
+  { label: 'Mieux dormir', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir' },
+  { label: 'Parler italien', hint: 'Les phrases du quotidien', text: 'Je veux tenir une conversation simple en italien' },
+  { label: 'Coder en Python', hint: 'Les bases, pas à pas', text: 'Je veux apprendre les bases de la programmation en Python' },
 ]
 
 /** One-tap details that help the AI aim right; each appends or removes its phrase. */
@@ -38,6 +40,8 @@ const ERRORS: Record<string, string> = {
   no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',
   monthly_limit: 'Tu as utilisé tes générations du mois. Reviens le mois prochain, ou passe à l’abonnement.',
 }
+
+const remaining = (n: number) => (n > 1 ? `${n} créations restantes` : n === 1 ? '1 création restante' : 'Plus de création ce mois-ci')
 
 export const WISH_KEY = 'sipp.wish'
 
@@ -117,17 +121,28 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
 
   return (
     <Screen>
-      <header className="topbar">
-        <IconButton label="Retour" onClick={() => nav(-1)}>
-          {Icon.back}
+      <header className="topbar" style={{ justifyContent: 'space-between' }}>
+        <IconButton label="Fermer" onClick={() => nav(-1)}>
+          {Icon.close}
         </IconButton>
+        {!guest && plan.data && plan.data.sips_per_month < 1000 && (
+          <span style={{ padding: '7px 13px', borderRadius: 15, background: 'var(--surface)', fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>
+            {remaining(plan.data.sips_per_month - plan.data.sips_this_month)}
+          </span>
+        )}
       </header>
 
-      <div className="scroll" style={{ padding: '4px 22px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <h1 className="title-xl">Qu’est-ce que tu veux apprendre ?</h1>
-          <p className="muted" style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.45 }}>
-            Un sujet, un objectif, ton niveau. Je construis le parcours.
+      <div className="scroll" style={{ padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
+          <div style={{ position: 'relative', width: 128, height: 128, borderRadius: 64, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
+            <Confetti seed={1} />
+            <Mascot size={92} />
+          </div>
+          <h1 className="title-xl" style={{ fontSize: 28 }}>
+            Qu’est-ce qu’on apprend ?
+          </h1>
+          <p className="muted" style={{ fontSize: 16, lineHeight: 1.45, maxWidth: 320 }}>
+            Ton sujet, ton niveau, et pourquoi. Je te prépare un Sip ou un programme sur mesure.
           </p>
         </motion.div>
 
@@ -136,10 +151,10 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           animate={create.isError ? { x: [0, -8, 8, -4, 0], opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className="card"
-          style={{ borderRadius: 26, padding: '16px 18px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}
+          style={{ borderRadius: 24, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: 'inset 0 0 0 2px var(--line-strong)' }}
         >
           <div style={{ position: 'relative' }}>
-            <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--muted)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">
+            <span style={{ fontSize: 19, fontWeight: 500, color: 'var(--faint)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">
               {!text && 'Je veux '}
               {!text && (
                 <AnimatePresence mode="wait">
@@ -153,7 +168,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
               id="wish"
               ref={input}
               aria-label="Ce que tu veux apprendre"
-              rows={4}
+              rows={3}
               maxLength={4000}
               autoFocus
               value={text}
@@ -161,10 +176,10 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                 setText(e.target.value)
                 if (create.isError) create.reset()
               }}
-              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 20, fontWeight: 800, lineHeight: 1.4, color: 'var(--ink)', padding: 0, fontFamily: 'inherit' }}
+              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 19, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink)', padding: 0, fontFamily: 'inherit' }}
             />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10, borderTop: '1px solid rgba(43,38,32,.07)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10, borderTop: '1.5px solid var(--bg-deep)' }}>
             {DETAILS.map((d) => {
               const on = hasDetail(text, d.text)
               return (
@@ -186,11 +201,11 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                     height: 32,
                     padding: '0 12px',
                     borderRadius: 16,
-                    border: on ? '1.5px solid var(--peach-lip)' : '1.5px solid rgba(43,38,32,.1)',
-                    background: on ? 'var(--peach-soft)' : 'transparent',
-                    color: on ? 'var(--peach-ink)' : 'var(--ink-soft)',
+                    border: 'none',
+                    background: on ? 'var(--primary)' : 'var(--bg-deep)',
+                    color: on ? '#fff' : 'var(--ink-soft)',
                     fontSize: 13,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
@@ -213,44 +228,35 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 20, background: 'var(--rose-soft)' }}
             >
               <Mascot mood="oops" size={40} />
-              <p style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.4, color: '#4A2430' }}>{err}</p>
+              <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: 'var(--rose-ink)' }}>{err}</p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>En panne d’idée ?</span>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', margin: '0 -22px', padding: '2px 22px 8px', scrollSnapType: 'x mandatory', scrollPaddingLeft: 22, scrollbarWidth: 'none' }}>
-            {IDEAS.map((idea, i) => (
-              <motion.button
-                key={idea.label}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.15 + i * 0.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => pick(idea.text)}
-                style={{
-                  flex: '0 0 auto',
-                  width: 150,
-                  minHeight: 96,
-                  scrollSnapAlign: 'start',
-                  border: 'none',
-                  borderRadius: 22,
-                  padding: '14px 14px',
-                  background: idea.bg,
-                  color: idea.ink,
-                  textAlign: 'left',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: 8,
-                }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 900, lineHeight: 1.25 }}>{idea.label}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.85, lineHeight: 1.3 }}>{idea.hint}</span>
-              </motion.button>
-            ))}
-          </div>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span className="display" style={{ fontSize: 18, margin: '0 6px' }}>
+            En panne d’idée ?
+          </span>
+          {IDEAS.map((idea, i) => (
+            <motion.button
+              key={idea.label}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.15 + i * 0.05 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => pick(idea.text)}
+              style={{ border: 'none', borderRadius: 22, padding: '10px 14px 10px 10px', background: 'var(--surface)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}
+            >
+              <SipIcon text={idea.text} size={46} />
+              <span style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{idea.label}</span>
+                <span style={{ fontSize: 13, color: 'var(--faint)' }}>{idea.hint}</span>
+              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </motion.button>
+          ))}
         </section>
       </div>
 
@@ -265,7 +271,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           </Button>
         )}
         {!guest && plan.data?.lite && !paywall && (
-          <p className="muted" style={{ fontSize: 13, fontWeight: 700, textAlign: 'center', marginTop: 10 }}>
+          <p className="muted" style={{ fontSize: 13, textAlign: 'center', marginTop: 10 }}>
             Offre gratuite : un parcours court, préparé avec un modèle plus léger.
           </p>
         )}

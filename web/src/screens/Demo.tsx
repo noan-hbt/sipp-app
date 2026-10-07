@@ -39,13 +39,13 @@ export function Demo() {
           </motion.div>
           <h1 className="title-xl">Premier Sip bu !</h1>
           {done.total > 0 && (
-            <p className="muted" style={{ fontSize: 15, fontWeight: 700 }}>
+            <p className="muted" style={{ fontSize: 15, fontWeight: 500 }}>
               {done.correct} bonne{done.correct > 1 ? 's' : ''} réponse{done.correct > 1 ? 's' : ''} sur {done.total}
             </p>
           )}
         </div>
         <Takeaways objective={info.objective} points={info.points} action={info.action} mastered={mastered(done.correct, done.total)} delay={0.3} />
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', lineHeight: 1.45 }}>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ fontSize: 16, fontWeight: 600, textAlign: 'center', lineHeight: 1.45 }}>
           Et maintenant, le sujet de ton choix ? Je te prépare un parcours sur mesure, gratuitement.
         </motion.p>
       </div>

@@ -95,6 +95,7 @@ export interface Stats {
   completed_today: boolean
   lessons_completed: number
   total_stars: number
+  week?: boolean[]
 }
 export interface Chapter {
   position: number

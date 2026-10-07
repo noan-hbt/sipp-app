@@ -6,7 +6,7 @@ import { ConfirmSheet } from '../components/ConfirmSheet'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
-import { SipIcon } from '../components/SipIcon'
+import { SipIcon, sipPalette } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError, type Chapter, type Program } from '../lib/api'
 import { duration } from '../lib/format'
@@ -73,12 +73,12 @@ export function ProgramView() {
           </IconButton>
         </header>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
-          <div className="raised" style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center' }}>
+          <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
             <Mascot mood={p?.status === 'failed' ? 'oops' : 'think'} size={104} />
           </div>
           <h1 className="title-l">{p?.status === 'failed' ? 'La suite m’a résisté' : p ? 'Je dessine la suite…' : ''}</h1>
           {p?.status === 'generating' && (
-            <p className="muted" style={{ fontSize: 15, fontWeight: 700 }}>
+            <p className="muted" style={{ fontSize: 15 }}>
               Je cherche les prochaines étapes à partir de ce que tu as appris.
             </p>
           )}
@@ -96,8 +96,10 @@ export function ProgramView() {
 
   const section = (title: string, chapters: Chapter[]) =>
     chapters.length > 0 && (
-      <motion.section variants={item} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em', marginLeft: 4 }}>{title}</span>
+      <motion.section variants={item} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <span className="display" style={{ fontSize: 18, margin: '6px 6px 0' }}>
+          {title}
+        </span>
         {chapters.map((c) => (
           <ChapterCard
             key={c.position}
@@ -113,66 +115,115 @@ export function ProgramView() {
       </motion.section>
     )
 
+  const current = p.chapters.find((c) => chapterState(c, next) === 'current')
+  const pal = sipPalette(p.title)
   return (
     <Screen>
-      <header className="topbar">
-        <IconButton label="Retour" onClick={() => nav('/library', { replace: true })}>
-          {Icon.back}
-        </IconButton>
-      </header>
-      <div className="scroll" style={{ padding: '0 20px 48px' }}>
-        <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <motion.div variants={item} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <SipIcon id={p.id} size={62} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>Programme</span>
-                <h1 style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.15 }}>{p.title}</h1>
-              </div>
+      <div className="scroll" style={{ paddingBottom: 48 }}>
+        <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <motion.div variants={item} style={{ position: 'relative', borderRadius: '0 0 40px 40px', background: pal.bg, padding: 'calc(var(--safe-top) + 14px) 18px 22px', overflow: 'hidden' }}>
+            <Confetti />
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
+              <IconButton label="Retour" onClick={() => nav('/library', { replace: true })}>
+                {Icon.back}
+              </IconButton>
             </div>
-            {p.summary && (
-              <p className="muted" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5 }}>
-                {p.summary}
-              </p>
-            )}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {[`${p.chapters.length} chapitres`, duration(totalLessons), `${done}/${p.chapters.length} terminés`].map((t) => (
-                <span key={t} className="chip" style={{ background: 'var(--surface)', color: 'var(--ink-soft)', boxShadow: '0 0 0 1px rgba(43,38,32,.06)' }}>
-                  {t}
-                </span>
-              ))}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6 }}>
+              <motion.div initial={{ scale: 0.7, rotate: -8 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 14 }}>
+                <SipIcon text={p.title} size={140} radius={0} />
+              </motion.div>
+              <h1 className="display" style={{ fontSize: 26, lineHeight: 1.1 }}>
+                {p.title}
+              </h1>
+              {p.summary && <p style={{ fontSize: 15, lineHeight: 1.45, color: pal.ink }}>{p.summary}</p>}
             </div>
           </motion.div>
 
-          {p.status === 'adjusting' ? (
-            <motion.div variants={item} className="card" style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Mascot mood="think" size={44} />
-              <p style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.4 }}>J’ajuste la suite de ton programme selon ce que tu viens d’apprendre…</p>
-            </motion.div>
-          ) : (
-            p.note && (
-              <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lavender)' }}>
-                <Mascot mood="hello" size={44} />
-                <div>
-                  <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--lavender-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Programme ajusté</span>
-                  <p style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4, color: 'var(--ink)' }}>{p.note}</p>
+          <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <motion.div variants={item} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              {[
+                [`${done}/${p.chapters.length}`, 'chapitres faits', 'var(--butter)'],
+                [String(p.chapters.length), 'chapitres', 'var(--peach-soft)'],
+                [duration(totalLessons), 'au total', 'var(--mint)'],
+              ].map(([v, l, bg]) => (
+                <div key={l} style={{ borderRadius: 20, background: bg, padding: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span className="display" style={{ fontSize: 20 }}>
+                    {v}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>{l}</span>
                 </div>
+              ))}
+            </motion.div>
+
+            {current?.sip && (
+              <motion.div variants={item}>
+                <Button onClick={() => nav(`/sips/${current.sip!.id}`)}>Reprendre · chapitre {current.position}</Button>
               </motion.div>
-            )
-          )}
+            )}
 
-          {err && (
-            <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="well" style={{ borderRadius: 18, padding: '12px 14px', fontSize: 15, fontWeight: 800, color: 'var(--rose-ink)' }}>
-              {err}
-            </motion.p>
-          )}
+            {p.status === 'adjusting' ? (
+              <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)' }}>
+                <Mascot mood="think" size={44} />
+                <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>J’ajuste la suite de ton programme selon ce que tu viens d’apprendre…</p>
+              </motion.div>
+            ) : (
+              p.note && (
+                <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lavender)' }}>
+                  <Mascot mood="hello" size={44} />
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>Programme ajusté</span>
+                    <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink)' }}>{p.note}</p>
+                  </div>
+                </motion.div>
+              )
+            )}
 
-          {section(advanced.length ? 'Les bases' : 'Les chapitres', core)}
-          {section('Pour aller plus loin', advanced)}
-          <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère un emplacement." busy={remove.isPending} onConfirm={() => remove.mutate()} />
+            {err && (
+              <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ borderRadius: 18, padding: '12px 14px', fontSize: 15, fontWeight: 600, color: 'var(--rose-ink)', background: 'var(--rose-soft)' }}>
+                {err}
+              </motion.p>
+            )}
+
+            {section(advanced.length ? 'Les bases' : 'Le parcours', core)}
+            {section('Pour aller plus loin', advanced)}
+            <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère une place." busy={remove.isPending} onConfirm={() => remove.mutate()} />
+          </div>
         </motion.div>
       </div>
     </Screen>
+  )
+}
+
+/** Flat dots and stars scattered on colored headers. */
+export function Confetti({ seed = 0 }: { seed?: number }) {
+  const bits = [
+    { x: '8%', y: '38%', s: 14, c: 'var(--sun)', k: 'dot' },
+    { x: '86%', y: '30%', s: 20, c: 'var(--lavender-strong)', k: 'sq' },
+    { x: '80%', y: '78%', s: 22, c: '#fff', k: 'star' },
+    { x: '14%', y: '76%', s: 18, c: 'var(--coral)', k: 'star' },
+    { x: '92%', y: '58%', s: 10, c: 'var(--mint-strong)', k: 'dot' },
+  ]
+  return (
+    <>
+      {bits.map((b, i) => (
+        <motion.span
+          key={i}
+          aria-hidden="true"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1, rotate: b.k === 'sq' ? 18 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 12, delay: 0.15 + ((i + seed) % 5) * 0.06 }}
+          style={{ position: 'absolute', left: b.x, top: b.y, width: b.s, height: b.s, display: 'grid' }}
+        >
+          {b.k === 'star' ? (
+            <svg width={b.s} height={b.s} viewBox="0 0 24 24">
+              <path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill={b.c} />
+            </svg>
+          ) : (
+            <span style={{ width: '100%', height: '100%', borderRadius: b.k === 'dot' ? '50%' : 5, background: b.c }} />
+          )}
+        </motion.span>
+      ))}
+    </>
   )
 }
 
@@ -183,7 +234,7 @@ export function DeleteButton({ label, confirm, busy, onConfirm }: { label: strin
       <button
         disabled={busy}
         onClick={() => setOpen(true)}
-        style={{ alignSelf: 'center', border: 'none', background: 'none', height: 44, padding: '0 12px', fontSize: 14, fontWeight: 800, color: 'var(--rose-ink)' }}
+        style={{ alignSelf: 'center', border: 'none', background: 'none', height: 44, padding: '0 12px', fontSize: 14, fontWeight: 600, color: 'var(--rose-ink)' }}
       >
         {label}
       </button>
@@ -213,12 +264,12 @@ function ChapterCard({
   const tappable = !!s
   const badge =
     state === 'done'
-      ? { bg: 'var(--mint)', fg: 'var(--mint-ink)', lip: 'var(--mint-lip)' }
+      ? { bg: 'var(--mint)', fg: 'var(--mint-ink)' }
       : state === 'current' || state === 'building'
-        ? { bg: 'var(--peach)', fg: 'var(--ink)', lip: 'var(--peach-lip)' }
+        ? { bg: 'var(--primary)', fg: '#fff' }
         : state === 'next'
-          ? { bg: 'var(--surface)', fg: 'var(--ink)', lip: 'rgba(43,38,32,.12)' }
-          : { bg: 'var(--track)', fg: 'var(--muted)', lip: 'transparent' }
+          ? { bg: 'var(--primary-soft)', fg: 'var(--primary-ink)' }
+          : { bg: 'var(--bg-deep)', fg: 'var(--faint)' }
   return (
     <motion.div
       whileTap={tappable ? { scale: 0.98 } : undefined}
@@ -227,8 +278,16 @@ function ChapterCard({
         play('tap')
         onOpen()
       }}
-      className={state === 'later' ? 'well' : 'card'}
-      style={{ borderRadius: 24, padding: 14, display: 'flex', gap: 14, cursor: tappable ? 'pointer' : undefined, position: 'relative' }}
+      style={{
+        borderRadius: 24,
+        padding: 14,
+        display: 'flex',
+        gap: 14,
+        cursor: tappable ? 'pointer' : undefined,
+        position: 'relative',
+        background: state === 'current' ? 'var(--primary-soft)' : state === 'later' ? 'transparent' : 'var(--surface)',
+        boxShadow: state === 'later' ? 'inset 0 0 0 2px var(--line)' : 'none',
+      }}
     >
       <span
         style={{
@@ -240,29 +299,29 @@ function ChapterCard({
           placeItems: 'center',
           background: badge.bg,
           color: badge.fg,
-          boxShadow: `0 3px 0 ${badge.lip}`,
+          fontFamily: 'var(--display)',
           fontSize: 16,
-          fontWeight: 900,
+          fontWeight: 500,
         }}
       >
-        {state === 'done' ? Icon.check(16, '#2F7A52') : last && state === 'later' ? '★' : c.position}
+        {state === 'done' ? Icon.check(16, 'var(--mint-ink)') : last && state === 'later' ? '★' : c.position}
       </span>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.25, color: state === 'later' ? 'var(--ink-soft)' : 'var(--ink)' }}>{c.title}</span>
-        <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4, color: 'var(--muted)' }}>{c.outcome}</span>
+        <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25, color: state === 'later' ? 'var(--muted)' : 'var(--ink)' }}>{c.title}</span>
+        <span style={{ fontSize: 14, lineHeight: 1.4, color: 'var(--muted)' }}>{c.outcome}</span>
         {s && state !== 'building' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
             <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--track)' }}>
-              <div style={{ width: `${(s.progress.completed / Math.max(1, s.progress.total)) * 100}%`, height: '100%', borderRadius: 3, background: state === 'done' ? 'var(--mint-strong)' : 'var(--peach)' }} />
+              <div style={{ width: `${(s.progress.completed / Math.max(1, s.progress.total)) * 100}%`, height: '100%', borderRadius: 3, background: state === 'done' ? 'var(--mint-strong)' : 'var(--primary)' }} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>
               {s.progress.completed}/{s.progress.total}
             </span>
           </div>
         ) : state === 'building' ? (
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--peach-ink)' }}>{s?.status === 'failed' ? 'Raté, touche pour réessayer' : 'En préparation…'}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary-ink)' }}>{s?.status === 'failed' ? 'Raté, touche pour réessayer' : 'En préparation…'}</span>
         ) : (
-          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--muted)' }}>
+          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--faint)' }}>
             {c.estimated_lessons} leçons · {duration(c.estimated_lessons)}
           </span>
         )}

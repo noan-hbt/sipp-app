@@ -51,9 +51,11 @@ async def stats(session: AsyncSession, user: User, tz: str = "UTC") -> dict:
         dt = completed_at if completed_at.tzinfo else completed_at.replace(tzinfo=timezone.utc)
         days.add(dt.astimezone(zone).date())
     today = utcnow().astimezone(zone).date()
+    monday = today - timedelta(days=today.weekday())
     return {
         "streak_days": streak(days, today),
         "completed_today": today in days,
         "lessons_completed": len(rows),
         "total_stars": sum(s or 0 for _, s in rows),
+        "week": [monday + timedelta(days=i) in days for i in range(7)],
     }

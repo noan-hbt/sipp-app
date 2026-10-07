@@ -4,15 +4,15 @@ import { haptic, play } from '../lib/sound'
 
 type Variant = 'peach' | 'dark' | 'soft' | 'mint' | 'ghost'
 
-const VARIANTS: Record<Variant, { bg: string; color: string; lip: string; shadow?: string }> = {
-  peach: { bg: 'var(--peach)', color: 'var(--ink)', lip: 'var(--peach-lip)' },
-  dark: { bg: 'var(--ink)', color: '#F7F1E8', lip: '#000' },
-  mint: { bg: 'var(--mint)', color: 'var(--mint-ink)', lip: 'var(--mint-lip)' },
-  soft: { bg: 'var(--bg)', color: 'var(--ink)', lip: 'transparent', shadow: 'var(--raised)' },
-  ghost: { bg: 'transparent', color: 'var(--ink)', lip: 'transparent', shadow: 'none' },
+const VARIANTS: Record<Variant, { bg: string; color: string; shadow?: string }> = {
+  peach: { bg: 'var(--primary)', color: '#fff' },
+  dark: { bg: 'var(--ink)', color: '#fff' },
+  mint: { bg: 'var(--mint-lip)', color: '#fff' },
+  soft: { bg: 'var(--surface)', color: 'var(--ink)', shadow: 'inset 0 0 0 2px var(--line-strong)' },
+  ghost: { bg: 'transparent', color: 'var(--primary)', shadow: 'none' },
 }
 
-/** Chunky button: sinks onto its lip when pressed, with a tap sound. */
+/** Flat pill button: squishes a little when pressed, with a tap sound. */
 export function Button({
   variant = 'peach',
   children,
@@ -27,7 +27,6 @@ export function Button({
   sound?: 'tap' | 'pop' | null
 } & Omit<HTMLMotionProps<'button'>, 'children'>) {
   const v = VARIANTS[variant]
-  const lip = v.lip === 'transparent' ? 0 : 5
   return (
     <motion.button
       {...rest}
@@ -40,23 +39,23 @@ export function Button({
       }}
       initial={false}
       animate={{ opacity: disabled ? 0.45 : 1 }}
-      whileTap={disabled ? undefined : { y: lip, scale: 0.985 }}
+      whileTap={disabled ? undefined : { scale: 0.96 }}
       whileHover={disabled ? undefined : { scale: 1.01 }}
       transition={{ type: 'spring', stiffness: 700, damping: 30 }}
       style={{
-        height: 60,
+        height: 56,
         width: '100%',
-        borderRadius: 30,
+        borderRadius: 28,
         border: 'none',
         background: v.bg,
         color: v.color,
-        fontSize: 18,
-        fontWeight: 900,
+        fontSize: 17,
+        fontWeight: 600,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        boxShadow: v.shadow ?? `0 ${lip}px 0 ${v.lip}, 0 12px 20px rgba(120,80,40,.18)`,
+        boxShadow: v.shadow ?? 'none',
         cursor: disabled ? 'default' : 'pointer',
         ...style,
       }}
@@ -66,7 +65,7 @@ export function Button({
   )
 }
 
-/** Round neumorphic icon button. */
+/** Small rounded-square icon button. */
 export function IconButton({ label, children, onClick }: { label: string; children: ReactNode; onClick?: () => void }) {
   return (
     <motion.button
@@ -76,7 +75,7 @@ export function IconButton({ label, children, onClick }: { label: string; childr
         haptic()
         onClick?.()
       }}
-      whileTap={{ scale: 0.9, boxShadow: 'var(--inset-sm)' }}
+      whileTap={{ scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 600, damping: 25 }}
     >
       {children}
@@ -84,31 +83,21 @@ export function IconButton({ label, children, onClick }: { label: string; childr
   )
 }
 
-export function ProgressBar({ value, color = 'var(--peach)', height = 16 }: { value: number; color?: string; height?: number }) {
+export function ProgressBar({ value, color = 'var(--primary)', height = 10 }: { value: number; color?: string; height?: number }) {
   return (
     <div
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(value * 100)}
-      style={{ flex: 1, height, borderRadius: height / 2, padding: 3, background: 'var(--track)' }}
+      style={{ flex: 1, height, borderRadius: height / 2, background: 'var(--track)', overflow: 'hidden' }}
     >
       <motion.div
         initial={false}
         animate={{ width: `${Math.max(value, 0.04) * 100}%` }}
         transition={{ type: 'spring', stiffness: 120, damping: 18 }}
-        style={{ height: '100%', borderRadius: (height - 6) / 2, background: color, position: 'relative', overflow: 'hidden' }}
-      >
-        <span
-          style={{
-            position: 'absolute',
-            inset: '2px 6px auto',
-            height: Math.max(2, (height - 6) / 3),
-            borderRadius: 4,
-            background: 'rgba(255,255,255,.35)',
-          }}
-        />
-      </motion.div>
+        style={{ height: '100%', borderRadius: height / 2, background: color }}
+      />
     </div>
   )
 }
@@ -132,9 +121,7 @@ export function Star({ size = 16, filled = true, delay = 0, animate = false }: {
     >
       <path
         d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6L2.5 9.3l6.6-.8z"
-        fill={filled ? 'var(--star)' : 'var(--bg-deep)'}
-        stroke={filled ? '#D9A42C' : 'var(--shadow-dark)'}
-        strokeWidth="1.2"
+        fill={filled ? 'var(--star)' : 'var(--line)'}
         strokeLinejoin="round"
       />
     </motion.svg>
@@ -180,7 +167,8 @@ export const Icon = {
   ),
   flame: (
     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-7 0 2 1 3 2 3 0-3-1-5 1-8z" fill="var(--peach)" />
+      <path d="M12 2c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-7 0 2 1 3 2 3 0-3-1-5 1-8z" fill="var(--coral)" />
+      <path d="M12 12c.5 2 3 3 3 5.5a3 3 0 01-6 0c0-1.5 1-2.5 1.5-3.5.5 1 1 1.5 1.5 1.5z" fill="var(--sun)" />
     </svg>
   ),
   sound: (on: boolean) => (
@@ -211,18 +199,13 @@ export const Icon = {
     </svg>
   ),
   today: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5 10h12v5a5 5 0 01-5 5h-2a5 5 0 01-5-5z" />
-      <path d="M17 11.5h1a2.5 2.5 0 010 5h-1.4" />
-      <path d="M9 3.5c-.9 1 .9 1.7 0 2.8M13 3.5c-.9 1 .9 1.7 0 2.8" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.2l8.5 6.6V20a1 1 0 01-1 1H15v-6H9v6H4.5a1 1 0 01-1-1V9.8z" />
     </svg>
   ),
   library: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3.5" y="3.5" width="7" height="7" rx="2.2" />
-      <rect x="13.5" y="3.5" width="7" height="7" rx="2.2" />
-      <rect x="3.5" y="13.5" width="7" height="7" rx="2.2" />
-      <path d="M17 14v6M14 17h6" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h5v16H4zM10.5 4h5v16h-5zM17.5 5l3 .8-3.6 14.4-3-.8" />
     </svg>
   ),
 }

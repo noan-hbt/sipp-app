@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { Confetti } from './ProgramView'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, type SipDetail } from '../lib/api'
 import { duration } from '../lib/format'
@@ -124,7 +125,7 @@ export function Generating() {
               {failed ? 'Oups, j’ai buggé' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
             </motion.h1>
           </AnimatePresence>
-          <p className="muted" style={{ fontSize: 15, fontWeight: 700, maxWidth: 320 }}>
+          <p className="muted" style={{ fontSize: 15, maxWidth: 320 }}>
             {failed ? 'Ça arrive. Relance, ça ne te coûte rien.' : sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
           </p>
           {!failed && facts.length > 0 && (
@@ -136,7 +137,7 @@ export function Generating() {
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.1 + i * 0.1 }}
                   className="chip"
-                  style={{ background: 'var(--surface)', color: 'var(--ink-soft)', fontSize: 13, boxShadow: '0 0 0 1px rgba(43,38,32,.06)' }}
+                  style={{ background: 'var(--surface)', color: 'var(--ink-soft)', fontSize: 13 }}
                 >
                   {clip(f, 42)}
                 </motion.span>
@@ -151,8 +152,8 @@ export function Generating() {
           </Button>
         ) : (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em', marginLeft: 4 }}>
-              Ton parcours{lessons > 0 && <span style={{ color: 'var(--muted)' }}> · {lessons} leçons · {duration(lessons)}</span>}
+            <span className="display" style={{ fontSize: 18, marginLeft: 6 }}>
+              Ton parcours{lessons > 0 && <span style={{ fontFamily: 'var(--font)', fontWeight: 500, fontSize: 14, letterSpacing: 0, color: 'var(--muted)' }}> · {lessons} leçons · {duration(lessons)}</span>}
             </span>
             {outline.length === 0
               ? [0, 1, 2].map((i) => <GhostRow key={i} delay={i * 0.15} />)
@@ -160,7 +161,7 @@ export function Generating() {
           </section>
         )}
 
-        <p className="muted" style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, fontWeight: 700 }}>
+        <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, color: 'var(--faint)' }}>
           Tu peux fermer l’app, je continue sans toi.
         </p>
       </div>
@@ -193,17 +194,17 @@ function Brew({ from, to, failed, done }: { from: number; to: number; failed: bo
   const size = 168
   return (
     <motion.div
-      className="raised"
       animate={done ? { scale: [1, 1.07, 1] } : {}}
       transition={{ duration: 0.6 }}
-      style={{ width: size + 20, height: size + 20, borderRadius: '50%', display: 'grid', placeItems: 'center', marginTop: 4 }}
+      style={{ position: 'relative', width: size + 56, height: size + 56, borderRadius: '50%', display: 'grid', placeItems: 'center', marginTop: 4, background: failed ? 'var(--rose-soft)' : 'var(--peach-soft)' }}
     >
-      <div className="inset" style={{ width: size, height: size, borderRadius: '50%', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center' }}>
+      <Confetti seed={3} />
+      <div style={{ width: size, height: size, borderRadius: '50%', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', background: 'var(--surface)' }}>
         <motion.div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: size * 2, y }}>
           <svg width={size * 2} height="16" viewBox="0 0 336 16" style={{ display: 'block', animation: 'wave 2.4s linear infinite' }}>
-            <path d="M0 8 Q 21 0 42 8 T 84 8 T 126 8 T 168 8 T 210 8 T 252 8 T 294 8 T 336 8 V16 H0 Z" fill={failed ? '#F3C9D2' : '#EAD8C3'} />
+            <path d="M0 8 Q 21 0 42 8 T 84 8 T 126 8 T 168 8 T 210 8 T 252 8 T 294 8 T 336 8 V16 H0 Z" fill={failed ? '#FFC9BC' : '#FFD7BD'} />
           </svg>
-          <div style={{ height: size * 2, marginTop: -1, background: failed ? '#F3C9D2' : '#EAD8C3' }} />
+          <div style={{ height: size * 2, marginTop: -1, background: failed ? '#FFC9BC' : '#FFD7BD' }} />
         </motion.div>
         <div style={{ position: 'relative' }}>
           <Mascot mood={failed ? 'oops' : done ? 'bravo' : 'think'} size={104} />
@@ -216,10 +217,9 @@ function Brew({ from, to, failed, done }: { from: number; to: number; failed: bo
 function GhostRow({ delay }: { delay: number }) {
   return (
     <motion.div
-      className="well"
       animate={{ opacity: [0.45, 0.9, 0.45] }}
       transition={{ duration: 1.6, repeat: Infinity, delay }}
-      style={{ height: 58, borderRadius: 20 }}
+      style={{ height: 58, borderRadius: 20, background: 'var(--bg-deep)' }}
     />
   )
 }
@@ -235,16 +235,16 @@ function ModuleRow({ index, title, state }: { index: number; title: string; stat
       className="card"
       style={{ borderRadius: 20, padding: '10px 14px 10px 10px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 58 }}
     >
-      <span style={{ width: 38, height: 38, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center', background: bg, color: ink, fontSize: 16, fontWeight: 900 }}>{index + 1}</span>
-      <span style={{ flex: 1, fontSize: 15, fontWeight: 800, lineHeight: 1.3, color: state === 'todo' ? 'var(--muted)' : 'var(--ink)' }}>{title}</span>
+      <span style={{ width: 38, height: 38, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center', background: bg, color: ink, fontFamily: 'var(--display)', fontSize: 16, fontWeight: 500 }}>{index + 1}</span>
+      <span style={{ flex: 1, fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: state === 'todo' ? 'var(--faint)' : 'var(--ink)' }}>{title}</span>
       <span style={{ width: 26, height: 26, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         <AnimatePresence mode="wait">
           {state === 'done' ? (
             <motion.span key="d" initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 15 }} style={{ width: 26, height: 26, borderRadius: 13, background: 'var(--mint)', display: 'grid', placeItems: 'center' }}>
-              {Icon.check(14, '#2F7A52')}
+              {Icon.check(14, 'var(--mint-ink)')}
             </motion.span>
           ) : state === 'active' ? (
-            <motion.span key="a" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ width: 20, height: 20, borderRadius: 10, border: '3px solid var(--track)', borderTopColor: 'var(--peach-lip)' }} />
+            <motion.span key="a" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} style={{ width: 20, height: 20, borderRadius: 10, border: '3px solid var(--track)', borderTopColor: 'var(--primary)' }} />
           ) : null}
         </AnimatePresence>
       </span>

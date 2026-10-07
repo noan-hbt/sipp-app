@@ -34,6 +34,8 @@ async def test_complete_gives_stars_and_streak(auth_client):
     r = await auth_client.post(f"/lessons/{l1['id']}/complete", json={"score": {"correct": 0, "total": 2}})
     assert r.json()["stars"] == 2
     s = (await auth_client.get("/auth/me/stats?tz=Europe/Paris")).json()
+    week = s.pop("week")
+    assert len(week) == 7 and sum(week) == 1
     assert s == {"streak_days": 1, "completed_today": True, "lessons_completed": 1, "total_stars": 2}
     assert (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["lessons"][0]["stars"] == 2
 

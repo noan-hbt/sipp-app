@@ -30,7 +30,7 @@ function Header({ tag, bg, ink, children }: { tag: string; bg: string; ink: stri
       <span className="tag" style={{ background: bg, color: ink }}>
         {tag}
       </span>
-      {children && <h2 style={{ fontSize: 21, fontWeight: 900, lineHeight: 1.3 }}>{children}</h2>}
+      {children && <h2 style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.3 }}>{children}</h2>}
     </>
   )
 }
@@ -62,7 +62,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Header tag="Complète" bg="var(--butter)" ink="var(--butter-ink)" />
-      <p style={{ fontSize: 19, fontWeight: 700, lineHeight: 2.1 }}>
+      <p style={{ fontSize: 19, fontWeight: 500, lineHeight: 2.1 }}>
         {parts.map((part, i) => {
           if (i % 2 === 0) return <RichText key={i} text={part} />
           const slot = Number(part) - 1
@@ -86,13 +86,13 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
                 padding: '2px 12px',
                 borderRadius: 12,
                 fontSize: 17,
-                fontWeight: 900,
+                fontWeight: 700,
                 justifyContent: 'center',
                 border: 'none',
                 borderBottom: v ? 'none' : '3px solid var(--faint)',
                 background: ok === true ? 'var(--mint)' : ok === false ? 'var(--rose)' : v ? 'var(--peach-soft)' : 'var(--track)',
                 color: ok === true ? '#1F5136' : ok === false ? '#6E2236' : 'var(--ink)',
-                boxShadow: v && ok === null ? '0 3px 0 #EBC09F' : 'none',
+                boxShadow: 'none',
                 textDecoration: ok === false ? 'line-through' : 'none',
               }}
             >
@@ -103,7 +103,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
       </p>
       {answered ? (
         b.blanks.some((x, i) => !same(values[i], x.answer)) && (
-          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: 15, fontWeight: 800, color: 'var(--mint-ink)' }}>
+          <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: 15, fontWeight: 600, color: 'var(--mint-ink)' }}>
             Réponse : {b.blanks.map((x) => x.answer).join(' · ')}
           </motion.p>
         )
@@ -127,7 +127,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
                     padding: '10px 16px',
                     borderRadius: 16,
                     fontSize: 16,
-                    fontWeight: 800,
+                    fontWeight: 600,
                     background: used ? 'var(--track)' : 'var(--bg)',
                   }}
                 >
@@ -196,12 +196,12 @@ function MatchItem({
         padding: '10px 12px',
         borderRadius: 18,
         fontSize: 15,
-        fontWeight: 800,
+        fontWeight: 600,
         lineHeight: 1.3,
         border: state === 'selected' ? '2px solid var(--peach)' : '2px solid transparent',
         background: state === 'done' ? color![0] : state === 'selected' ? 'var(--peach-soft)' : 'var(--bg)',
         color: state === 'done' ? color![1] : 'var(--ink)',
-        boxShadow: state === 'selected' ? '0 4px 0 #EBC09F' : undefined,
+        boxShadow: state === 'selected' ? 'inset 0 0 0 2px var(--primary)' : undefined,
         transition: 'background .25s, color .25s, border-color .2s',
       }}
     >
@@ -267,7 +267,7 @@ export function Match({ b, answer, onAnswer }: { b: B.MatchBlock; answer?: Answe
       </div>
       <AnimatePresence>
         {!answered && mistakes > 0 && (
-          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)', textAlign: 'center' }}>
+          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', textAlign: 'center' }}>
             {mistakes} erreur{mistakes > 1 ? 's' : ''}
           </motion.span>
         )}
@@ -325,10 +325,10 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
         key={answered ? 'a' : 'q'}
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        style={{ textAlign: 'center', fontSize: 40, fontWeight: 900, letterSpacing: '-0.02em', color: ok === null ? 'var(--ink)' : ok ? 'var(--mint-ink)' : 'var(--rose-ink)' }}
+        style={{ textAlign: 'center', fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', color: ok === null ? 'var(--ink)' : ok ? 'var(--mint-ink)' : 'var(--rose-ink)' }}
       >
         {fmt(guess, b.step)}
-        <span style={{ fontSize: 20, fontWeight: 800 }}>{unit}</span>
+        <span style={{ fontSize: 20, fontWeight: 600 }}>{unit}</span>
       </motion.div>
 
       <div style={{ position: 'relative', height: 44, margin: '0 6px' }}>
@@ -363,7 +363,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
             marginLeft: -16,
             borderRadius: 16,
             background: answered ? (ok ? 'var(--mint-strong)' : '#E79AAA') : 'var(--peach)',
-            boxShadow: `0 4px 0 ${answered ? (ok ? 'var(--mint-lip)' : '#C97B8C') : 'var(--peach-lip)'}, 0 6px 12px rgba(120,80,40,.2)`,
+            boxShadow: '0 4px 10px rgba(29,26,23,.15)',
             pointerEvents: 'none',
           }}
         />
@@ -392,7 +392,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
           />
         )}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, color: 'var(--muted)', margin: '-8px 6px 0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '-8px 6px 0' }}>
         <span>
           {fmt(b.min, b.step)}
           {unit}
@@ -404,7 +404,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
       </div>
 
       {answered ? (
-        <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: 15, fontWeight: 800, color: 'var(--mint-ink)', textAlign: 'center' }}>
+        <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: 15, fontWeight: 600, color: 'var(--mint-ink)', textAlign: 'center' }}>
           Réponse : {fmt(b.answer, b.step)}
           {unit}
         </motion.p>
