@@ -6,6 +6,7 @@ import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, type SipDetail } from '../lib/api'
+import { duration } from '../lib/format'
 import { play } from '../lib/sound'
 
 const LEVEL: Record<string, string> = {
@@ -83,6 +84,7 @@ export function Generating() {
   }, [phase, nav, qc, sipId])
 
   const profile = sip.data?.profile
+  const lessons = sip.data?.modules.reduce((n, m) => n + m.lessons.length, 0) ?? 0
   const outline = sip.data?.outline?.length ? sip.data.outline : (sip.data?.modules.map((m) => m.title) ?? [])
   const facts = profile
     ? [
@@ -143,7 +145,9 @@ export function Generating() {
           </Button>
         ) : (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em', marginLeft: 4 }}>Ton parcours</span>
+            <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em', marginLeft: 4 }}>
+              Ton parcours{lessons > 0 && <span style={{ color: 'var(--muted)' }}> · {lessons} leçons · {duration(lessons)}</span>}
+            </span>
             {outline.length === 0
               ? [0, 1, 2].map((i) => <GhostRow key={i} delay={i * 0.15} />)
               : outline.map((title, i) => <ModuleRow key={i} index={i} title={title} state={i < mapped ? 'done' : i === mapped && phase === 'cut' ? 'active' : 'todo'} />)}

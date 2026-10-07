@@ -297,7 +297,6 @@ const fmt = (v: number, step: number) => {
 export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
   const mid = b.min + Math.round((b.max - b.min) / 2 / b.step) * b.step
   const [value, setValue] = useState(mid)
-  const [touched, setTouched] = useState(false)
   const answered = !!answer
   const guess = answered ? (answer!.value as number) : value
   const pct = (v: number) => ((v - b.min) / (b.max - b.min)) * 100
@@ -375,7 +374,6 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
               const v = Number(e.target.value)
               if (Math.round((v - b.min) / b.step) % Math.max(1, Math.round((b.max - b.min) / b.step / 20)) === 0) haptic(4)
               setValue(v)
-              setTouched(true)
             }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, margin: 0, cursor: 'pointer' }}
           />
@@ -400,14 +398,13 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
       ) : (
         <Button
           variant="dark"
-          disabled={!touched}
           onClick={() => {
             const good = Math.abs(value - b.answer) <= b.tolerance
             grade(good)
             onAnswer({ correct: good, value })
           }}
         >
-          {touched ? 'Valider' : 'Glisse pour estimer'}
+          Valider
         </Button>
       )}
     </section>

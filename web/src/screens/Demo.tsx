@@ -7,7 +7,7 @@ import { Button } from '../components/ui'
 import { DEMO_LESSON } from '../demo/demoLesson'
 import { play } from '../lib/sound'
 import { doneInfo, LessonPlayer, type Finished } from './Lesson'
-import { Takeaways } from './LessonDone'
+import { mastered, Takeaways } from './LessonDone'
 
 /** A real lesson, hand-written, playable without an account. */
 export function Demo() {
@@ -44,7 +44,7 @@ export function Demo() {
             </p>
           )}
         </div>
-        <Takeaways objective={info.objective} points={info.points} action={info.action} delay={0.3} />
+        <Takeaways objective={info.objective} points={info.points} action={info.action} mastered={mastered(done.correct, done.total)} delay={0.3} />
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ fontSize: 16, fontWeight: 800, textAlign: 'center', lineHeight: 1.45 }}>
           Et maintenant, le sujet de ton choix ? Je te prépare un parcours sur mesure, gratuitement.
         </motion.p>

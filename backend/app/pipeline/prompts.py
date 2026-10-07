@@ -102,8 +102,12 @@ Rules:
   practical; use `math` only when the formula IS the concept and the learner's level
   allows it. Always build the intuition in words before a formula.
 - Plan 1-3 comprehension checks that test understanding, not recall of wording.
+  Each check tests a DIFFERENT idea; never two checks on the same point. Prefer making
+  the learner apply an idea to a new situation or example over restating it.
   Vary their form across the lesson (question, fill_blanks, match, estimate) when it
   fits the content; never force a form that does not fit.
+- Every block must bring something new: never follow an analogy or example with a
+  block that repeats the same explanation (e.g. a concept re-saying the analogy).
 - `sequence` lists the ordered teaching steps, each prefixed with its block type,
   e.g. "scenario: ...", "concept: ...", "question(true_false): ...". End with "recap".
 - Keep it dense and focused: ~{lesson_minutes} minutes total, roughly 7-12 blocks.
@@ -118,7 +122,13 @@ Rules:
 - Follow the plan's order and intent. You may merge or split steps if it helps.
 - Mobile-first writing: short sentences, short paragraphs, one idea per block. A text
   block is at most ~80 words. Concept explanations at most ~80 words.
-- Address the learner directly, warm and precise, no fluff, no emojis.
+- Address the learner directly, warm and precise, no fluff, no emojis. In French,
+  always use "tu" (tutoiement), never "vous"; in other languages use the informal,
+  friendly register.
+- Each block adds new information. Do not re-explain in a concept what an analogy or
+  example just said: build on it instead.
+- Each comprehension check tests a different idea; prefer applying the idea to a new
+  case over checking the same point twice.
 - Every question has an `explanation` that teaches (why the answer is right, why
   distractors are wrong), shown whatever the learner answered.
 - single_choice: exactly one correct option. Options have short ids ("a","b","c",...).
@@ -140,6 +150,7 @@ Rules:
   define every symbol in `variables`. Inline math in any text uses single dollars,
   e.g. "la dimension $d_k$". Never put a display formula inside text.
 - The last block is a `recap` (2-5 points, plus `concepts` = concept names acquired).
+  The points must cover every part of the lesson objective, most important first.
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
 - `concepts_taught`: the concept names actually taught in this lesson.
 - Be factually accurate. If something is debated or simplified, say so briefly.
@@ -157,7 +168,10 @@ Check:
 - factual accuracy (most important)
 - missing concepts relative to the lesson objective and planned concepts
 - contradictions
-- useless repetition
+- useless repetition: blocks re-explaining the previous block, or two checks testing
+  the same idea (major)
+- register: French content must use "tu", never "vous" (major)
+- recap: its points cover every part of the objective
 - concepts used before being introduced (known concepts listed in context are fine)
 - difficulty relative to the learner's level
 - misleading or wrong examples

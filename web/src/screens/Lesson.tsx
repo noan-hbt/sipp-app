@@ -77,7 +77,7 @@ export function doneInfo(l: { title: string; objective: string; blocks: Block[] 
     title: l.title,
     objective: l.objective,
     concepts: recap?.type === 'recap' ? recap.concepts ?? [] : [],
-    points: recap?.type === 'recap' ? recap.points.slice(0, 2) : [],
+    points: recap?.type === 'recap' ? recap.points : [],
     action: action?.type === 'application' ? action.prompt : null,
   }
 }

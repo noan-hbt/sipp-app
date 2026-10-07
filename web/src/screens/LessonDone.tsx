@@ -50,8 +50,25 @@ function Confetti() {
   )
 }
 
+/** The objective counts as reached only with at least 2/3 of the checks right. */
+export function mastered(correct: number, total: number) {
+  return total === 0 || correct / total >= 2 / 3
+}
+
 /** What was learned: the lesson's outcome, the ideas to keep, an optional mini-action. */
-export function Takeaways({ objective, points, action, delay = 0 }: { objective: string; points: string[]; action: string | null; delay?: number }) {
+export function Takeaways({
+  objective,
+  points,
+  action,
+  mastered,
+  delay = 0,
+}: {
+  objective: string
+  points: string[]
+  action: string | null
+  mastered: boolean
+  delay?: number
+}) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}
@@ -61,8 +78,8 @@ export function Takeaways({ objective, points, action, delay = 0 }: { objective:
       style={{ borderRadius: 26, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 900, color: 'var(--mint-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
-          {Icon.check(14)} Objectif atteint
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 900, color: mastered ? 'var(--mint-ink)' : 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          {mastered ? <>{Icon.check(14)} Objectif atteint</> : 'Objectif de la leçon'}
         </span>
         <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.4 }}>
           <RichText text={objective} />
@@ -161,7 +178,7 @@ export function LessonDone() {
           </div>
         </motion.div>
 
-        {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} delay={1.2} />}
+        {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1.2} />}
 
         {s.concepts.length > 0 && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }} className="well" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -194,6 +211,11 @@ export function LessonDone() {
         <Button sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
           {s.next_lesson_id ? 'Niveau suivant' : 'Voir mon parcours'}
         </Button>
+        {!mastered(s.correct, s.total) && (
+          <Button variant="soft" onClick={() => nav(`/lessons/${lessonId}`, { replace: true })}>
+            Refaire la leçon
+          </Button>
+        )}
         <Button variant="ghost" style={{ height: 48, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
           J’arrête là pour aujourd’hui
         </Button>

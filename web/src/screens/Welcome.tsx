@@ -37,7 +37,7 @@ export function Welcome() {
           Créer mon parcours
         </Button>
         <Button variant="soft" onClick={() => nav('/demo')}>
-          Goûter un Sip · 3 min
+          Goûter un Sip · 5 min
         </Button>
         <button onClick={() => nav('/login')} style={{ border: 'none', background: 'none', height: 44, fontSize: 15, fontWeight: 800, color: 'var(--muted)' }}>
           J’ai déjà un compte

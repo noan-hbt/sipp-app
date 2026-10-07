@@ -6,6 +6,7 @@ import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { Icon, IconButton, Star } from '../components/ui'
 import { Api, type LessonBrief, type ModuleOut } from '../lib/api'
+import { duration, LESSON_MINUTES } from '../lib/format'
 import { haptic, play } from '../lib/sound'
 
 const GAP = 104
@@ -263,6 +264,13 @@ function ProgramList({
         gap: 26,
       }}
     >
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 4px' }}>
+        {[`${nodes.length} leçons`, duration(nodes.length), `${modules.length} module${modules.length > 1 ? 's' : ''}`].map((t) => (
+          <span key={t} className="chip" style={{ background: 'var(--surface)', color: 'var(--ink-soft)', boxShadow: '0 0 0 1px rgba(43,38,32,.06)' }}>
+            {t}
+          </span>
+        ))}
+      </div>
       {summary && (
         <p className="muted" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, padding: '0 4px' }}>
           {summary}
@@ -279,7 +287,7 @@ function ProgramList({
               </span>
               <h2 style={{ fontSize: 17, fontWeight: 900, lineHeight: 1.3, flex: 1 }}>{m.title}</h2>
               <span className="muted" style={{ fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
-                {done}/{m.lessons.length}
+                {done}/{m.lessons.length} · {m.lessons.length * LESSON_MINUTES} min
               </span>
             </div>
             <div className="card" style={{ borderRadius: 24, padding: 6, display: 'flex', flexDirection: 'column' }}>
