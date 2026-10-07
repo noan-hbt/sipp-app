@@ -89,7 +89,7 @@ export function Home() {
                 {resume.next_lesson_title && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)' }}>
-                      Prochain Sip · Leçon {resume.progress.completed + 1} sur {resume.progress.total}
+                      Prochaine leçon · {resume.progress.completed + 1} sur {resume.progress.total}
                     </span>
                     <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>{resume.next_lesson_title}</p>
                   </div>
