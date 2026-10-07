@@ -34,10 +34,6 @@ function Tag({ children, bg, ink }: { children: ReactNode; bg: string; ink: stri
   )
 }
 
-function IconTile({ bg, children }: { bg: string; children: ReactNode }) {
-  return <span style={{ width: 38, height: 38, borderRadius: 14, background: bg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>{children}</span>
-}
-
 const P = ({ children, strong }: { children: string; strong?: boolean }) => (
   <p style={{ fontSize: strong ? 17 : 16, lineHeight: 1.55, fontWeight: strong ? 800 : 600, color: strong ? 'var(--ink)' : 'var(--ink-soft)' }}>
     <RichText text={children} />
@@ -57,16 +53,7 @@ function Text({ b }: { b: B.TextBlock }) {
 function Concept({ b }: { b: B.ConceptBlock }) {
   return (
     <article className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <motion.span initial={{ rotate: -30, scale: 0.5 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 12, delay: 0.15 }}>
-          <IconTile bg="var(--lavender)">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5A45A8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0012 3z" />
-            </svg>
-          </IconTile>
-        </motion.span>
-        <span style={{ fontSize: 13, fontWeight: 900, color: '#5A45A8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
-      </div>
+      <span style={{ fontSize: 13, fontWeight: 900, color: '#5A45A8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
       <h2 style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2 }}>
         <RichText text={b.name} />
       </h2>
@@ -79,11 +66,6 @@ function Concept({ b }: { b: B.ConceptBlock }) {
 function Example({ b }: { b: B.ExampleBlock }) {
   return (
     <article className="well" style={{ borderRadius: 24, padding: '16px 18px', display: 'flex', gap: 12 }}>
-      <IconTile bg="var(--butter)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A6A12" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.4l-4.8 2.5.9-5.4L4.2 7.7l5.4-.8z" />
-        </svg>
-      </IconTile>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
         <span style={{ fontSize: 13, fontWeight: 900, color: '#8A6A12' }}>
           Exemple · <RichText text={b.title} />
