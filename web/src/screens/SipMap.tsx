@@ -348,7 +348,7 @@ function MapNode({
       >
         <Mascot mood={unlocking ? 'bravo' : 'hello'} size={MASCOT} />
       </motion.div>
-      <motion.span
+      <span
         aria-hidden="true"
         style={{
           position: 'absolute',
@@ -358,10 +358,9 @@ function MapNode({
           height: size + 16,
           borderRadius: '50%',
           background: 'var(--peach)',
-          transformOrigin: '50% 50%',
+          opacity: 0,
+          animation: 'halo 2s ease-out infinite',
         }}
-        animate={{ scale: [0.92, 1.32], opacity: [0.35, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
       />
       <motion.button
         aria-label={`Commencer : ${node.lesson.title}`}

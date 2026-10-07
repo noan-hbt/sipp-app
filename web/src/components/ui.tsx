@@ -18,7 +18,7 @@ export function Button({
   children,
   onClick,
   disabled,
-  sound = 'tap',
+  sound = null,
   style,
   ...rest
 }: {
@@ -73,7 +73,7 @@ export function IconButton({ label, children, onClick }: { label: string; childr
       className="icon-btn"
       aria-label={label}
       onClick={() => {
-        play('tap')
+        haptic()
         onClick?.()
       }}
       whileTap={{ scale: 0.9, boxShadow: 'var(--inset-sm)' }}

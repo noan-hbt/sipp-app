@@ -75,9 +75,10 @@ function noise(start: number, dur: number, gain = 0.12) {
 const A3 = 220, C4 = 261.63, D4 = 293.66, E4 = 329.63, G4 = 392, C5 = 523.25, E5 = 659.25
 
 const SOUNDS: Record<SoundName, () => void> = {
-  tap: () => tone(360, 0, 0.06, { type: 'sine', gain: 0.22, to: 280 }),
-  pop: () => tone(260, 0, 0.11, { type: 'sine', gain: 0.4, to: 440 }),
-  reveal: () => tone(330, 0, 0.14, { type: 'sine', gain: 0.16, to: 420 }),
+  // Frequent interactions: barely-there ticks.
+  tap: () => tone(240, 0, 0.04, { type: 'sine', gain: 0.09, to: 190 }),
+  reveal: () => tone(300, 0, 0.09, { type: 'sine', gain: 0.06, to: 340 }),
+  pop: () => tone(260, 0, 0.11, { type: 'sine', gain: 0.3, to: 440 }),
   correct: () => {
     tone(E4, 0, 0.16, { type: 'triangle', gain: 0.38 })
     tone(C5, 0.1, 0.3, { type: 'triangle', gain: 0.34 })
@@ -101,8 +102,14 @@ const SOUNDS: Record<SoundName, () => void> = {
 }
 
 
+const last: Partial<Record<SoundName, number>> = {}
+
 export function play(name: SoundName) {
   if (!enabled) return
+  // Drop rapid repeats of the same sound (double taps, chained reveals).
+  const now = performance.now()
+  if (now - (last[name] ?? -1e9) < 140) return
+  last[name] = now
   try {
     SOUNDS[name]()
   } catch {
