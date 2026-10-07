@@ -9,6 +9,7 @@ from app.api.schemas import (
     LessonOut,
     ModuleOut,
     Progress,
+    ResumeIn,
     SipCreate,
     SipDetail,
     SipSummary,
@@ -18,6 +19,7 @@ from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Sip, SipStatus, User, utcnow
 from app.pipeline import engine
+from app.plans import check_plan, count_generation
 from app.progress import stars_for, stats
 from app.quota import check_cost, check_new_sip
 
@@ -71,6 +73,7 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
         progress=progress,
         next_lesson_id=nxt,
         next_lesson_title=next((l.title for l in lessons if l.id == nxt), None),
+        lite=sip.lite,
         created_at=sip.created_at,
     )
 
@@ -90,7 +93,9 @@ async def create_sip(
             {"code": "too_many_active_builds", "message": "too many sips being generated"},
         )
     await check_new_sip(session, user)
-    sip = Sip(user_id=user.id, input_text=body.input.strip())
+    plan = await check_plan(session, user)
+    sip = Sip(user_id=user.id, input_text=body.input.strip(), lite=plan["lite"])
+    count_generation(user)
     session.add(sip)
     await session.flush()
     await enqueue(session, engine.JOB_BUILD_SIP, {"sip_id": sip.id})
@@ -209,6 +214,7 @@ async def _lesson_out(session: AsyncSession, lesson: Lesson) -> LessonOut:
         completed_at=lesson.completed_at,
         stars=lesson.stars,
         next_lesson_id=nxt.id if nxt else None,
+        resume=None if lesson.completed_at else lesson.resume,
     )
 
 
@@ -239,6 +245,7 @@ async def complete_lesson(
     if lesson.completed_at is None:
         lesson.completed_at = utcnow()
     lesson.answers = body.answers
+    lesson.resume = None
     stars = stars_for(body.score)
     lesson.stars = max(lesson.stars or 0, stars)
 
@@ -259,3 +266,16 @@ async def complete_lesson(
         stars=lesson.stars,
         streak_days=st["streak_days"],
     )
+
+
+@router.put("/lessons/{lesson_id}/resume", status_code=204)
+async def save_resume(
+    lesson_id: str,
+    body: ResumeIn,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Saves where the learner stopped, so reopening the lesson resumes at that block."""
+    lesson = await _own_lesson(session, user, lesson_id)
+    lesson.resume = body.model_dump()
+    await session.commit()

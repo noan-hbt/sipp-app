@@ -133,6 +133,7 @@ class StructuredLLM:
     client: ChatClient
     recorder: Recorder | None = None
     settings: Any = field(default_factory=get_settings)
+    lite: bool = False  # free plan: one small model, no escalation
 
     async def generate(
         self,
@@ -142,8 +143,11 @@ class StructuredLLM:
         out: type[T],
         escalate: bool = True,
     ) -> T:
-        models = [self.settings.model_for(stage)]
-        if escalate and self.settings.model_escalation not in models:
+        if self.lite:
+            models = [self.settings.model_lite]
+        else:
+            models = [self.settings.model_for(stage)]
+        if escalate and not self.lite and self.settings.model_escalation not in models:
             models.append(self.settings.model_escalation)
 
         schema = out.model_json_schema()

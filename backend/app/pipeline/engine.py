@@ -4,6 +4,7 @@ build_sip:        interpretation -> curriculum -> mapping   (roadmap, once per S
 generate_lesson:  planning -> writing -> checks + review -> (one revision)   (per lesson)
 """
 
+import dataclasses
 import json
 import logging
 from typing import Any
@@ -94,6 +95,8 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
     if sip is None or sip.status == SipStatus.READY:
         return
     sip.status, sip.error = SipStatus.GENERATING, None
+    if sip.lite:
+        llm = dataclasses.replace(llm, lite=True)
 
     # 1. Interpretation (reused on retry)
     if sip.profile is None:
@@ -111,12 +114,16 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         sip.stage = "curriculum"
         await session.commit()
         budget_min, budget_max = s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
-        bounded = _bounded_curriculum(s.max_modules, s.max_lessons_per_module, budget_max)
+        max_modules = s.max_modules
+        if sip.lite:
+            budget_min, budget_max = s.lite_lesson_budget
+            max_modules = s.lite_max_modules
+        bounded = _bounded_curriculum(max_modules, s.max_lessons_per_module, budget_max)
         curriculum = await llm.generate(
             "curriculum",
             prompts.CURRICULUM.format(
                 lesson_minutes=s.lesson_minutes,
-                max_modules=s.max_modules,
+                max_modules=max_modules,
                 budget_min=budget_min,
                 budget_max=budget_max,
                 language=profile.language,
@@ -147,7 +154,7 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             "Lessons already mapped in previous modules:\n"
             + ("\n".join(previous_lines) if previous_lines else "(none)")
         )
-        max_lessons = min(s.max_lessons_per_module, cm.estimated_lessons + 2)
+        max_lessons = min(s.max_lessons_per_module, cm.estimated_lessons + (0 if sip.lite else 2))
         bounded_mapping = create_model(
             "ModuleMapping",
             __base__=ModuleMapping,
@@ -294,6 +301,8 @@ async def generate_lesson(
     if lesson is None or lesson.status == LessonStatus.READY:
         return
     sip = await session.get(Sip, lesson.sip_id)
+    if sip.lite:
+        llm = dataclasses.replace(llm, lite=True)
     language = (sip.profile or {}).get("language", "en")
     lesson.status, lesson.error = LessonStatus.GENERATING, None
     await session.commit()

@@ -27,6 +27,25 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            urlPattern: ({ url, request, sameOrigin }) => !sameOrigin && request.method === 'GET' && (
+              url.pathname.startsWith('/sips') ||
+              url.pathname.startsWith('/lessons/') ||
+              url.pathname.startsWith('/auth/me')
+            ),
+            handler: 'NetworkFirst',
+            options: {
+              networkTimeoutSeconds: 4,
+              cacheName: 'sipp-api',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 30 * 24 * 60 * 60,
+              },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
       },
     }),
   ],

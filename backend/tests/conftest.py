@@ -5,6 +5,7 @@ _db = os.path.join(tempfile.mkdtemp(), "test.db")
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{_db}"
 os.environ["JWT_SECRET"] = "test-secret-0123456789abcdef0123456789"
 os.environ["ENV"] = "dev"
+os.environ["DEFAULT_PLAN"] = "max"
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402

@@ -7,8 +7,8 @@ import { Mascot } from '../components/Mascot'
 import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton, ProgressBar } from '../components/ui'
-import { Api, ApiError } from '../lib/api'
-import { isGraded, isInteractive } from '../lib/blocks'
+import { Api, ApiError, type LessonOut } from '../lib/api'
+import { isGraded, isInteractive, type Block } from '../lib/blocks'
 import { play } from '../lib/sound'
 
 const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
@@ -23,36 +23,101 @@ export function Lesson() {
     queryFn: () => Api.lesson(lessonId),
     refetchInterval: (q) => (q.state.data && q.state.data.status !== 'ready' && q.state.data.status !== 'failed' ? 2000 : false),
   })
-  const [revealed, setRevealed] = useState(1)
-  const [answers, setAnswers] = useState<Record<number, Answer>>({})
+  const data = lesson.data
+
+  const complete = useMutation({
+    mutationFn: ({ answers, correct, total }: Finished) =>
+      Api.complete(lessonId, {
+        answers: toList(answers),
+        score: { correct, total },
+      }).then((r) => ({ r, correct, total })),
+    onSuccess: ({ r, correct, total }) => {
+      void qc.invalidateQueries({ queryKey: ['sip', data!.sip_id] })
+      void qc.invalidateQueries({ queryKey: ['sips'] })
+      void qc.invalidateQueries({ queryKey: ['stats'] })
+      void qc.invalidateQueries({ queryKey: ['lesson', lessonId] })
+      nav(`/lessons/${lessonId}/done`, { replace: true, state: { ...r, correct, total, sipId: data!.sip_id, ...doneInfo(data!) } })
+    },
+  })
+
+  if (!data || data.status !== 'ready') {
+    return <Preparing failed={data?.status === 'failed' || lesson.error instanceof ApiError} title={data?.title} onClose={() => nav(-1)} />
+  }
+
+  return (
+    <LessonPlayer
+      key={data.id}
+      title={data.title}
+      blocks={data.blocks ?? []}
+      resume={data.resume}
+      onSave={(step, answers) => void Api.saveResume(lessonId, { step, answers: toList(answers) }).catch(() => {})}
+      onClose={() => nav(`/sips/${data.sip_id}`, { replace: true })}
+      onFinish={(f) => complete.mutate(f)}
+      finishing={complete.isPending}
+    />
+  )
+}
+
+export interface Finished {
+  answers: Record<number, Answer>
+  correct: number
+  total: number
+}
+
+function toList(answers: Record<number, Answer>) {
+  return Object.entries(answers).map(([i, a]) => ({ block: Number(i), ...a }))
+}
+
+/** What the end screen shows: the outcome, the key ideas and an optional mini-action. */
+export function doneInfo(l: { title: string; objective: string; blocks: Block[] | null }) {
+  const blocks = l.blocks ?? []
+  const recap = blocks.find((b) => b.type === 'recap')
+  const action = blocks.find((b) => b.type === 'application')
+  return {
+    title: l.title,
+    objective: l.objective,
+    concepts: recap?.type === 'recap' ? recap.concepts ?? [] : [],
+    points: recap?.type === 'recap' ? recap.points.slice(0, 2) : [],
+    action: action?.type === 'application' ? action.prompt : null,
+  }
+}
+
+function fromList(resume: LessonOut['resume']): Record<number, Answer> {
+  const out: Record<number, Answer> = {}
+  for (const a of resume?.answers ?? []) {
+    const { block, ...rest } = a as { block: number } & Answer
+    if (typeof block === 'number') out[block] = rest
+  }
+  return out
+}
+
+export function LessonPlayer({
+  title,
+  blocks,
+  resume,
+  onSave,
+  onClose,
+  onFinish,
+  finishing,
+}: {
+  title: string
+  blocks: Block[]
+  resume?: LessonOut['resume']
+  onSave?: (step: number, answers: Record<number, Answer>) => void
+  onClose: () => void
+  onFinish: (f: Finished) => void
+  finishing: boolean
+}) {
+  const [revealed, setRevealed] = useState(() => Math.min(Math.max(1, (resume?.step ?? 0) + 1), Math.max(1, blocks.length)))
+  const [answers, setAnswers] = useState<Record<number, Answer>>(() => fromList(resume))
   const [sheetOpen, setSheetOpen] = useState(false)
+  // Between the answer and the feedback sheet: the block shows its result, no bottom bar.
+  const [grading, setGrading] = useState(false)
   const endRef = useRef<HTMLDivElement>(null)
-  const blocks = lesson.data?.status === 'ready' ? (lesson.data.blocks ?? []) : []
   const current = blocks[revealed - 1]
   const currentAnswer = answers[revealed - 1]
   const awaiting = current && isInteractive(current) && !currentAnswer
   const isLast = revealed >= blocks.length
-
-  const complete = useMutation({
-    mutationFn: () => {
-      const graded = blocks.map((b, i) => [b, answers[i]] as const).filter(([b]) => isGraded(b))
-      const correct = graded.filter(([, a]) => a?.correct).length
-      return Api.complete(lessonId, {
-        answers: Object.entries(answers).map(([i, a]) => ({ block: Number(i), ...a })),
-        score: { correct, total: graded.length },
-      }).then((r) => ({ r, correct, total: graded.length }))
-    },
-    onSuccess: ({ r, correct, total }) => {
-      void qc.invalidateQueries({ queryKey: ['sip', lesson.data!.sip_id] })
-      void qc.invalidateQueries({ queryKey: ['sips'] })
-      void qc.invalidateQueries({ queryKey: ['stats'] })
-      const recap = blocks.find((b) => b.type === 'recap')
-      nav(`/lessons/${lessonId}/done`, {
-        replace: true,
-        state: { ...r, correct, total, sipId: lesson.data!.sip_id, title: lesson.data!.title, concepts: recap?.type === 'recap' ? recap.concepts ?? [] : [] },
-      })
-    },
-  })
 
   useEffect(() => {
     if (revealed > 1) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -61,20 +126,27 @@ export function Lesson() {
   function next() {
     setSheetOpen(false)
     if (isLast) {
-      complete.mutate()
+      const graded = blocks.map((b, i) => [b, answers[i]] as const).filter(([b]) => isGraded(b))
+      onFinish({ answers, correct: graded.filter(([, a]) => a?.correct).length, total: graded.length })
       return
     }
     play('reveal')
     setRevealed((r) => r + 1)
+    onSave?.(revealed, answers)
   }
 
   function onAnswer(i: number, a: Answer) {
-    setAnswers((s) => ({ ...s, [i]: a }))
-    setTimeout(() => setSheetOpen(true), a.correct === null ? 100 : 450)
-  }
-
-  if (!lesson.data || lesson.data.status !== 'ready') {
-    return <Preparing failed={lesson.data?.status === 'failed' || lesson.error instanceof ApiError} title={lesson.data?.title} onClose={() => nav(-1)} />
+    const all = { ...answers, [i]: a }
+    setAnswers(all)
+    setGrading(true)
+    onSave?.(revealed - 1, all)
+    setTimeout(
+      () => {
+        setGrading(false)
+        setSheetOpen(true)
+      },
+      a.correct === null ? 100 : 450,
+    )
   }
 
   const fb = currentAnswer && current ? feedbackFor(current) : null
@@ -83,7 +155,7 @@ export function Lesson() {
   return (
     <Screen kind="modal">
       <header className="topbar">
-        <IconButton label="Quitter la leçon" onClick={() => nav(`/sips/${lesson.data!.sip_id}`, { replace: true })}>
+        <IconButton label="Quitter la leçon" onClick={onClose}>
           {Icon.close}
         </IconButton>
         <ProgressBar value={revealed / blocks.length} />
@@ -91,7 +163,7 @@ export function Lesson() {
 
       <div className="scroll" style={{ padding: '6px 22px 170px' }}>
         <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 20 }}>
-          <RichText text={lesson.data.title} />
+          <RichText text={title} />
         </motion.h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
           {blocks.slice(0, revealed).map((b, i) => (
@@ -109,7 +181,7 @@ export function Lesson() {
       </div>
 
       <AnimatePresence>
-        {!awaiting && !sheetOpen && (
+        {!awaiting && !sheetOpen && !grading && (
           <motion.div
             className="bottom-fade"
             initial={{ y: 40, opacity: 0 }}
@@ -117,8 +189,8 @@ export function Lesson() {
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
-            <Button variant={isLast ? 'peach' : 'dark'} onClick={next} disabled={complete.isPending} sound={null}>
-              {complete.isPending ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : currentAnswer ? 'Continuer' : 'Continuer'}
+            <Button variant={isLast ? 'peach' : 'dark'} onClick={next} disabled={finishing} sound={null}>
+              {finishing ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : 'Continuer'}
             </Button>
           </motion.div>
         )}

@@ -24,6 +24,19 @@ class UsageOut(BaseModel):
     max_cost_per_day_usd: float
 
 
+class PlanOut(BaseModel):
+    plan: str
+    on_trial: bool
+    plan_expires_at: datetime | None
+    trial_available: bool
+    trial_days: int
+    slots: int
+    slots_used: int
+    sips_per_month: int
+    sips_this_month: int
+    lite: bool
+
+
 class TokenOut(BaseModel):
     access_token: str
     refresh_token: str
@@ -57,6 +70,7 @@ class SipSummary(BaseModel):
     progress: Progress
     next_lesson_id: str | None
     next_lesson_title: str | None = None
+    lite: bool = False
     created_at: datetime
 
 
@@ -104,6 +118,12 @@ class LessonOut(BaseModel):
     completed_at: datetime | None
     stars: int | None
     next_lesson_id: str | None
+    resume: dict[str, Any] | None = None
+
+
+class ResumeIn(BaseModel):
+    step: int = Field(ge=0, description="Index of the block the learner is on.")
+    answers: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
 
 
 class Score(BaseModel):

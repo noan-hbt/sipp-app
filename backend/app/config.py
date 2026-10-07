@@ -53,6 +53,22 @@ class Settings(BaseSettings):
     max_sips_per_day: int = 5
     max_cost_per_day_usd: float = 1.0
 
+    # Plans: library slots (Sips kept at once) and new Sips per calendar month.
+    # Billing (RevenueCat) will set user.plan; until then only the trial grants a paid plan.
+    plans: dict[str, dict[str, int | bool]] = {
+        "free": {"slots": 1, "sips_per_month": 1, "lite": True},
+        "basic": {"slots": 3, "sips_per_month": 4, "lite": False},
+        "plus": {"slots": 10, "sips_per_month": 15, "lite": False},
+        "max": {"slots": 1000, "sips_per_month": 1000, "lite": False},  # internal / team
+    }
+    default_plan: str = "free"
+    trial_plan: str = "basic"
+    trial_days: int = 7
+    # Lite generation: one small model everywhere, short course.
+    model_lite: str = "openai/gpt-6-luna"
+    lite_lesson_budget: tuple[int, int] = (3, 5)
+    lite_max_modules: int = 2
+
     # Worker
     worker_poll_seconds: float = 1.0
     worker_concurrency: int = 3

@@ -2,9 +2,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.config import get_settings
 from app.db import Base
 
 
@@ -29,6 +30,15 @@ class User(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    plan: Mapped[str] = mapped_column(
+        String(20), default=lambda: get_settings().default_plan, server_default="free"
+    )
+    # Paid/trial plan end; past it the user falls back to "free".
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    trial_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # New Sips generated in `gen_month` ("YYYY-MM"); kept even if the Sip is deleted.
+    gen_month: Mapped[str | None] = mapped_column(String(7))
+    gen_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class RefreshToken(Base):
@@ -62,6 +72,8 @@ class Sip(TimestampMixin, Base):
     profile: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     curriculum: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     error: Mapped[str | None] = mapped_column(Text)
+    # Lite generation (free plan): reduced course, smaller models.
+    lite: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     modules: Mapped[list["Module"]] = relationship(
         back_populates="sip", cascade="all, delete-orphan", order_by="Module.position"
@@ -119,6 +131,7 @@ class Lesson(TimestampMixin, Base):
 
     answers: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
     stars: Mapped[int | None] = mapped_column(Integer)  # best result, 1-3
+    resume: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # in-progress step + answers
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     module: Mapped[Module] = relationship(back_populates="lessons")

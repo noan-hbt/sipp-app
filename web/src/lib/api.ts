@@ -21,6 +21,7 @@ export interface SipSummary {
   progress: Progress
   next_lesson_id: string | null
   next_lesson_title?: string | null
+  lite?: boolean
   created_at: string
 }
 export type LessonStatus = 'pending' | 'queued' | 'generating' | 'ready' | 'failed'
@@ -77,6 +78,7 @@ export interface LessonOut {
   completed_at: string | null
   stars: number | null
   next_lesson_id: string | null
+  resume?: { step: number; answers: unknown[] } | null
 }
 export interface CompleteOut {
   lesson_id: string
@@ -90,6 +92,18 @@ export interface Stats {
   completed_today: boolean
   lessons_completed: number
   total_stars: number
+}
+export interface Plan {
+  plan: 'free' | 'basic' | 'plus' | 'max'
+  on_trial: boolean
+  plan_expires_at: string | null
+  trial_available: boolean
+  trial_days: number
+  slots: number
+  slots_used: number
+  sips_per_month: number
+  sips_this_month: number
+  lite: boolean
 }
 export interface ApiErrorDetail { code?: string; message?: string }
 
@@ -130,6 +144,7 @@ export function setTokens(t: Tokens | null) {
   } catch {
     /* private mode */
   }
+  if (!t && typeof caches !== 'undefined') void caches.delete('sipp-api').catch(() => {})
   listeners.forEach((l) => l())
 }
 export function onTokens(l: () => void) {
@@ -195,6 +210,9 @@ export const Api = {
     tokens ? api<void>('/auth/logout', { method: 'POST', json: { refresh_token: tokens.refresh_token } }) : Promise.resolve(),
   stats: () => api<Stats>(`/auth/me/stats?tz=${encodeURIComponent(TZ)}`),
   deleteAccount: (password: string) => api<void>('/auth/me', { method: 'DELETE', json: { password } }),
+  plan: () => api<Plan>('/auth/me/plan'),
+  startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
+  exportData: () => api<unknown>('/auth/me/export'),
   sips: () => api<SipSummary[]>('/sips'),
   sip: (id: string) => api<SipDetail>(`/sips/${id}`),
   createSip: (input: string) => api<SipSummary>('/sips', { method: 'POST', json: { input } }),
@@ -203,4 +221,6 @@ export const Api = {
   lesson: (id: string) => api<LessonOut>(`/lessons/${id}`),
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),
+  saveResume: (id: string, body: { step: number; answers: unknown[] }) =>
+    api<void>(`/lessons/${id}/resume`, { method: 'PUT', json: body }),
 }
