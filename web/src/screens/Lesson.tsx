@@ -113,14 +113,28 @@ export function LessonPlayer({
   const [sheetOpen, setSheetOpen] = useState(false)
   // Between the answer and the feedback sheet: the block shows its result, no bottom bar.
   const [grading, setGrading] = useState(false)
-  const endRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const blockRefs = useRef<(HTMLDivElement | null)[]>([])
   const current = blocks[revealed - 1]
   const currentAnswer = answers[revealed - 1]
   const awaiting = current && isInteractive(current) && !currentAnswer
   const isLast = revealed >= blocks.length
 
   useEffect(() => {
-    if (revealed > 1) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    if (revealed <= 1) return
+    // Bring the new block fully into view above the bottom bar; if it is taller than the
+    // screen, align its top instead so the learner reads it from the start.
+    const t = setTimeout(() => {
+      const box = scrollRef.current
+      const el = blockRefs.current[revealed - 1]
+      if (!box || !el) return
+      const visible = box.clientHeight - 150
+      const top = el.offsetTop - 12
+      const bottom = el.offsetTop + el.offsetHeight
+      const target = el.offsetHeight > visible ? top : bottom - visible
+      if (target > box.scrollTop) box.scrollTo({ top: target, behavior: 'smooth' })
+    }, 60)
+    return () => clearTimeout(t)
   }, [revealed])
 
   function next() {
@@ -161,13 +175,20 @@ export function LessonPlayer({
         <ProgressBar value={revealed / blocks.length} />
       </header>
 
-      <div className="scroll" style={{ padding: '6px 22px 170px' }}>
+      <div
+        ref={scrollRef}
+        className="scroll"
+        style={{ padding: '6px 22px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
+      >
         <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 20 }}>
           <RichText text={title} />
         </motion.h1>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
           {blocks.slice(0, revealed).map((b, i) => (
             <motion.div
+              ref={(el) => {
+                blockRefs.current[i] = el
+              }}
               key={i}
               initial={{ opacity: 0, y: 26, scale: 0.98, filter: 'blur(4px)' }}
               animate={{ opacity: i < revealed - 1 && !isInteractive(b) ? 0.92 : 1, y: 0, scale: 1, filter: 'blur(0px)' }}
@@ -177,7 +198,6 @@ export function LessonPlayer({
             </motion.div>
           ))}
         </div>
-        <div ref={endRef} style={{ height: 1 }} />
       </div>
 
       <AnimatePresence>

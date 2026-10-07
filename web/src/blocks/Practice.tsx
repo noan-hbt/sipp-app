@@ -295,8 +295,14 @@ const fmt = (v: number, step: number) => {
 }
 
 export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
-  const mid = b.min + Math.round((b.max - b.min) / 2 / b.step) * b.step
-  const [value, setValue] = useState(mid)
+  // Start away from the answer (at 20% or 80% of the range), so validating untouched is a real guess.
+  const snap = (v: number) => b.min + Math.round((v - b.min) / b.step) * b.step
+  const lo = snap(b.min + (b.max - b.min) * 0.2)
+  const hi = snap(b.min + (b.max - b.min) * 0.8)
+  const [value, setValue] = useState(() => {
+    const start = Math.abs(lo - b.answer) > Math.abs(hi - b.answer) ? lo : hi
+    return Math.abs(start - b.answer) <= b.tolerance ? (start === lo ? b.min : b.max) : start
+  })
   const answered = !!answer
   const guess = answered ? (answer!.value as number) : value
   const pct = (v: number) => ((v - b.min) / (b.max - b.min)) * 100

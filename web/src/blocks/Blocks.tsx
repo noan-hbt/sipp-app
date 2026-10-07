@@ -53,13 +53,17 @@ function Text({ b }: { b: B.TextBlock }) {
 
 function Concept({ b }: { b: B.ConceptBlock }) {
   return (
-    <article className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <span style={{ fontSize: 13, fontWeight: 900, color: '#5A45A8', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
-      <h2 style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.2 }}>
+    <article style={{ borderLeft: '4px solid var(--lavender-strong)', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--lavender-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>Nouveau concept</span>
+      <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.25 }}>
         <RichText text={b.name} />
       </h2>
-      <P strong>{b.definition}</P>
-      <P>{b.explanation}</P>
+      <p style={{ fontSize: 17, lineHeight: 1.55, fontWeight: 800 }}>
+        <RichText text={b.definition} />
+      </p>
+      <p style={{ fontSize: 17, lineHeight: 1.6, fontWeight: 600, color: 'var(--ink-soft)' }}>
+        <RichText text={b.explanation} />
+      </p>
     </article>
   )
 }
@@ -129,7 +133,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
         <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.6, repeat: Infinity }} style={{ color: 'var(--sky-ink)' }}>
           ⇄
         </motion.span>
-        <span style={{ flex: 1, textAlign: 'right' }}>
+        <span style={{ flex: 1 }}>
           <RichText text={b.target} />
         </span>
       </div>
@@ -146,7 +150,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
               <RichText text={m.source} />
             </span>
             <span style={{ color: 'var(--faint)' }}>→</span>
-            <span style={{ flex: 1, textAlign: 'right' }}>
+            <span style={{ flex: 1, color: 'var(--ink)' }}>
               <RichText text={m.target} />
             </span>
           </motion.div>
