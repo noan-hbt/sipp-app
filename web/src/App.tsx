@@ -14,6 +14,7 @@ import { LessonDone } from './screens/LessonDone'
 import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
 import { Profile } from './screens/Profile'
+import { ProgramView } from './screens/ProgramView'
 import { SipMap } from './screens/SipMap'
 import { Welcome } from './screens/Welcome'
 
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="/new" element={<NewSip />} />
               <Route path="/sips/:sipId/building" element={<Generating />} />
               <Route path="/sips/:sipId" element={<SipMap />} />
+              <Route path="/programs/:programId" element={<ProgramView />} />
               <Route path="/lessons/:lessonId" element={<Lesson />} />
               <Route path="/lessons/:lessonId/done" element={<LessonDone />} />
               <Route path="*" element={<Navigate to="/" replace />} />

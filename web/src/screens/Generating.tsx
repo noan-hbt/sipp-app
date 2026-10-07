@@ -24,7 +24,7 @@ const MODULE_COLORS = [
   ['var(--butter)', 'var(--butter-ink)'],
 ]
 
-type Phase = 'read' | 'plan' | 'cut' | 'first' | 'done'
+type Phase = 'read' | 'program' | 'plan' | 'cut' | 'first' | 'done'
 
 /** Where the build is, and the share of the cup to fill (each phase owns a band). */
 function progressOf(sip: SipDetail | undefined): { phase: Phase; from: number; to: number; mapped: number } {
@@ -40,11 +40,13 @@ function progressOf(sip: SipDetail | undefined): { phase: Phase; from: number; t
     return { phase: 'cut', from: a, to: a + 0.5 / n, mapped: i - 1 }
   }
   if (stage === 'curriculum') return { phase: 'plan', from: 0.15, to: 0.35, mapped: 0 }
+  if (stage === 'roadmap') return { phase: 'program', from: 0.08, to: 0.2, mapped: 0 }
   return { phase: 'read', from: 0.02, to: 0.15, mapped: 0 }
 }
 
 const TITLES: Record<Phase, string> = {
   read: 'Je lis ta demande…',
+  program: 'C’est un grand projet ! Je le découpe en chapitres…',
   plan: 'Je trace le chemin…',
   cut: 'Je découpe en leçons…',
   first: 'Je prépare ta première leçon…',
@@ -77,11 +79,15 @@ export function Generating() {
     if (phase === 'done') {
       const t = setTimeout(() => {
         void qc.invalidateQueries({ queryKey: ['sips'] })
-        nav(`/sips/${sipId}`, { replace: true, state: { fresh: true } })
+        void qc.invalidateQueries({ queryKey: ['programs'] })
+        const s = sip.data
+        // A new program opens on its roadmap; later chapters go straight to their map.
+        if (s?.program_id && s.chapter === 1) nav(`/programs/${s.program_id}`, { replace: true })
+        else nav(`/sips/${sipId}`, { replace: true, state: { fresh: true } })
       }, 1800)
       return () => clearTimeout(t)
     }
-  }, [phase, nav, qc, sipId])
+  }, [phase, nav, qc, sipId, sip.data])
 
   const profile = sip.data?.profile
   const lessons = sip.data?.modules.reduce((n, m) => n + m.lessons.length, 0) ?? 0
@@ -115,11 +121,11 @@ export function Generating() {
               transition={{ duration: 0.25 }}
               className="title-l"
             >
-              {failed ? 'Oups, j’ai buggé' : TITLES[phase]}
+              {failed ? 'Oups, j’ai buggé' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
             </motion.h1>
           </AnimatePresence>
           <p className="muted" style={{ fontSize: 15, fontWeight: 700, maxWidth: 320 }}>
-            {failed ? 'Ça arrive. Relance, ça ne te coûte rien.' : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
+            {failed ? 'Ça arrive. Relance, ça ne te coûte rien.' : sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
           </p>
           {!failed && facts.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>

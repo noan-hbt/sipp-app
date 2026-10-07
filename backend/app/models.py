@@ -52,6 +52,29 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class ProgramStatus:
+    GENERATING = "generating"  # roadmap being written ("go further" on a finished Sip)
+    READY = "ready"
+    FAILED = "failed"
+
+
+class Program(TimestampMixin, Base):
+    """A big learning goal split into chapters; each chapter becomes a Sip on demand."""
+
+    __tablename__ = "programs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default=ProgramStatus.READY)
+    title: Mapped[str | None] = mapped_column(String(300))
+    summary: Mapped[str | None] = mapped_column(Text)
+    profile: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    # [{title, outcome, level: core|advanced, estimated_lessons}], position = index + 1
+    roadmap: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    lite: Mapped[bool] = mapped_column(default=False, server_default=false())
+    error: Mapped[str | None] = mapped_column(Text)
+
+
 class SipStatus:
     QUEUED = "queued"
     GENERATING = "generating"
@@ -74,6 +97,11 @@ class Sip(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
     # Lite generation (free plan): reduced course, smaller models.
     lite: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Chapter of a program (1-based), or standalone when null.
+    program_id: Mapped[str | None] = mapped_column(
+        ForeignKey("programs.id", ondelete="CASCADE"), index=True
+    )
+    chapter: Mapped[int | None] = mapped_column(Integer)
 
     modules: Mapped[list["Module"]] = relationship(
         back_populates="sip", cascade="all, delete-orphan", order_by="Module.position"

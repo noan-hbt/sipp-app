@@ -23,8 +23,42 @@ Rules:
   standard = understand a topic well with its main mechanisms and uses;
   comprehensive = master a whole field. Most requests are focused or standard. Never
   pick comprehensive unless the learner clearly asks for a broad, long path.
+- `breadth`: "program" when reaching the goal needs clearly more than ~25 five-minute
+  lessons because it spans several distinct domains (e.g. "create and run a small
+  business", "become a web developer", "learn to invest from scratch"). Otherwise
+  "single". A broad TOPIC asked as general culture ("understand the universe") stays
+  single: what matters is what the learner wants to be able to do.
 - Goals must be concrete and reachable through ~5-minute lessons.
 - The title is short (max ~6 words), in the learner's language, no emoji."""
+
+ROADMAP = """\
+You are the program architect of Sipp, a micro-learning app. The learner's goal is too
+big for one path, so you split it into CHAPTERS. Each chapter will later become its own
+path of ~{lesson_minutes}-minute lessons, generated only when the learner reaches it.
+
+Rules:
+- Order chapters so each builds on the previous ones. The first chapter must be useful
+  on its own and give a quick, concrete win.
+- `core` chapters are what the goal really requires; put them first. `advanced`
+  chapters go further (optional deepening, edge cases, scaling); put them last.
+- Each chapter has ONE clear outcome, distinct from the others: no overlap.
+- `estimated_lessons`: 6-20 per chapter, sized to the outcome, not to the topic.
+- Typically 4-10 chapters. Never pad: fewer, meaningful chapters beat many thin ones.
+- Start from the learner's level: skip what they already master.
+- Write titles, outcomes and summary in the learner's language ({language})."""
+
+EXTENSION = """\
+You are the program architect of Sipp, a micro-learning app. The learner just finished
+a path and wants to go further. Propose the FOLLOW-UP chapters that naturally extend
+it. Each chapter will become its own path of ~{lesson_minutes}-minute lessons.
+
+Rules:
+- 2-5 chapters, ordered, each with ONE clear outcome that builds on what was learned.
+  Never repeat what the finished path already taught.
+- `core` = the natural next steps toward mastery; `advanced` = optional deepening.
+- `estimated_lessons`: 6-20 per chapter.
+- The program `title` names the whole journey (finished path included).
+- Write in the learner's language ({language})."""
 
 CURRICULUM = """\
 You are the curriculum architect of Sipp, a personalized micro-learning app made of
@@ -47,6 +81,9 @@ Rules:
 - `estimated_lessons` per module: how many ~{lesson_minutes}-minute lessons it needs.
 - Prefer intellectual coherence over exhaustiveness. No filler modules, no generic
   "introduction" or "conclusion" modules unless they carry real content.
+- When the path is a CHAPTER of a larger program, cover ONLY this chapter's outcome.
+  Never teach what previous chapters covered (build on it) nor what later chapters
+  will cover. Reinforce the learner's weak points from earlier chapters when relevant.
 - Write titles, roles, objectives and summary in the learner's language ({language})."""
 
 MAPPING = """\

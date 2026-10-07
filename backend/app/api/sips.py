@@ -74,6 +74,8 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
         next_lesson_id=nxt,
         next_lesson_title=next((l.title for l in lessons if l.id == nxt), None),
         lite=sip.lite,
+        program_id=sip.program_id,
+        chapter=sip.chapter,
         created_at=sip.created_at,
     )
 

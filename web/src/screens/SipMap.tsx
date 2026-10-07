@@ -1,13 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion, useAnimationControls } from 'motion/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { Icon, IconButton, Star } from '../components/ui'
-import { Api, type LessonBrief, type ModuleOut } from '../lib/api'
+import { Button, Icon, IconButton, Star } from '../components/ui'
+import { Api, ApiError, type LessonBrief, type ModuleOut } from '../lib/api'
 import { duration, LESSON_MINUTES } from '../lib/format'
 import { haptic, play } from '../lib/sound'
+import { DeleteButton } from './ProgramView'
 
 const GAP = 104
 const BANNER_GAP = 92
@@ -109,6 +110,32 @@ export function SipMap() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  const qc = useQueryClient()
+  const extend = useMutation({
+    mutationFn: () => Api.extendSip(sipId),
+    onSuccess: (p) => {
+      play('whoosh')
+      void qc.invalidateQueries({ queryKey: ['sip', sipId] })
+      void qc.invalidateQueries({ queryKey: ['programs'] })
+      nav(`/programs/${p.id}`)
+    },
+    onError: (e) => {
+      // Already turned into a program (e.g. from another device): just open it.
+      const pid = e instanceof ApiError ? (e.detail as { program_id?: string } | undefined)?.program_id : undefined
+      if (pid) nav(`/programs/${pid}`)
+      else play('wrong')
+    },
+  })
+  const programId = sip.data?.program_id
+  const remove = useMutation({
+    mutationFn: () => Api.deleteSip(sipId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['sips'] })
+      void qc.invalidateQueries({ queryKey: ['programs'] })
+      void qc.invalidateQueries({ queryKey: ['plan'] })
+      nav(programId ? `/programs/${programId}` : '/library', { replace: true })
+    },
+  })
   const modules = useMemo(() => sip.data?.modules ?? [], [sip.data])
   const { nodes, height, nowIdx } = useMemo(() => layout(modules, width), [modules, width])
   const now = nodes[nowIdx]
@@ -146,7 +173,21 @@ export function SipMap() {
     <Screen>
       <AnimatePresence>
         {view === 'list' && sip.data && (
-          <ProgramList key="list" modules={modules} nodes={nodes} summary={sip.data.summary} onOpen={(id) => nav(`/lessons/${id}`)} />
+          <ProgramList
+            key="list"
+            modules={modules}
+            nodes={nodes}
+            summary={sip.data.summary}
+            onOpen={(id) => nav(`/lessons/${id}`)}
+            footer={
+              <DeleteButton
+                label={programId ? 'Supprimer ce chapitre' : 'Supprimer ce Sip'}
+                confirm={programId ? 'Supprimer ce chapitre ? Tu pourras le régénérer depuis le programme (une génération).' : 'Supprimer ce Sip ? Ta progression sera perdue.'}
+                busy={remove.isPending}
+                onConfirm={() => remove.mutate()}
+              />
+            }
+          />
         )}
       </AnimatePresence>
       <div ref={scroller} className="scroll" style={{ position: 'relative', visibility: view === 'list' ? 'hidden' : undefined }}>
@@ -204,12 +245,48 @@ export function SipMap() {
         )}
       </div>
 
+      <AnimatePresence>
+        {view === 'map' && nodes.length > 0 && nowIdx === -1 && (
+          <motion.div
+            key="finished"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 26, delay: justCompleted ? 1.2 : 0.3 }}
+            className="card"
+            style={{ position: 'absolute', zIndex: 3, left: 16, right: 16, bottom: 'calc(var(--safe-bottom) + 16px)', borderRadius: 28, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Mascot mood="bravo" size={52} />
+              <div>
+                <span style={{ fontSize: 17, fontWeight: 900 }}>{programId ? 'Chapitre terminé !' : 'Sip terminé !'}</span>
+                <p className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
+                  {programId ? 'La suite de ton programme t’attend.' : 'Envie d’aller plus loin sur ce sujet ?'}
+                </p>
+              </div>
+            </div>
+            {programId ? (
+              <Button sound="pop" onClick={() => nav(`/programs/${programId}`)}>
+                Voir la suite du programme
+              </Button>
+            ) : (
+              <Button sound="pop" disabled={extend.isPending} onClick={() => extend.mutate()}>
+                {extend.isPending ? <Mascot mood="think" size={30} /> : 'Aller plus loin'}
+              </Button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header style={{ position: 'absolute', zIndex: 2, left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(241,237,231,0))' }}>
-        <IconButton label="Retour" onClick={() => nav('/')}>
+        <IconButton label="Retour" onClick={() => nav(programId ? `/programs/${programId}` : '/')}>
           {Icon.back}
         </IconButton>
         <div className="card" style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 23, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
-          <span style={{ fontWeight: 900, fontSize: 15, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sip.data?.title ?? ''}</span>
+          <span style={{ fontWeight: 900, fontSize: 15, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {sip.data?.chapter && <span style={{ color: 'var(--muted)' }}>Ch. {sip.data.chapter} · </span>}
+            {sip.data?.title ?? ''}
+          </span>
           <motion.span key={totalStars} initial={{ scale: 1.5 }} animate={{ scale: 1 }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 900, fontSize: 14 }}>
             <Star size={16} />
             {totalStars}
@@ -239,11 +316,13 @@ function ProgramList({
   nodes,
   summary,
   onOpen,
+  footer,
 }: {
   modules: ModuleOut[]
   nodes: Node[]
   summary: string | null
   onOpen: (lessonId: string) => void
+  footer?: ReactNode
 }) {
   const byId = new Map(nodes.map((n) => [n.lesson.id, n]))
   return (
@@ -359,6 +438,7 @@ function ProgramList({
           </section>
         )
       })}
+      {footer}
     </motion.div>
   )
 }

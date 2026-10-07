@@ -16,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.jobs.queue import enqueue
 from app.llm.client import StructuredLLM
-from app.models import Lesson, LessonStatus, Module, Sip, SipStatus
-from app.pipeline import prompts
+from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus
+from app.pipeline import programs, prompts
 from app.pipeline.checks import check_lesson, clean_mapping, normalize
 from app.pipeline.schemas import (
     Curriculum,
@@ -109,12 +109,24 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         sip.title = profile.title
     profile = LearningProfile.model_validate(sip.profile)
 
+    # 1b. Big goal: write the program roadmap, this Sip becomes its first chapter.
+    if sip.program_id is None and profile.breadth == "program":
+        sip.stage = "roadmap"
+        await session.commit()
+        await programs.create_program(session, llm, sip, profile)
+    chapter_ctx, chapter_known = await programs.program_context(session, sip)
+
     # 2. Curriculum (reused on retry)
     if sip.curriculum is None:
         sip.stage = "curriculum"
         await session.commit()
         budget_min, budget_max = s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
         max_modules = s.max_modules
+        if sip.program_id is not None:
+            est = programs.chapter_of(await session.get(Program, sip.program_id), sip.chapter)[
+                "estimated_lessons"
+            ]
+            budget_min, budget_max = max(3, est - 3), min(est + 4, s.lesson_budget["standard"][1])
         if sip.lite:
             budget_min, budget_max = s.lite_lesson_budget
             max_modules = s.lite_max_modules
@@ -128,7 +140,8 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
                 budget_max=budget_max,
                 language=profile.language,
             ),
-            f"Learner's own words:\n{sip.input_text}\n\nLearning profile:\n{_dump(sip.profile)}",
+            f"Learner's own words:\n{sip.input_text}\n\nLearning profile:\n{_dump(sip.profile)}"
+            + (f"\n\nThis path is a CHAPTER of a program:\n{chapter_ctx}" if chapter_ctx else ""),
             bounded,
         )
         sip.curriculum = curriculum.model_dump()
@@ -153,6 +166,12 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             f"Objectives:\n" + "\n".join(f"- {o}" for o in cm.objectives) + "\n\n"
             "Lessons already mapped in previous modules:\n"
             + ("\n".join(previous_lines) if previous_lines else "(none)")
+            + (
+                "\n\nAlready taught in earlier chapters of the program (do not re-teach):\n"
+                + ", ".join(chapter_known)
+                if chapter_known
+                else ""
+            )
         )
         max_lessons = min(s.max_lessons_per_module, cm.estimated_lessons + (0 if sip.lite else 2))
         bounded_mapping = create_model(
@@ -232,8 +251,8 @@ async def build_lesson_context(session: AsyncSession, lesson: Lesson) -> tuple[s
     module = next(m for m in modules if m.id == lesson.module_id)
     earlier = [l for l in lessons if l.global_index < lesson.global_index]
 
-    known: list[str] = []
-    seen: set[str] = set()
+    chapter_ctx, known = await programs.program_context(session, sip)
+    seen: set[str] = {normalize(c) for c in known}
     for l in earlier:
         for c in l.concepts_taught or l.concepts:
             if normalize(c) not in seen:
@@ -242,6 +261,7 @@ async def build_lesson_context(session: AsyncSession, lesson: Lesson) -> tuple[s
 
     parts = [
         f"LEARNING PROFILE:\n{_dump(sip.profile)}",
+        *([chapter_ctx] if chapter_ctx else []),
         "CURRICULUM:\n"
         + "\n".join(
             f"{'>>' if m.id == module.id else '  '} M{m.position}. {m.title} — {m.role}" for m in modules

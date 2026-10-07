@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # Models per pipeline stage (OpenRouter slugs)
     model_interpretation: str = "openai/gpt-6-luna"
     model_curriculum: str = "anthropic/claude-opus-5.5"
+    model_roadmap: str = "anthropic/claude-opus-5.5"
     model_mapping: str = "openai/gpt-6.1-sol"
     model_planning: str = "openai/gpt-6-luna"
     model_writing: str = "openai/gpt-6-luna"

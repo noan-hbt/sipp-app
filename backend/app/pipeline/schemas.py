@@ -35,9 +35,40 @@ class LearningProfile(_Out):
         description="Breadth of the path: focused = one narrow question or skill, "
         "standard = understand a topic well, comprehensive = master a whole field."
     )
+    breadth: Literal["single", "program"] = Field(
+        default="single",
+        description="single = fits in one path of at most ~25 five-minute lessons; "
+        "program = a big goal that needs several such paths (chapters).",
+    )
     context: str | None = Field(default=None, description="Why they learn it, use case.")
     assumptions: list[str] = Field(
         default_factory=list, description="Assumptions made where the input was silent."
+    )
+
+
+# 1b. Roadmap (big goals only) -------------------------------------------------
+
+
+class RoadmapChapter(_Out):
+    title: str = Field(description="Short chapter title (max ~6 words).")
+    outcome: str = Field(description="What the learner can do after it, one sentence.")
+    level: Literal["core", "advanced"] = Field(
+        description="core = needed to reach the goal, advanced = going further."
+    )
+    estimated_lessons: int = Field(ge=4, le=25, description="Number of ~5-minute lessons.")
+
+
+class Roadmap(_Out):
+    title: str = Field(description="Short title of the whole program, in the learner's language.")
+    summary: str = Field(description="2-3 sentences: where the program leads.")
+    chapters: list[RoadmapChapter] = Field(min_length=2, max_length=15)
+
+
+class RoadmapExtension(_Out):
+    title: str = Field(description="Short title of the whole journey, in the learner's language.")
+    summary: str = Field(description="2-3 sentences: where the program leads.")
+    chapters: list[RoadmapChapter] = Field(
+        min_length=2, max_length=6, description="Follow-up chapters only, not the finished one."
     )
 
 

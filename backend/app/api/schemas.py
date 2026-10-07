@@ -70,6 +70,8 @@ class SipSummary(BaseModel):
     next_lesson_id: str | None
     next_lesson_title: str | None = None
     lite: bool = False
+    program_id: str | None = None
+    chapter: int | None = None
     created_at: datetime
 
 
@@ -100,6 +102,26 @@ class SipDetail(SipSummary):
     profile: dict[str, Any] | None
     outline: list[str] = Field(default_factory=list, description="Module titles, known before mapping ends.")
     modules: list[ModuleOut]
+
+
+class ChapterOut(BaseModel):
+    position: int
+    title: str
+    outcome: str
+    level: str
+    estimated_lessons: int
+    sip: SipSummary | None
+
+
+class ProgramOut(BaseModel):
+    id: str
+    status: str
+    error: str | None
+    title: str | None
+    summary: str | None
+    lite: bool
+    chapters: list[ChapterOut]
+    created_at: datetime
 
 
 class LessonOut(BaseModel):

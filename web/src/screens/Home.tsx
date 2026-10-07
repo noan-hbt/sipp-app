@@ -72,7 +72,7 @@ export function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <SipIcon id={resume.id} size={58} />
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>On reprend ?</span>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>{resume.chapter ? `On reprend · chapitre ${resume.chapter}` : 'On reprend ?'}</span>
                     <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.2 }}>{resume.title}</h2>
                   </div>
                 </div>

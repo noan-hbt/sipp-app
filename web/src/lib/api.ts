@@ -22,6 +22,8 @@ export interface SipSummary {
   next_lesson_id: string | null
   next_lesson_title?: string | null
   lite?: boolean
+  program_id?: string | null
+  chapter?: number | null
   created_at: string
 }
 export type LessonStatus = 'pending' | 'queued' | 'generating' | 'ready' | 'failed'
@@ -93,6 +95,24 @@ export interface Stats {
   completed_today: boolean
   lessons_completed: number
   total_stars: number
+}
+export interface Chapter {
+  position: number
+  title: string
+  outcome: string
+  level: 'core' | 'advanced'
+  estimated_lessons: number
+  sip: SipSummary | null
+}
+export interface Program {
+  id: string
+  status: 'generating' | 'ready' | 'failed'
+  error: string | null
+  title: string | null
+  summary: string | null
+  lite: boolean
+  chapters: Chapter[]
+  created_at: string
 }
 export interface Plan {
   plan: 'free' | 'basic' | 'plus' | 'max'
@@ -220,6 +240,11 @@ export const Api = {
   createSip: (input: string) => api<SipSummary>('/sips', { method: 'POST', json: { input } }),
   retrySip: (id: string) => api<SipSummary>(`/sips/${id}/retry`, { method: 'POST' }),
   deleteSip: (id: string) => api<void>(`/sips/${id}`, { method: 'DELETE' }),
+  programs: () => api<Program[]>('/programs'),
+  program: (id: string) => api<Program>(`/programs/${id}`),
+  deleteProgram: (id: string) => api<void>(`/programs/${id}`, { method: 'DELETE' }),
+  startChapter: (id: string, position: number) => api<SipSummary>(`/programs/${id}/chapters/${position}`, { method: 'POST' }),
+  extendSip: (id: string) => api<Program>(`/sips/${id}/extend`, { method: 'POST' }),
   lesson: (id: string) => api<LessonOut>(`/lessons/${id}`),
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),

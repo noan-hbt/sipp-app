@@ -4,12 +4,14 @@ import asyncio
 import logging
 import signal
 
+from sqlalchemy import update
+
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
 from app.llm.client import CallRecord, OpenRouterClient, StructuredLLM
-from app.models import Job, Lesson, LessonStatus, LLMCall, Sip, SipStatus
-from app.pipeline import engine
+from app.models import Job, Lesson, LessonStatus, LLMCall, Program, Sip, SipStatus
+from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
 
@@ -42,6 +44,8 @@ async def run_job(job: Job, client=None) -> None:
         if job.type == engine.JOB_BUILD_SIP:
             sip_id = job.payload["sip_id"]
             await engine.build_sip(session, make_llm(client, sip_id=sip_id), sip_id)
+        elif job.type == programs.JOB_EXTEND_PROGRAM:
+            await programs.extend_program(session, make_llm(client), job.payload["program_id"])
         elif job.type == engine.JOB_GENERATE_LESSON:
             lesson_id = job.payload["lesson_id"]
             lesson = await session.get(Lesson, lesson_id)
@@ -59,6 +63,14 @@ async def on_failure(job: Job, error: str) -> None:
             if sip:
                 sip.status = SipStatus.QUEUED if retry else SipStatus.FAILED
                 sip.error = None if retry else error[:2000]
+        elif job.type == programs.JOB_EXTEND_PROGRAM:
+            program = await session.get(Program, job.payload["program_id"])
+            if program and not retry:
+                # Back to a standalone Sip: the learner can ask again.
+                await session.execute(
+                    update(Sip).where(Sip.program_id == program.id).values(program_id=None, chapter=None)
+                )
+                await session.delete(program)
         elif job.type == engine.JOB_GENERATE_LESSON:
             lesson = await session.get(Lesson, job.payload["lesson_id"])
             if lesson:
