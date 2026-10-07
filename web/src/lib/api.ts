@@ -210,6 +210,7 @@ export const Api = {
     tokens ? api<void>('/auth/logout', { method: 'POST', json: { refresh_token: tokens.refresh_token } }) : Promise.resolve(),
   stats: () => api<Stats>(`/auth/me/stats?tz=${encodeURIComponent(TZ)}`),
   deleteAccount: (password: string) => api<void>('/auth/me', { method: 'DELETE', json: { password } }),
+  me: () => api<{ id: string; email: string; created_at: string }>('/auth/me'),
   plan: () => api<Plan>('/auth/me/plan'),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
   exportData: () => api<unknown>('/auth/me/export'),

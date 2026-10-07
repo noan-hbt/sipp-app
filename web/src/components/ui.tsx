@@ -210,4 +210,19 @@ export const Icon = {
       <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
     </svg>
   ),
+  today: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 10h12v5a5 5 0 01-5 5h-2a5 5 0 01-5-5z" />
+      <path d="M17 11.5h1a2.5 2.5 0 010 5h-1.4" />
+      <path d="M9 3.5c-.9 1 .9 1.7 0 2.8M13 3.5c-.9 1 .9 1.7 0 2.8" />
+    </svg>
+  ),
+  library: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="3.5" width="7" height="7" rx="2.2" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="2.2" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="2.2" />
+      <path d="M17 14v6M14 17h6" />
+    </svg>
+  ),
 }

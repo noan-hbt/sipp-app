@@ -3,11 +3,21 @@ import { useEffect, useMemo } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { RichText } from '../components/RichText'
 import { Button, Icon, Star } from '../components/ui'
 import type { CompleteOut } from '../lib/api'
 import { play } from '../lib/sound'
 
-type DoneState = CompleteOut & { correct: number; total: number; sipId: string; title: string; concepts: string[] }
+type DoneState = CompleteOut & {
+  correct: number
+  total: number
+  sipId: string
+  title: string
+  concepts: string[]
+  objective?: string
+  points?: string[]
+  action?: string | null
+}
 
 const CONFETTI = ['var(--peach)', 'var(--lavender-strong)', 'var(--mint-strong)', 'var(--star)', '#8DB8E0', '#E79AAA']
 
@@ -37,6 +47,47 @@ function Confetti() {
         />
       ))}
     </div>
+  )
+}
+
+/** What was learned: the lesson's outcome, the ideas to keep, an optional mini-action. */
+export function Takeaways({ objective, points, action, delay = 0 }: { objective: string; points: string[]; action: string | null; delay?: number }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 20, delay }}
+      className="card"
+      style={{ borderRadius: 26, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 900, color: 'var(--mint-ink)', textTransform: 'uppercase', letterSpacing: '.06em' }}>
+          {Icon.check(14)} Objectif atteint
+        </span>
+        <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.4 }}>
+          <RichText text={objective} />
+        </p>
+      </div>
+      {points.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>À retenir</span>
+          {points.map((p) => (
+            <p key={p} style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45, color: 'var(--ink-soft)', paddingLeft: 14, position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 0, top: 9, width: 6, height: 6, borderRadius: 3, background: 'var(--peach)' }} />
+              <RichText text={p} />
+            </p>
+          ))}
+        </div>
+      )}
+      {action && (
+        <div className="well" style={{ borderRadius: 18, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--lavender-ink)' }}>À essayer aujourd’hui</span>
+          <p style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45 }}>
+            <RichText text={action} />
+          </p>
+        </div>
+      )}
+    </motion.section>
   )
 }
 
@@ -109,6 +160,8 @@ export function LessonDone() {
             </div>
           </div>
         </motion.div>
+
+        {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} delay={1.2} />}
 
         {s.concepts.length > 0 && (
           <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }} className="well" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>

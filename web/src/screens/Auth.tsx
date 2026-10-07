@@ -1,13 +1,15 @@
 import { motion, useAnimationControls } from 'motion/react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { Button } from '../components/ui'
+import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
 
-export function Auth() {
-  const [mode, setMode] = useState<'login' | 'register'>('register')
+export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' }) {
+  const nav = useNavigate()
+  const [mode, setMode] = useState<'login' | 'register'>(initial)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -41,8 +43,13 @@ export function Auth() {
   }
 
   return (
-    <Screen kind="fade">
-      <div className="scroll" style={{ padding: 'calc(var(--safe-top) + 48px) 24px 24px', display: 'flex', flexDirection: 'column', gap: 26 }}>
+    <Screen>
+      <header className="topbar">
+        <IconButton label="Retour" onClick={() => nav('/', { replace: true })}>
+          {Icon.back}
+        </IconButton>
+      </header>
+      <div className="scroll" style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 26 }}>
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -54,7 +61,7 @@ export function Auth() {
           </div>
           <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.02em' }}>Sipp</h1>
           <p className="muted" style={{ fontSize: 17, fontWeight: 700, maxWidth: 280 }}>
-            Dis-moi ce que tu veux savoir. Je construis le chemin, cinq minutes à la fois.
+            {mode === 'register' ? 'Crée ton compte pour garder ton parcours et ta progression.' : 'Content de te revoir !'}
           </p>
         </motion.div>
 

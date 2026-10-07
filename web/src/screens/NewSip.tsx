@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -19,12 +19,32 @@ const ERRORS: Record<string, string> = {
   daily_sip_limit: 'Tu as déjà lancé beaucoup de Sips aujourd’hui. Reviens demain !',
   daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
   too_many_active_builds: 'Je construis déjà plusieurs parcours. Attends qu’ils soient prêts.',
+  no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',
+  monthly_limit: 'Tu as utilisé tes générations du mois. Reviens le mois prochain, ou passe à l’abonnement.',
 }
 
-export function NewSip() {
+export const WISH_KEY = 'sipp.wish'
+
+/** `guest`: visitor not signed up yet; the wish is kept and the Sip is created right after sign-up. */
+export function NewSip({ guest = false }: { guest?: boolean }) {
   const nav = useNavigate()
   const qc = useQueryClient()
-  const [text, setText] = useState('')
+  const [text, setText] = useState(() => {
+    try {
+      return sessionStorage.getItem(WISH_KEY) ?? ''
+    } catch {
+      return ''
+    }
+  })
+  const plan = useQuery({ queryKey: ['plan'], queryFn: Api.plan, enabled: !guest })
+  const trial = useMutation({
+    mutationFn: Api.startTrial,
+    onSuccess: (p) => {
+      play('complete')
+      qc.setQueryData(['plan'], p)
+      create.reset()
+    },
+  })
   const create = useMutation({
     mutationFn: Api.createSip,
     onSuccess: (sip) => {
@@ -34,6 +54,7 @@ export function NewSip() {
     },
     onError: () => play('wrong'),
   })
+  const paywall = create.error instanceof ApiError && create.error.status === 402
   const err = create.error instanceof ApiError ? (ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
 
   return (
@@ -98,9 +119,35 @@ export function NewSip() {
       </div>
 
       <div className="bottom-bar">
-        <Button disabled={text.trim().length < 3 || create.isPending} onClick={() => create.mutate(text.trim())} sound="pop">
-          {create.isPending ? <Mascot mood="think" size={36} /> : 'Construis mon parcours'}
-        </Button>
+        {paywall && plan.data?.trial_available ? (
+          <Button variant="peach" disabled={trial.isPending} onClick={() => trial.mutate()} sound="pop">
+            {trial.isPending ? <Mascot mood="think" size={36} /> : `Essayer gratuitement ${plan.data.trial_days} jours`}
+          </Button>
+        ) : guest ? (
+          <Button
+            disabled={text.trim().length < 3}
+            onClick={() => {
+              try {
+                sessionStorage.setItem(WISH_KEY, text.trim())
+              } catch {
+                /* private mode: the visitor will retype it */
+              }
+              nav('/signup')
+            }}
+            sound="pop"
+          >
+            Construis mon parcours
+          </Button>
+        ) : (
+          <Button disabled={text.trim().length < 3 || create.isPending} onClick={() => create.mutate(text.trim())} sound="pop">
+            {create.isPending ? <Mascot mood="think" size={36} /> : 'Construis mon parcours'}
+          </Button>
+        )}
+        {!guest && plan.data?.lite && !paywall && (
+          <p className="muted" style={{ fontSize: 13, fontWeight: 700, textAlign: 'center', marginTop: 10 }}>
+            Offre gratuite : un parcours court, préparé avec un modèle plus léger.
+          </p>
+        )}
       </div>
     </Screen>
   )

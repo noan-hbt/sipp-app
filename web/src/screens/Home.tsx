@@ -1,19 +1,13 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { itemVariants as item, listVariants as list } from '../components/SipCard'
 import { SipIcon, sipPalette } from '../components/SipIcon'
-import { Button, Icon, IconButton } from '../components/ui'
-import { Api, setTokens, type SipSummary } from '../lib/api'
-import { play, setSoundEnabled, soundEnabled } from '../lib/sound'
-
-const list = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
-const item = {
-  hidden: { opacity: 0, y: 18, scale: 0.97 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 260, damping: 22 } },
-}
+import { Button, Icon } from '../components/ui'
+import { Api, type SipSummary } from '../lib/api'
+import { play } from '../lib/sound'
 
 function greeting() {
   const h = new Date().getHours()
@@ -22,18 +16,17 @@ function greeting() {
 
 export function Home() {
   const nav = useNavigate()
-  const qc = useQueryClient()
   const sips = useQuery({
     queryKey: ['sips'],
     queryFn: Api.sips,
     refetchInterval: (q) => (q.state.data?.some((s) => s.status === 'queued' || s.status === 'generating') ? 3000 : false),
   })
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
-  const [settings, setSettings] = useState(false)
 
   const all = sips.data ?? []
   const resume = all.find((s) => s.status === 'ready' && s.progress.completed < s.progress.total)
-  const others = all.filter((s) => s !== resume)
+  // Other Sips worth a glance today: in progress or being built, most recent first.
+  const others = all.filter((s) => s !== resume && !(s.progress.total > 0 && s.progress.completed >= s.progress.total)).slice(0, 3)
 
   return (
     <Screen>
@@ -43,7 +36,7 @@ export function Home() {
             <span className="muted" style={{ fontSize: 14, fontWeight: 700 }}>
               {greeting()}
             </span>
-            <h1 style={{ fontSize: 28, fontWeight: 900 }}>Mes Sips</h1>
+            <h1 style={{ fontSize: 28, fontWeight: 900 }}>Aujourd’hui</h1>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -64,13 +57,10 @@ export function Home() {
             </motion.span>
             {stats.data?.streak_days ?? 0}
           </motion.div>
-          <IconButton label="Réglages" onClick={() => setSettings(true)}>
-            {Icon.user}
-          </IconButton>
         </div>
       </header>
 
-      <div className="scroll" style={{ padding: '18px 22px 140px' }}>
+      <div className="scroll" style={{ padding: '18px 22px 130px' }}>
         {sips.isLoading ? (
           <Skeleton />
         ) : all.length === 0 ? (
@@ -112,77 +102,62 @@ export function Home() {
             )}
 
             {others.length > 0 && (
-              <motion.h3 variants={item} style={{ margin: '6px 4px 0', fontSize: 16, fontWeight: 900 }}>
-                Tous mes Sips
-              </motion.h3>
+              <motion.div variants={item} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '6px 4px 0' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 900 }}>{resume ? 'Aussi en cours' : 'En cours'}</h3>
+                <button onClick={() => nav('/library', { replace: true })} style={{ border: 'none', background: 'none', fontSize: 14, fontWeight: 900, color: '#9c4a22' }}>
+                  Tout voir
+                </button>
+              </motion.div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-              {others.map((s) => (
-                <SipCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
-              ))}
-            </div>
+            {others.map((s) => (
+              <MiniCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
+            ))}
+            <motion.div variants={item} style={{ marginTop: 4 }}>
+              <Button variant="soft" onClick={() => nav('/new')} sound="pop">
+                <span style={{ width: 32, height: 32, borderRadius: 16, background: 'var(--ink)', color: 'var(--bg)', display: 'grid', placeItems: 'center' }}>{Icon.plus}</span>
+                Apprendre autre chose
+              </Button>
+            </motion.div>
           </motion.div>
         )}
       </div>
-
-      <div className="bottom-fade">
-        <Button variant="soft" onClick={() => nav('/new')} sound="pop">
-          <span style={{ width: 32, height: 32, borderRadius: 16, background: 'var(--ink)', color: 'var(--bg)', display: 'grid', placeItems: 'center' }}>{Icon.plus}</span>
-          Apprendre un truc nouveau
-        </Button>
-      </div>
-
-      <AnimatePresence>
-        {settings && (
-          <Settings
-            onClose={() => setSettings(false)}
-            onLogout={async () => {
-              await Api.logout().catch(() => undefined)
-              qc.clear()
-              setTokens(null)
-            }}
-          />
-        )}
-      </AnimatePresence>
     </Screen>
   )
 }
 
-function SipCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
+function MiniCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
   const building = sip.status === 'queued' || sip.status === 'generating'
   const failed = sip.status === 'failed'
-  const done = sip.progress.total > 0 && sip.progress.completed >= sip.progress.total
   const pal = sipPalette(sip.id)
   return (
     <motion.button
       variants={item}
-      layout
+      whileTap={{ scale: 0.97 }}
       onClick={() => {
         play('tap')
         onOpen()
       }}
-      whileTap={{ scale: 0.96 }}
-      className={building ? 'inset' : 'raised'}
-      style={{ border: 'none', textAlign: 'left', borderRadius: 26, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: failed ? 'var(--rose-soft)' : 'var(--bg)' }}
+      className="card"
+      style={{ border: 'none', textAlign: 'left', borderRadius: 24, padding: 12, display: 'flex', alignItems: 'center', gap: 12, background: failed ? 'var(--rose-soft)' : undefined }}
     >
-      {building ? <Mascot mood="think" size={48} /> : failed ? <Mascot mood="oops" size={48} /> : <SipIcon id={sip.id} />}
-      <span style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.25 }}>{sip.title ?? sip.input_text}</span>
-      {building ? (
-        <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>
-          Je trace ton chemin…
-        </span>
-      ) : failed ? (
-        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--rose-ink)' }}>Raté, touche pour réessayer</span>
-      ) : (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--bg-deep)' }}>
-            <div style={{ width: `${(sip.progress.completed / Math.max(1, sip.progress.total)) * 100}%`, height: '100%', borderRadius: 4, background: pal.bar }} />
+      {building ? <Mascot mood="think" size={44} /> : failed ? <Mascot mood="oops" size={44} /> : <SipIcon id={sip.id} size={44} />}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sip.title ?? sip.input_text}</span>
+        {building ? (
+          <span className="muted" style={{ fontSize: 13, fontWeight: 700 }}>Je trace ton chemin…</span>
+        ) : failed ? (
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--rose-ink)' }}>Raté, touche pour réessayer</span>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'var(--track)' }}>
+              <div style={{ width: `${(sip.progress.completed / Math.max(1, sip.progress.total)) * 100}%`, height: '100%', borderRadius: 3, background: pal.bar }} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)' }}>
+              {sip.progress.completed}/{sip.progress.total}
+            </span>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 900, color: done ? 'var(--mint-ink)' : 'var(--muted)' }}>
-            {done ? 'Fini' : `${sip.progress.completed}/${sip.progress.total}`}
-          </span>
-        </div>
-      )}
+        )}
+      </div>
     </motion.button>
   )
 }
@@ -221,64 +196,5 @@ function Skeleton() {
         />
       ))}
     </div>
-  )
-}
-
-function Settings({ onClose, onLogout }: { onClose: () => void; onLogout: () => void }) {
-  const [sound, setSound] = useState(soundEnabled())
-  return (
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(43,38,32,.25)', zIndex: 20 }}
-      />
-      <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', stiffness: 380, damping: 36 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0, bottom: 0.6 }}
-        onDragEnd={(_, i) => i.offset.y > 80 && onClose()}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 21,
-          background: 'var(--bg)',
-          borderRadius: '34px 34px 0 0',
-          padding: '12px 22px calc(var(--safe-bottom) + 26px)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          boxShadow: '0 -10px 30px rgba(120,90,60,.18)',
-        }}
-      >
-        <span style={{ alignSelf: 'center', width: 44, height: 5, borderRadius: 3, background: 'var(--shadow-dark)' }} />
-        <h2 className="title-m">Réglages</h2>
-        <button
-          onClick={() => {
-            setSound(!sound)
-            setSoundEnabled(!sound)
-          }}
-          className="raised-sm"
-          style={{ border: 'none', borderRadius: 22, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 16, fontWeight: 800 }}
-        >
-          {Icon.sound(sound)}
-          <span style={{ flex: 1, textAlign: 'left' }}>Effets sonores</span>
-          <span className="inset" style={{ width: 54, height: 32, borderRadius: 16, padding: 3, display: 'flex', justifyContent: sound ? 'flex-end' : 'flex-start' }}>
-            <motion.span layout transition={{ type: 'spring', stiffness: 600, damping: 30 }} style={{ width: 26, height: 26, borderRadius: 13, background: sound ? 'var(--peach)' : 'var(--faint)' }} />
-          </span>
-        </button>
-        <Button variant="ghost" onClick={onLogout} style={{ height: 50, fontSize: 16, color: 'var(--rose-ink)' }}>
-          Se déconnecter
-        </Button>
-      </motion.div>
-    </>
   )
 }
