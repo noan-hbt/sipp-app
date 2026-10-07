@@ -11,6 +11,7 @@ import { MathDisplay, RichText } from '../components/RichText'
 import { Button, Icon } from '../components/ui'
 import type * as B from '../lib/blocks'
 import { haptic, play } from '../lib/sound'
+import { Estimate, FillBlanks, Match } from './Practice'
 
 hljs.registerLanguage('python', python)
 hljs.registerLanguage('javascript', javascript)
@@ -678,6 +679,12 @@ export function BlockView({ block, answer, onAnswer }: { block: B.Block; answer?
       return <Misconception b={block} answer={answer} onAnswer={onAnswer} />
     case 'question':
       return <Question b={block} answer={answer} onAnswer={onAnswer} />
+    case 'fill_blanks':
+      return <FillBlanks b={block} answer={answer} onAnswer={onAnswer} />
+    case 'match':
+      return <Match b={block} answer={answer} onAnswer={onAnswer} />
+    case 'estimate':
+      return <Estimate b={block} answer={answer} onAnswer={onAnswer} />
     case 'application':
       return <Application b={block} />
     case 'recap':
@@ -691,5 +698,6 @@ export function BlockView({ block, answer, onAnswer }: { block: B.Block; answer?
 export function feedbackFor(block: B.Block): { explanation: string; expected?: string } {
   if (block.type === 'misconception') return { explanation: block.correction }
   if (block.type === 'question') return { explanation: block.explanation, expected: block.kind === 'open' ? block.expected_answer : undefined }
+  if (block.type === 'fill_blanks' || block.type === 'match' || block.type === 'estimate') return { explanation: block.explanation }
   return { explanation: '' }
 }

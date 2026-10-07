@@ -7,6 +7,7 @@ Inline math: any learner-facing text field may contain inline LaTeX between sing
 dollars, e.g. "la clé $k_i$". Display formulas go in a `math` block.
 """
 
+import re
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -181,6 +182,81 @@ class QuestionBlock(_Block):
         return self
 
 
+_BLANK = re.compile(r"\{(\d+)\}")
+
+
+class FillBlank(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    answer: Str = Field(description="The exact word or short phrase (1-4 words) that fills this blank.")
+
+
+class FillBlanksBlock(_Block):
+    type: Literal["fill_blanks"]
+    text: Str = Field(description="Sentence(s) with numbered blanks {1}, {2}, {3} in order.")
+    blanks: list[FillBlank] = Field(min_length=1, max_length=3)
+    distractors: list[Str] = Field(
+        min_length=1, max_length=4, description="Plausible wrong words shown among the choices."
+    )
+    explanation: Str = Field(description="Shown after answering, whatever the result.")
+
+    @model_validator(mode="after")
+    def _consistency(self) -> "FillBlanksBlock":
+        nums = [int(n) for n in _BLANK.findall(self.text)]
+        if nums != list(range(1, len(self.blanks) + 1)):
+            raise ValueError(
+                f"text must contain blanks {{1}}..{{{len(self.blanks)}}} once each, in order (found {nums})"
+            )
+        answers = [b.answer.strip().lower() for b in self.blanks]
+        if len(set(answers)) != len(answers):
+            raise ValueError("blank answers must be distinct")
+        if any(d.strip().lower() in answers for d in self.distractors):
+            raise ValueError("a distractor equals a correct answer")
+        return self
+
+
+class MatchPair(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    left: Str
+    right: Str
+
+
+class MatchBlock(_Block):
+    type: Literal["match"]
+    prompt: Str
+    pairs: list[MatchPair] = Field(min_length=3, max_length=5, description="Correct pairs; shuffled by the app.")
+    explanation: Str = Field(description="Shown after answering, whatever the result.")
+
+    @model_validator(mode="after")
+    def _unique(self) -> "MatchBlock":
+        for side in ("left", "right"):
+            vals = [getattr(p, side).strip().lower() for p in self.pairs]
+            if len(set(vals)) != len(vals):
+                raise ValueError(f"match pairs must have distinct '{side}' values")
+        return self
+
+
+class EstimateBlock(_Block):
+    type: Literal["estimate"]
+    prompt: Str = Field(description="A question whose answer is a number.")
+    min: float
+    max: float
+    step: float = Field(gt=0)
+    answer: float
+    tolerance: float = Field(ge=0, description="Guesses within answer ± tolerance count as correct.")
+    unit: str | None = Field(default=None, description="Short unit shown after the number, e.g. 'km', '%', 'ans'.")
+    explanation: Str = Field(description="Shown after answering, whatever the result.")
+
+    @model_validator(mode="after")
+    def _range(self) -> "EstimateBlock":
+        if not self.min < self.answer < self.max:
+            raise ValueError("estimate needs min < answer < max")
+        if (self.max - self.min) / self.step > 2000:
+            raise ValueError("estimate step too small for the range (max 2000 positions)")
+        if self.tolerance >= (self.max - self.min) / 2:
+            raise ValueError("estimate tolerance too wide for the range")
+        return self
+
+
 class ApplicationBlock(_Block):
     type: Literal["application"]
     prompt: Str
@@ -210,6 +286,9 @@ Block = Annotated[
     | MathBlock
     | MisconceptionBlock
     | QuestionBlock
+    | FillBlanksBlock
+    | MatchBlock
+    | EstimateBlock
     | ApplicationBlock
     | RecapBlock,
     Field(discriminator="type"),
@@ -228,6 +307,9 @@ BLOCK_TYPES = [
     "math",
     "misconception",
     "question",
+    "fill_blanks",
+    "match",
+    "estimate",
     "application",
     "recap",
 ]

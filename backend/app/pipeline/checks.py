@@ -8,6 +8,9 @@ from app.pipeline.blocks import (
     ConceptBlock,
     MathBlock,
     QuestionBlock,
+    FillBlanksBlock,
+    MatchBlock,
+    EstimateBlock,
     RecapBlock,
 )
 from app.pipeline.schemas import LessonDraft, ModuleMapping
@@ -131,9 +134,12 @@ def inline_math_unbalanced(block) -> bool:
     return found
 
 
+CHECK_BLOCKS = (QuestionBlock, FillBlanksBlock, MatchBlock, EstimateBlock)
+
+
 def estimate_minutes(draft: LessonDraft) -> float:
     words = sum(block_words(b) for b in draft.blocks)
-    interactions = sum(1 for b in draft.blocks if b.type in ("question", "misconception", "application"))
+    interactions = sum(1 for b in draft.blocks if b.type in ("question", "misconception", "application", "fill_blanks", "match", "estimate"))
     return words / WORDS_PER_MINUTE + interactions * SECONDS_PER_INTERACTION / 60
 
 
@@ -152,10 +158,10 @@ def check_lesson(
     elif recaps != [len(blocks) - 1]:
         res.errors.append("exactly one 'recap' block is allowed and it must be the last block")
 
-    if not any(isinstance(b, QuestionBlock) for b in blocks):
-        res.errors.append("lesson needs at least one 'question' block")
+    if not any(isinstance(b, CHECK_BLOCKS) for b in blocks):
+        res.errors.append("lesson needs at least one comprehension check (question, fill_blanks, match or estimate)")
 
-    if isinstance(blocks[0], (QuestionBlock, RecapBlock)):
+    if isinstance(blocks[0], (*CHECK_BLOCKS, RecapBlock)):
         res.errors.append("lesson must not open with a question or recap")
 
     # duplicated content

@@ -39,6 +39,25 @@ export interface QuestionBlock {
   expected_answer?: string
   explanation: string
 }
+export interface FillBlanksBlock {
+  type: 'fill_blanks'
+  text: string
+  blanks: { answer: string }[]
+  distractors: string[]
+  explanation: string
+}
+export interface MatchBlock { type: 'match'; prompt: string; pairs: { left: string; right: string }[]; explanation: string }
+export interface EstimateBlock {
+  type: 'estimate'
+  prompt: string
+  min: number
+  max: number
+  step: number
+  answer: number
+  tolerance: number
+  unit?: string | null
+  explanation: string
+}
 export interface ApplicationBlock { type: 'application'; prompt: string; guidance?: string; optional?: boolean }
 export interface RecapBlock { type: 'recap'; points: string[]; concepts?: string[] }
 
@@ -55,15 +74,18 @@ export type Block =
   | MathBlock
   | MisconceptionBlock
   | QuestionBlock
+  | FillBlanksBlock
+  | MatchBlock
+  | EstimateBlock
   | ApplicationBlock
   | RecapBlock
 
 /** Blocks the learner must answer before continuing. */
 export function isInteractive(b: Block) {
-  return b.type === 'question' || b.type === 'misconception'
+  return b.type === 'question' || b.type === 'misconception' || b.type === 'fill_blanks' || b.type === 'match' || b.type === 'estimate'
 }
 
 /** Graded blocks count toward the lesson score (open questions are not graded). */
 export function isGraded(b: Block) {
-  return b.type === 'misconception' || (b.type === 'question' && b.kind !== 'open')
+  return isInteractive(b) && !(b.type === 'question' && b.kind === 'open')
 }

@@ -107,3 +107,33 @@ def test_code_and_math_blocks():
     assert any("unbalanced braces" in e for e in errors)
     assert any("$ delimiters" in e for e in errors)
     assert any("inline math" in e for e in errors)
+
+
+FILL = {"type": "fill_blanks", "text": "Le {1} augmente quand le {2} baisse.", "blanks": [{"answer": "prix"}, {"answer": "stock"}], "distractors": ["taux"], "explanation": "x"}
+MATCH = {"type": "match", "prompt": "Relie", "pairs": [{"left": "a", "right": "1"}, {"left": "b", "right": "2"}, {"left": "c", "right": "3"}], "explanation": "x"}
+EST = {"type": "estimate", "prompt": "Combien ?", "min": 0, "max": 100, "step": 1, "answer": 42, "tolerance": 5, "unit": "%", "explanation": "x"}
+
+
+def test_new_interactive_blocks_validate():
+    d = draft(blocks=[DRAFT["blocks"][0], FILL, MATCH, EST, DRAFT["blocks"][-1]])
+    assert [b.type for b in d.blocks][1:4] == ["fill_blanks", "match", "estimate"]
+    # a fill/match/estimate is enough as comprehension check
+    res = check_lesson(d, [], [], 5)
+    assert not any("comprehension check" in e for e in res.errors)
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        {**FILL, "text": "Le {2} et le {1}."},
+        {**FILL, "distractors": ["prix"]},
+        {**MATCH, "pairs": MATCH["pairs"][:2]},
+        {**MATCH, "pairs": [*MATCH["pairs"][:2], {"left": "a", "right": "9"}]},
+        {**EST, "answer": 150},
+        {**EST, "step": 0.01},
+        {**EST, "tolerance": 60},
+    ],
+)
+def test_new_blocks_rejected(block):
+    with pytest.raises(ValidationError):
+        draft(blocks=[DRAFT["blocks"][0], block, DRAFT["blocks"][-1]])

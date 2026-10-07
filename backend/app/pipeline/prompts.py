@@ -84,6 +84,10 @@ Available block types for the writer:
 - math: display formula (LaTeX) + meaning in words + variables
 - misconception: a plausible false belief, then its correction (true/false interaction)
 - question: comprehension check (single_choice, multiple_choice, true_false, open)
+- fill_blanks: sentence with 1-3 blanks to fill by tapping words (key terms, definitions)
+- match: link 3-5 pairs (term/definition, cause/effect, example/category...)
+- estimate: guess a number on a slider (orders of magnitude, dates, proportions);
+  only when the real value is well established and the guess itself teaches something
 - application: ask the learner to apply it to their own situation (no single right answer)
 - recap: consolidate key takeaways (always last)
 
@@ -98,6 +102,8 @@ Rules:
   practical; use `math` only when the formula IS the concept and the learner's level
   allows it. Always build the intuition in words before a formula.
 - Plan 1-3 comprehension checks that test understanding, not recall of wording.
+  Vary their form across the lesson (question, fill_blanks, match, estimate) when it
+  fits the content; never force a form that does not fit.
 - `sequence` lists the ordered teaching steps, each prefixed with its block type,
   e.g. "scenario: ...", "concept: ...", "question(true_false): ...". End with "recap".
 - Keep it dense and focused: ~{lesson_minutes} minutes total, roughly 7-12 blocks.
@@ -118,6 +124,15 @@ Rules:
 - single_choice: exactly one correct option. Options have short ids ("a","b","c",...).
   Distractors must be plausible. true_false: use `answer`, no options. open: provide
   `expected_answer` with key points.
+- fill_blanks: `text` contains {{1}}, {{2}}, {{3}} in order, one per blank; each answer is a
+  single word or short phrase that is the ONLY sensible fit; 2-4 plausible distractors
+  of the same kind (never synonyms of an answer).
+- match: 3-5 pairs, each left matches exactly one right; keep each side short (max ~8
+  words) and unambiguous.
+- estimate: a well-established numeric fact; `min`/`max` frame a sensible range with the
+  answer not at the center, `step` gives at most ~200 positions, `tolerance` accepts a
+  reasonable guess (about 5-15% of the range), `unit` is short. `explanation` gives the
+  real value and why it matters.
 - Never introduce a concept before defining it, except known concepts from context.
 - `code`: minimal, idiomatic, runnable when possible, max ~20 lines, no long comments;
   `explanation` says what to look at. Put code ONLY in code blocks, never in text.
@@ -151,6 +166,9 @@ Check:
 - off-objective information
 - questions: correct answers are actually correct, distractors are actually wrong,
   explanations are right
+- fill_blanks: each blank has exactly one sensible answer among the choices
+- match: each pair is correct and no left item could reasonably match another right
+- estimate: the answer value is accurate and the tolerance is fair
 
 Verdict:
 - "pass" if there is no major or critical issue (minor issues may be listed).
