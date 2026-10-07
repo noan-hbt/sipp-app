@@ -56,7 +56,7 @@ function Text({ b }: { b: B.TextBlock }) {
 
 function Concept({ b }: { b: B.ConceptBlock }) {
   return (
-    <article className="raised" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <article className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <motion.span initial={{ rotate: -30, scale: 0.5 }} animate={{ rotate: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 12, delay: 0.15 }}>
           <IconTile bg="var(--lavender)">
@@ -78,7 +78,7 @@ function Concept({ b }: { b: B.ConceptBlock }) {
 
 function Example({ b }: { b: B.ExampleBlock }) {
   return (
-    <article className="inset" style={{ borderRadius: 24, padding: '16px 18px', display: 'flex', gap: 12 }}>
+    <article className="well" style={{ borderRadius: 24, padding: '16px 18px', display: 'flex', gap: 12 }}>
       <IconTile bg="var(--butter)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8A6A12" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 14.4l-4.8 2.5.9-5.4L4.2 7.7l5.4-.8z" />
@@ -114,7 +114,7 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
         initial={{ scale: 0.8, originX: 0, originY: 1 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 350, damping: 20, delay: 0.08 }}
-        className="raised"
+        className="card"
         style={{ borderRadius: '24px 24px 24px 6px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}
       >
         <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--rose-ink)' }}>
@@ -135,7 +135,7 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
 
 function Analogy({ b }: { b: B.AnalogyBlock }) {
   return (
-    <article className="raised" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <article className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Tag bg="var(--sky)" ink="var(--sky-ink)">
         Analogie
       </Tag>
@@ -150,7 +150,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
           <RichText text={b.target} />
         </span>
       </div>
-      <div className="inset" style={{ borderRadius: 18, padding: 6, display: 'flex', flexDirection: 'column' }}>
+      <div className="well" style={{ borderRadius: 18, padding: 6, display: 'flex', flexDirection: 'column' }}>
         {b.mappings.map((m, i) => (
           <motion.div
             key={i}
@@ -189,7 +189,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
           Comparer
         </Tag>
         {b.items.length > 1 && (
-          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 800, color: '#8B8478' }}>
+          <motion.span animate={{ x: [0, 5, 0] }} transition={{ duration: 1.4, repeat: 3 }} style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)' }}>
             Glisse →
           </motion.span>
         )}
@@ -216,15 +216,15 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={stagger(i)}
-            className="raised"
+            className="card"
             style={{ flex: '0 0 76%', scrollSnapAlign: 'center', borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}
           >
             <span style={{ fontSize: 18, fontWeight: 900 }}>
               <RichText text={it.name} />
             </span>
             {b.dimensions.map((d, j) => (
-              <div key={j} className="inset" style={{ borderRadius: 18, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 900, color: '#8B8478', textTransform: 'uppercase' }}>
+              <div key={j} className="well" style={{ borderRadius: 18, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 12, fontWeight: 900, color: 'var(--muted)', textTransform: 'uppercase' }}>
                   <RichText text={d} />
                 </span>
                 <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.4 }}>
@@ -358,7 +358,7 @@ function Code({ b }: { b: B.CodeBlock }) {
   }, [b.code, b.language])
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ borderRadius: 26, background: 'var(--ink)', overflow: 'hidden', boxShadow: 'var(--raised)' }}>
+      <div style={{ borderRadius: 26, background: 'var(--ink)', overflow: 'hidden', boxShadow: '0 4px 14px rgba(43,38,32,.12)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 6px 18px' }}>
           <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {['var(--rose)', 'var(--butter)', 'var(--mint)'].map((c) => (
@@ -399,11 +399,11 @@ function Code({ b }: { b: B.CodeBlock }) {
 
 function MathB({ b }: { b: B.MathBlock }) {
   return (
-    <section className="raised" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <section className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Tag bg="var(--sky)" ink="var(--sky-ink)">
         Formule
       </Tag>
-      <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }} className="inset" style={{ borderRadius: 20, padding: '4px 12px' }}>
+      <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }} className="well" style={{ borderRadius: 20, padding: '4px 12px' }}>
         <MathDisplay latex={b.latex} />
       </motion.div>
       <P>{b.explanation}</P>
@@ -584,7 +584,7 @@ function TrueFalse({ chosen, truth, onPick }: { chosen: boolean | null; truth: b
 
 function Misconception({ b, answer, onAnswer }: { b: B.MisconceptionBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
   return (
-    <section className="raised" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <section className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Tag bg="var(--rose)" ink="var(--rose-ink)">
         Idée reçue ?
       </Tag>
@@ -638,7 +638,7 @@ function Recap({ b }: { b: B.RecapBlock }) {
     ['var(--sky)', 'var(--sky-ink)'],
   ]
   return (
-    <section className="raised" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <section className="card" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <span style={{ fontSize: 16, fontWeight: 900 }}>À retenir</span>
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {b.points.map((p, i) => (

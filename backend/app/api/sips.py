@@ -70,6 +70,7 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
         error=sip.error,
         progress=progress,
         next_lesson_id=nxt,
+        next_lesson_title=next((l.title for l in lessons if l.id == nxt), None),
         created_at=sip.created_at,
     )
 

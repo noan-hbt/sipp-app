@@ -85,7 +85,7 @@ export function LessonDone() {
           transition={{ type: 'spring', stiffness: 220, damping: 20, delay: 1.1 }}
           style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}
         >
-          <div className="raised" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <motion.span initial={{ scale: 0 }} animate={{ scale: [0, 1.4, 1] }} transition={{ delay: 1.3, duration: 0.5 }} style={{ display: 'grid' }}>
               {Icon.flame}
             </motion.span>
@@ -94,12 +94,12 @@ export function LessonDone() {
               jour{s.streak_days > 1 ? 's' : ''} d’affilée
             </span>
           </div>
-          <div className="raised" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 13, fontWeight: 900, color: '#B5582A' }}>Parcours</span>
             <span style={{ fontSize: 26, fontWeight: 900 }}>
               {s.progress.completed}/{s.progress.total}
             </span>
-            <div className="inset" style={{ width: '100%', height: 10, borderRadius: 5, padding: 2 }}>
+            <div style={{ width: '100%', height: 10, borderRadius: 5, padding: 2, background: 'var(--track)' }}>
               <motion.div
                 initial={{ width: `${((s.progress.completed - 1) / Math.max(1, s.progress.total)) * 100}%` }}
                 animate={{ width: `${(s.progress.completed / Math.max(1, s.progress.total)) * 100}%` }}
@@ -111,7 +111,7 @@ export function LessonDone() {
         </motion.div>
 
         {s.concepts.length > 0 && (
-          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }} className="inset" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.3 }} className="well" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <span style={{ fontSize: 14, fontWeight: 900 }}>Dans ta poche</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {s.concepts.map((c, i) => (

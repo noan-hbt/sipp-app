@@ -56,6 +56,7 @@ class SipSummary(BaseModel):
     error: str | None
     progress: Progress
     next_lesson_id: str | None
+    next_lesson_title: str | None = None
     created_at: datetime
 
 

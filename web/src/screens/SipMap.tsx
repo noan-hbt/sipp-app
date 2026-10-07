@@ -79,6 +79,22 @@ export function SipMap() {
   const justCompleted = loc.state?.completed
   const fresh = loc.state?.fresh
   const scroller = useRef<HTMLDivElement>(null)
+  const [view, setView] = useState<'map' | 'list'>(() => {
+    try {
+      return sessionStorage.getItem('sipp.view') === 'list' ? 'list' : 'map'
+    } catch {
+      return 'map'
+    }
+  })
+  const toggleView = () => {
+    const v = view === 'map' ? 'list' : 'map'
+    setView(v)
+    try {
+      sessionStorage.setItem('sipp.view', v)
+    } catch {
+      /* ignore */
+    }
+  }
   const [width, setWidth] = useState(() => Math.min(window.innerWidth, 480))
   const sip = useQuery({
     queryKey: ['sip', sipId],
@@ -127,7 +143,12 @@ export function SipMap() {
 
   return (
     <Screen>
-      <div ref={scroller} className="scroll" style={{ position: 'relative' }}>
+      <AnimatePresence>
+        {view === 'list' && sip.data && (
+          <ProgramList key="list" modules={modules} nodes={nodes} summary={sip.data.summary} onOpen={(id) => nav(`/lessons/${id}`)} />
+        )}
+      </AnimatePresence>
+      <div ref={scroller} className="scroll" style={{ position: 'relative', visibility: view === 'list' ? 'hidden' : undefined }}>
         {sip.isLoading ? (
           <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
             <Mascot mood="think" size={90} />
@@ -147,7 +168,7 @@ export function SipMap() {
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.2, ease: 'easeInOut' }}
               />
-              <path d={todoPath} fill="none" stroke="#C8C0B4" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 16" />
+              <path d={todoPath} fill="none" stroke="#B3AB9F" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 16" />
               {lastSeg && (
                 <motion.path
                   d={lastSeg}
@@ -182,19 +203,155 @@ export function SipMap() {
         )}
       </div>
 
-      <header style={{ position: 'absolute', left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(241,237,231,0))' }}>
+      <header style={{ position: 'absolute', zIndex: 2, left: 0, right: 0, top: 0, padding: 'calc(var(--safe-top) + 14px) 18px 22px', display: 'flex', alignItems: 'center', gap: 12, background: 'linear-gradient(var(--bg) 72%, rgba(241,237,231,0))' }}>
         <IconButton label="Retour" onClick={() => nav('/')}>
           {Icon.back}
         </IconButton>
-        <div className="raised-sm" style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 23, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
+        <div className="card" style={{ flex: 1, minWidth: 0, height: 46, borderRadius: 23, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10 }}>
           <span style={{ fontWeight: 900, fontSize: 15, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sip.data?.title ?? ''}</span>
           <motion.span key={totalStars} initial={{ scale: 1.5 }} animate={{ scale: 1 }} style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 900, fontSize: 14 }}>
             <Star size={16} />
             {totalStars}
           </motion.span>
         </div>
+        <IconButton label={view === 'map' ? 'Voir le programme' : 'Voir la carte'} onClick={toggleView}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={view}
+              initial={{ scale: 0.4, rotate: -40, opacity: 0 }}
+              animate={{ scale: 1, rotate: 0, opacity: 1 }}
+              exit={{ scale: 0.4, rotate: 40, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              style={{ display: 'grid' }}
+            >
+              {view === 'map' ? Icon.list : Icon.map}
+            </motion.span>
+          </AnimatePresence>
+        </IconButton>
       </header>
     </Screen>
+  )
+}
+
+function ProgramList({
+  modules,
+  nodes,
+  summary,
+  onOpen,
+}: {
+  modules: ModuleOut[]
+  nodes: Node[]
+  summary: string | null
+  onOpen: (lessonId: string) => void
+}) {
+  const byId = new Map(nodes.map((n) => [n.lesson.id, n]))
+  return (
+    <motion.div
+      className="scroll"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 16 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 1,
+        background: 'var(--bg)',
+        padding: 'calc(var(--safe-top) + 88px) 20px 60px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 26,
+      }}
+    >
+      {summary && (
+        <p className="muted" style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, padding: '0 4px' }}>
+          {summary}
+        </p>
+      )}
+      {modules.map((m) => {
+        const [bg, ink] = MODULE_COLORS[(m.position - 1) % MODULE_COLORS.length]
+        const done = m.lessons.filter((l) => l.completed).length
+        return (
+          <section key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 4px' }}>
+              <span className="chip" style={{ background: bg, color: ink, flexShrink: 0 }}>
+                Module {m.position}
+              </span>
+              <h2 style={{ fontSize: 17, fontWeight: 900, lineHeight: 1.3, flex: 1 }}>{m.title}</h2>
+              <span className="muted" style={{ fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+                {done}/{m.lessons.length}
+              </span>
+            </div>
+            <div className="card" style={{ borderRadius: 24, padding: 6, display: 'flex', flexDirection: 'column' }}>
+              {m.lessons.map((l) => {
+                const n = byId.get(l.id)
+                const state = n?.state ?? 'locked'
+                const open = state !== 'locked'
+                return (
+                  <motion.button
+                    key={l.id}
+                    disabled={!open}
+                    aria-label={open ? undefined : `${l.title} (verrouillée)`}
+                    onClick={() => {
+                      play('tap')
+                      onOpen(l.id)
+                    }}
+                    whileTap={open ? { scale: 0.98 } : undefined}
+                    style={{
+                      border: 'none',
+                      textAlign: 'left',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: 12,
+                      borderRadius: 18,
+                      background: state === 'now' ? 'var(--peach-soft)' : 'transparent',
+                      cursor: open ? 'pointer' : 'default',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 17,
+                        flexShrink: 0,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: 14,
+                        fontWeight: 900,
+                        background: state === 'done' ? 'var(--mint)' : state === 'now' ? 'var(--peach)' : 'var(--track)',
+                        color: state === 'done' ? 'var(--mint-ink)' : 'var(--ink)',
+                      }}
+                    >
+                      {state === 'done' ? (
+                        Icon.check(16)
+                      ) : state === 'now' ? (
+                        (n?.index ?? 0) + 1
+                      ) : (
+                        <span style={{ transform: 'scale(.75)', display: 'grid' }}>{Icon.lock}</span>
+                      )}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.3, color: open ? 'var(--ink)' : 'var(--muted)' }}>{l.title}</span>
+                      <span className="muted" style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>
+                        {l.objective}
+                      </span>
+                    </span>
+                    {state === 'done' && (
+                      <span style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+                        {[1, 2, 3].map((i) => (
+                          <Star key={i} size={12} filled={(l.stars ?? 0) >= i} />
+                        ))}
+                      </span>
+                    )}
+                  </motion.button>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+    </motion.div>
   )
 }
 
@@ -209,7 +366,7 @@ function ModuleBanner({ node, width, fresh }: { node: Node; width: number; fresh
       style={{ position: 'absolute', left: 0, width, top: node.y + 58, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}
     >
       <span
-        className={reached ? 'raised-sm' : 'inset'}
+        className={reached ? undefined : 'well'}
         style={{
           maxWidth: width - 60,
           padding: '8px 16px',

@@ -91,8 +91,7 @@ export function ProgressBar({ value, color = 'var(--peach)', height = 16 }: { va
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(value * 100)}
-      className="inset"
-      style={{ flex: 1, height, borderRadius: height / 2, padding: 3 }}
+      style={{ flex: 1, height, borderRadius: height / 2, padding: 3, background: 'var(--track)' }}
     >
       <motion.div
         initial={false}
@@ -169,7 +168,7 @@ export const Icon = {
     </svg>
   ),
   lock: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A39C91" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
       <rect x="5" y="11" width="14" height="9" rx="3" />
       <path d="M8 11V8a4 4 0 018 0v3" />
     </svg>
@@ -188,6 +187,21 @@ export const Icon = {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 9v6h4l5 4V5L8 9z" />
       {on ? <path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11" /> : <path d="M17 9l5 6M22 9l-5 6" />}
+    </svg>
+  ),
+  list: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  ),
+  map: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="18" r="2.4" />
+      <circle cx="18" cy="6" r="2.4" />
+      <path d="M8.4 18H15a3 3 0 000-6H9a3 3 0 010-6h6.6" />
     </svg>
   ),
   user: (

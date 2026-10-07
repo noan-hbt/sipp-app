@@ -20,6 +20,7 @@ export interface SipSummary {
   error: string | null
   progress: Progress
   next_lesson_id: string | null
+  next_lesson_title?: string | null
   created_at: string
 }
 export type LessonStatus = 'pending' | 'queued' | 'generating' | 'ready' | 'failed'

@@ -49,7 +49,7 @@ export function Home() {
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <motion.div
-            className="raised-sm"
+            className="card"
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
@@ -83,12 +83,20 @@ export function Home() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                   <SipIcon id={resume.id} size={58} />
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 900, color: '#B5582A', textTransform: 'uppercase', letterSpacing: '.06em' }}>On reprend ?</span>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: '#9c4a22', textTransform: 'uppercase', letterSpacing: '.06em' }}>On reprend ?</span>
                     <h2 style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.2 }}>{resume.title}</h2>
                   </div>
                 </div>
-                <div className="inset" style={{ borderRadius: 18, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--bg-deep)', overflow: 'hidden' }}>
+                {resume.next_lesson_title && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--muted)' }}>
+                      Prochain Sip · Leçon {resume.progress.completed + 1} sur {resume.progress.total}
+                    </span>
+                    <p style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.35 }}>{resume.next_lesson_title}</p>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1, height: 10, borderRadius: 5, background: 'var(--track)', overflow: 'hidden' }}>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${(resume.progress.completed / Math.max(1, resume.progress.total)) * 100}%` }}
@@ -100,7 +108,7 @@ export function Home() {
                     {resume.progress.completed}/{resume.progress.total}
                   </span>
                 </div>
-                <Button onClick={() => nav(`/sips/${resume.id}`)}>C’est parti · 5 min</Button>
+                <Button onClick={() => nav(`/sips/${resume.id}`)}>{resume.progress.completed > 0 ? 'Reprendre' : 'C’est parti'} · 5 min</Button>
               </motion.section>
             )}
 

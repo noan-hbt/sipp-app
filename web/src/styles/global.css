@@ -11,10 +11,12 @@
   --bg-deep: #e7e1d8;
   --ink: #2b2620;
   --ink-soft: #47423b;
-  --muted: #6b645b;
-  --faint: #9b948a;
+  --muted: #5e574e;
+  --faint: #766f65;
   --shadow-dark: #d9d2c7;
   --shadow-light: #ffffff;
+  --surface: #f8f6f2;
+  --track: #e2dcd2;
 
   --peach: #f4a574;
   --peach-lip: #d27a45;
@@ -98,6 +100,9 @@ h1, h2, h3, p { margin: 0; }
 .raised { box-shadow: var(--raised); background: var(--bg); }
 .raised-sm { box-shadow: var(--raised-sm); background: var(--bg); }
 .inset { box-shadow: var(--inset); }
+/* Reading surfaces: flat paper, light shadow. Relief is reserved for things you can touch. */
+.card { background: var(--surface); box-shadow: 0 0 0 1px rgba(43, 38, 32, 0.04), 0 4px 14px rgba(43, 38, 32, 0.05); }
+.well { background: rgba(43, 38, 32, 0.045); }
 .inset-sm { box-shadow: var(--inset-sm); }
 
 .topbar {
@@ -161,7 +166,7 @@ h1, h2, h3, p { margin: 0; }
   flex-direction: column;
   gap: 6px;
 }
-.field label { font-size: 13px; font-weight: 800; color: #b5582a; }
+.field label { font-size: 13px; font-weight: 800; color: #9c4a22; }
 .field input, .field textarea {
   border: none;
   outline: none;
