@@ -168,7 +168,7 @@ export function SipMap() {
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.2, ease: 'easeInOut' }}
               />
-              <path d={todoPath} fill="none" stroke="#B3AB9F" strokeWidth="8" strokeLinecap="round" strokeDasharray="1 16" />
+              <path d={todoPath} fill="none" stroke="#D3CCC1" strokeWidth="7" strokeLinecap="round" strokeDasharray="1 16" />
               {lastSeg && (
                 <motion.path
                   d={lastSeg}
