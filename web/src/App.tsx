@@ -13,9 +13,13 @@ import { Lesson } from './screens/Lesson'
 import { LessonDone } from './screens/LessonDone'
 import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
+import { Offers } from './screens/Offers'
 import { Profile } from './screens/Profile'
 import { ProgramView } from './screens/ProgramView'
+import { Progress } from './screens/Progress'
+import { Review } from './screens/Review'
 import { SipMap } from './screens/SipMap'
+import { Understood } from './screens/Understood'
 import { Welcome } from './screens/Welcome'
 
 function useLoggedIn() {
@@ -76,6 +80,10 @@ export default function App() {
               <Route path="/library" element={<Library />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/new" element={<NewSip />} />
+              <Route path="/new/confirm" element={<Understood />} />
+              <Route path="/review" element={<Review />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/offers" element={<Offers />} />
               <Route path="/sips/:sipId/building" element={<Generating />} />
               <Route path="/sips/:sipId" element={<SipMap />} />
               <Route path="/programs/:programId" element={<ProgramView />} />

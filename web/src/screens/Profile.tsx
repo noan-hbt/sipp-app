@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useState, type CSSProperties } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
@@ -26,6 +27,7 @@ const rowIcon = (bg: string, fg: string, d: string) => (
 )
 
 export function Profile() {
+  const nav = useNavigate()
   const queryClient = useQueryClient()
   const me = useQuery({ queryKey: ['me'], queryFn: Api.me })
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
@@ -103,6 +105,11 @@ export function Profile() {
               ))}
             </div>
             {stats.isError && <p role="status" className="muted" style={{ fontSize: 13, marginTop: 10 }}>Tes statistiques sont indisponibles pour le moment.</p>}
+            <button type="button" onClick={() => nav('/progress')} style={{ ...rowStyle, marginTop: 8, borderRadius: 20, background: 'var(--surface)' }}>
+              {rowIcon('var(--peach-soft)', 'var(--primary)', 'M4 20V10M10 20V4M16 20v-7M22 20H2')}
+              <span style={{ flex: 1, textAlign: 'left' }}>Voir mes progrès</span>
+              <span aria-hidden="true" style={{ color: 'var(--faint)' }}>→</span>
+            </button>
           </motion.section>
 
           <motion.section variants={item} aria-label="Ton abonnement" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--lavender-strong)', position: 'relative', overflow: 'hidden' }}>
@@ -146,9 +153,10 @@ export function Profile() {
                   <Button variant="soft" onClick={() => trial.mutate()} disabled={trial.isPending || busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52, boxShadow: 'none' }}>
                     {trial.isPending ? 'Activation de ton essai…' : `Essayer Essentiel gratuitement · ${subscription.trial_days} jours`}
                   </Button>
-                ) : subscription.plan === 'free' ? (
-                  <p style={{ position: 'relative', fontSize: 14, color: '#2E2660' }}>Les abonnements arrivent bientôt.</p>
                 ) : null}
+                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '4px 0', fontSize: 15, fontWeight: 600, color: 'var(--ink)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                  Voir les offres
+                </button>
                 {trial.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>Ton essai n’a pas pu démarrer. Réessaie dans un instant.</p>}
               </>
             ) : (

@@ -50,3 +50,9 @@ async def test_export(auth_client):
     await auth_client.post("/sips", json={"input": "le café"})
     data = (await auth_client.get("/auth/me/export")).json()
     assert data["account"]["email"] == "a@b.co" and data["sips"][0]["request"] == "le café"
+
+
+async def test_public_plans(client):
+    plans = (await client.get("/auth/plans")).json()
+    assert [p["name"] for p in plans] == ["free", "basic", "plus"]
+    assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True}

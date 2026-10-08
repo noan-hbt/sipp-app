@@ -29,7 +29,7 @@ os.environ.setdefault("ENV", "dev")
 from sqlalchemy import func, select  # noqa: E402
 
 from app.db import Base, SessionLocal, engine  # noqa: E402
-from app.jobs.worker import make_llm  # noqa: E402
+from app.llm.record import make_llm  # noqa: E402
 from app.models import Lesson, LLMCall, Module, Sip, User  # noqa: E402
 from app.pipeline import engine as pipeline  # noqa: E402
 

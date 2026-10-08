@@ -9,34 +9,12 @@ from sqlalchemy import update
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
-from app.llm.client import CallRecord, OpenRouterClient, StructuredLLM
-from app.models import Job, Lesson, LessonStatus, LLMCall, Program, ProgramStatus, Sip, SipStatus
+from app.llm.client import OpenRouterClient
+from app.llm.record import make_llm
+from app.models import Job, Lesson, LessonStatus, Program, ProgramStatus, Sip, SipStatus
 from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
-
-
-def make_llm(client=None, sip_id: str | None = None, lesson_id: str | None = None) -> StructuredLLM:
-    async def record(rec: CallRecord) -> None:
-        c = rec.completion
-        async with SessionLocal() as s:
-            s.add(
-                LLMCall(
-                    stage=rec.stage,
-                    model=c.model if c else rec.model,
-                    sip_id=sip_id,
-                    lesson_id=lesson_id,
-                    prompt_tokens=c.prompt_tokens if c else None,
-                    completion_tokens=c.completion_tokens if c else None,
-                    cost=c.cost if c else None,
-                    latency_ms=rec.latency_ms,
-                    ok=rec.ok,
-                    error=rec.error[:4000] if rec.error else None,
-                )
-            )
-            await s.commit()
-
-    return StructuredLLM(client=client or OpenRouterClient(), recorder=record)
 
 
 async def run_job(job: Job, client=None) -> None:

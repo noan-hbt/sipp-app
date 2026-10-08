@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { SipIcon } from '../components/SipIcon'
@@ -34,11 +34,12 @@ const PLACEHOLDERS = [
   'comprendre la mécanique quantique, simplement…',
 ]
 
-const ERRORS: Record<string, string> = {
+export const NEW_SIP_ERRORS: Record<string, string> = {
   daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
   too_many_active_builds: 'Je construis déjà plusieurs parcours. Attends qu’ils soient prêts.',
   no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',
   monthly_limit: 'Tu as utilisé tes générations du mois. Reviens le mois prochain, ou passe à l’abonnement.',
+  llm_unavailable: 'Je n’arrive pas à réfléchir pour l’instant. Réessaie dans un instant.',
 }
 
 const remaining = (n: number) => (n > 1 ? `${n} créations restantes` : n === 1 ? '1 création restante' : 'Plus de création ce mois-ci')
@@ -63,8 +64,10 @@ function toggleDetail(text: string, d: string) {
 export function NewSip({ guest = false }: { guest?: boolean }) {
   const nav = useNavigate()
   const qc = useQueryClient()
+  const back = useLocation().state as { text?: string } | null
   const input = useRef<HTMLTextAreaElement>(null)
   const [text, setText] = useState(() => {
+    if (back?.text) return back.text
     try {
       return sessionStorage.getItem(WISH_KEY) ?? ''
     } catch {
@@ -86,17 +89,17 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
       create.reset()
     },
   })
+  // First what Sipp understood, confirmed on the next screen; the Sip is created there.
   const create = useMutation({
-    mutationFn: Api.createSip,
-    onSuccess: (sip) => {
-      play('whoosh')
-      void qc.invalidateQueries({ queryKey: ['sips'] })
-      nav(`/sips/${sip.id}/building`, { replace: true })
+    mutationFn: (wish: string) => Api.interpret(wish).then((interpretation) => ({ input: wish, interpretation })),
+    onSuccess: (understood) => {
+      play('pop')
+      nav('/new/confirm', { state: understood })
     },
     onError: () => play('wrong'),
   })
   const paywall = create.error instanceof ApiError && create.error.status === 402
-  const err = create.error instanceof ApiError ? (ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
+  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
   const ready = text.trim().length >= 3
 
   function pick(t: string) {
@@ -267,7 +270,13 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           </Button>
         ) : (
           <Button disabled={!ready || create.isPending} onClick={submit} sound="pop">
-            {create.isPending ? <Mascot mood="think" size={36} /> : 'Construis mon parcours'}
+            {create.isPending ? (
+              <>
+                <Mascot mood="think" size={32} /> Je lis ta demande…
+              </>
+            ) : (
+              'Construis mon parcours'
+            )}
           </Button>
         )}
         {!guest && plan.data?.lite && !paywall && (
