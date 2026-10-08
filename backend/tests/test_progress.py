@@ -36,7 +36,10 @@ async def test_complete_gives_stars_and_streak(auth_client):
     s = (await auth_client.get("/auth/me/stats?tz=Europe/Paris")).json()
     week = s.pop("week")
     assert len(week) == 7 and sum(week) == 1
-    assert s == {"streak_days": 1, "completed_today": True, "lessons_completed": 1, "total_stars": 2}
+    assert s.pop("month_days") == [s["today"]] and len(s.pop("month")) == 7
+    s.pop("today")
+    # the fake lesson has one concept block
+    assert s == {"streak_days": 1, "completed_today": True, "lessons_completed": 1, "total_stars": 2, "concepts": 1}
     assert (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["lessons"][0]["stars"] == 2
 
 

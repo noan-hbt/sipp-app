@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api import auth, programs, sips
+from app.api import assist, auth, concepts, programs, sips
 from app.config import get_settings
 from app.db import SessionLocal
 
@@ -25,6 +25,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(sips.router)
 app.include_router(programs.router)
+app.include_router(concepts.router)
+app.include_router(assist.router)
 
 
 @app.get("/health", tags=["meta"])

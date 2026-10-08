@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     model_writing: str = "openai/gpt-6-luna"
     model_review: str = "openai/gpt-6-luna"
     model_escalation: str = "openai/gpt-6.1-sol"
+    model_help: str = "openai/gpt-6-luna"
 
     # Guardrails (limits, never targets)
     max_modules: int = 12
@@ -52,6 +53,7 @@ class Settings(BaseSettings):
 
     # Per-user spending guards (rolling 24h)
     max_cost_per_day_usd: float = 1.0
+    max_help_per_day: int = 30
 
     # Plans: library slots (Sips kept at once) and new Sips per calendar month.
     # Billing (RevenueCat) will set user.plan; until then only the trial grants a paid plan.

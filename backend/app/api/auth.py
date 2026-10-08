@@ -20,8 +20,9 @@ from app.auth import (
     rotate_refresh_token,
     verify_password,
 )
+from app.concepts import sync_cards
 from app.db import get_session
-from app.models import Lesson, Module, Sip, User
+from app.models import ConceptCard, Lesson, Module, Sip, User
 from app.plans import plan_status, start_trial
 from app.progress import stats
 from app.quota import usage
@@ -74,7 +75,8 @@ async def me_usage(user: User = Depends(current_user), session: AsyncSession = D
 async def me_stats(
     tz: str = "UTC", user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
-    """Streak and stars. `tz` is the device's IANA timezone (e.g. Europe/Paris)."""
+    """Streak, stars and this month's active days. `tz` is the device's IANA timezone (e.g. Europe/Paris)."""
+    await sync_cards(session, user)
     return await stats(session, user, tz)
 
 
@@ -99,6 +101,7 @@ async def me_export(user: User = Depends(current_user), session: AsyncSession = 
     ids = [x.id for x in sips]
     modules = (await session.execute(select(Module).where(Module.sip_id.in_(ids)))).scalars().all() if ids else []
     lessons = (await session.execute(select(Lesson).where(Lesson.sip_id.in_(ids)))).scalars().all() if ids else []
+    cards = (await session.execute(select(ConceptCard).where(ConceptCard.user_id == user.id))).scalars().all()
 
     def lesson_out(l: Lesson) -> dict:
         return {
@@ -133,6 +136,15 @@ async def me_export(user: User = Depends(current_user), session: AsyncSession = 
                 ],
             }
             for x in sips
+        ],
+        "notions": [
+            {
+                "name": c.name,
+                "definition": c.definition,
+                "reviews": c.reviews,
+                "next_review": c.due_at,
+            }
+            for c in sorted(cards, key=lambda c: c.name.lower())
         ],
     }
 

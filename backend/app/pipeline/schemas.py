@@ -44,6 +44,10 @@ class LearningProfile(_Out):
     assumptions: list[str] = Field(
         default_factory=list, description="Assumptions made where the input was silent."
     )
+    out_of_scope: list[str] = Field(
+        default_factory=list,
+        description="Nearby topics the path deliberately leaves out (short labels).",
+    )
 
 
 # 1b. Roadmap (big goals only) -------------------------------------------------
@@ -175,3 +179,10 @@ class ReviewIssue(_Out):
 class Review(_Out):
     verdict: Literal["pass", "revise"]
     issues: list[ReviewIssue] = Field(default_factory=list)
+
+
+# In-lesson help ------------------------------------------------------------------
+
+
+class HelpAnswer(_Out):
+    answer: str = Field(description="The explanation shown to the learner, at most ~120 words.")

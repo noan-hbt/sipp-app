@@ -3,11 +3,11 @@
 from datetime import date, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import Score
-from app.models import Lesson, Sip, User, utcnow
+from app.models import ConceptCard, Lesson, Sip, User, utcnow
 
 
 def stars_for(score: Score | None) -> int:
@@ -52,10 +52,17 @@ async def stats(session: AsyncSession, user: User, tz: str = "UTC") -> dict:
         days.add(dt.astimezone(zone).date())
     today = utcnow().astimezone(zone).date()
     monday = today - timedelta(days=today.weekday())
+    concepts = await session.scalar(
+        select(func.count()).select_from(ConceptCard).where(ConceptCard.user_id == user.id)
+    )
     return {
         "streak_days": streak(days, today),
         "completed_today": today in days,
         "lessons_completed": len(rows),
         "total_stars": sum(s or 0 for _, s in rows),
         "week": [monday + timedelta(days=i) in days for i in range(7)],
+        "month": today.strftime("%Y-%m"),
+        "month_days": sorted(d.day for d in days if (d.year, d.month) == (today.year, today.month)),
+        "today": today.day,
+        "concepts": concepts or 0,
     }

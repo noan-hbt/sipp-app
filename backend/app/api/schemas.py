@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -52,6 +52,30 @@ class UserOut(BaseModel):
 
 class SipCreate(BaseModel):
     input: str = Field(min_length=3, max_length=4000, description="What the user wants to learn.")
+    profile: dict[str, Any] | None = Field(
+        default=None, description="The confirmed profile from `POST /sips/interpret`, possibly edited."
+    )
+
+
+class InterpretIn(BaseModel):
+    input: str = Field(min_length=3, max_length=4000)
+
+
+class InterpretOut(BaseModel):
+    profile: dict[str, Any]
+    lessons_min: int
+    lessons_max: int
+    program: bool = Field(description="A big goal: the path will be split into chapters.")
+
+
+class HelpIn(BaseModel):
+    block: int = Field(ge=0, description="Index of the block the learner needs help with.")
+    kind: Literal["rephrase", "simpler", "example", "word", "question"]
+    question: str | None = Field(default=None, max_length=500)
+
+
+class HelpOut(BaseModel):
+    answer: str
 
 
 class Progress(BaseModel):
@@ -175,3 +199,31 @@ class StatsOut(BaseModel):
     lessons_completed: int
     total_stars: int
     week: list[bool] = Field(default_factory=list, description="Active days of the current week, Monday first.")
+    month: str = Field(default="", description="Current month in the device's timezone, YYYY-MM.")
+    month_days: list[int] = Field(default_factory=list, description="Days of the current month with a finished lesson.")
+    today: int = Field(default=1, description="Day of the month today, in the device's timezone.")
+    concepts: int = Field(default=0, description="Notions met in finished lessons.")
+
+
+class ConceptOut(BaseModel):
+    id: str
+    name: str
+    definition: str
+    explanation: str | None
+    sip_id: str
+    sip_title: str
+    lesson_id: str
+    lesson_title: str
+    mastery: int = Field(description="1 fragile, 2 on its way, 3 well learned.")
+    due: bool = Field(description="Due for review now.")
+    learned_at: datetime
+    last_reviewed_at: datetime | None
+
+
+class ReviewOut(BaseModel):
+    due_count: int
+    cards: list[ConceptOut]
+
+
+class ReviewIn(BaseModel):
+    knew: bool
