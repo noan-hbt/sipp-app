@@ -100,7 +100,9 @@ export function SipMap() {
         : "locked";
   };
   const done = nowIdx === -1 ? flat.length : nowIdx;
-  const totalStars = flat.reduce((s, l) => s + (l.stars ?? 0), 0);
+  const totalStars =
+    flat.reduce((s, l) => s + (l.stars ?? 0), 0) +
+    modules.reduce((s, m) => s + (m.bonus_earned ? (m.bonus_stars ?? 0) : 0), 0);
   const name = sip.data?.title ?? sip.data?.input_text ?? "";
   const pal = sipPalette(name);
 

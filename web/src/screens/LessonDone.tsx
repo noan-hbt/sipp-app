@@ -181,6 +181,23 @@ export function LessonDone() {
             ))}
           </div>
 
+          {!!s.module_bonus && (
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 15, delay: 1.1 }}
+              style={{ borderRadius: 20, background: 'var(--butter)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}
+            >
+              <span style={{ display: 'flex' }}>
+                <Star size={30} animate delay={1.3} />
+              </span>
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span className="display" style={{ fontSize: 18 }}>Module terminé !</span>
+                <span style={{ fontSize: 14, color: 'var(--muted)' }}>+{s.module_bonus} étoiles bonus</span>
+              </span>
+            </motion.div>
+          )}
+
           {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1} />}
 
           {s.concepts.length > 0 && (

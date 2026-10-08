@@ -750,6 +750,20 @@ function EndMilestone({ node, width }: { node: EndNode; width: number }) {
             ? "Module terminé"
             : `Encore ${node.remaining} ${node.remaining > 1 ? "leçons" : "leçon"}`}
         </span>
+        {!!node.module.bonus_stars && (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              justifyContent: label.onRight ? "flex-start" : "flex-end",
+              color: reached ? C.butterInk : C.faint,
+            }}
+          >
+            <Star size={13} />
+            {reached ? `+${node.module.bonus_stars} gagnées` : `+${node.module.bonus_stars} à gagner`}
+          </span>
+        )}
       </span>
     </>
   );

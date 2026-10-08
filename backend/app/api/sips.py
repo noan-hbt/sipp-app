@@ -25,7 +25,7 @@ from app.models import Lesson, LessonStatus, Module, Program, ProgramStatus, Sip
 from app.pipeline import engine, programs
 from app.pipeline.schemas import LearningProfile
 from app.plans import check_plan, count_generation
-from app.progress import stars_for, stats
+from app.progress import MODULE_BONUS, finished_modules, stars_for, stats
 from app.quota import check_cost
 
 router = APIRouter(tags=["sips"])
@@ -156,6 +156,7 @@ async def get_sip(
         .all()
     )
     lessons = await _lessons(session, sip.id)
+    finished = finished_modules([(l.module_id, l.completed_at is not None) for l in lessons])
     out_modules = [
         ModuleOut(
             id=m.id,
@@ -179,6 +180,8 @@ async def get_sip(
                 for l in lessons
                 if l.module_id == m.id
             ],
+            bonus_stars=MODULE_BONUS,
+            bonus_earned=m.id in finished,
         )
         for m in modules
     ]
@@ -262,7 +265,8 @@ async def complete_lesson(
     lesson = await _own_lesson(session, user, lesson_id)
     if lesson.status != LessonStatus.READY:
         raise HTTPException(status.HTTP_409_CONFLICT, "lesson is not ready")
-    if lesson.completed_at is None:
+    first_time = lesson.completed_at is None
+    if first_time:
         lesson.completed_at = utcnow()
         for card in cards_from_lesson(lesson, user.id, lesson.completed_at):
             session.add(card)
@@ -285,7 +289,9 @@ async def complete_lesson(
         await enqueue(session, programs.JOB_ADJUST_PROGRAM, {"program_id": program.id})
     await session.commit()
 
-    progress, _ = _progress(await _lessons(session, lesson.sip_id))
+    sip_lessons = await _lessons(session, lesson.sip_id)
+    progress, _ = _progress(sip_lessons)
+    finished = finished_modules([(l.module_id, l.completed_at is not None) for l in sip_lessons])
     st = await stats(session, user, tz)
     return CompleteOut(
         lesson_id=lesson.id,
@@ -293,6 +299,7 @@ async def complete_lesson(
         progress=progress,
         stars=lesson.stars,
         streak_days=st["streak_days"],
+        module_bonus=MODULE_BONUS if first_time and lesson.module_id in finished else 0,
     )
 
 

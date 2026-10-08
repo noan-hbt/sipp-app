@@ -126,6 +126,8 @@ class ModuleOut(BaseModel):
     role: str
     objectives: list[str]
     lessons: list[LessonBrief]
+    bonus_stars: int = Field(default=3, description="Stars earned by finishing every lesson of the module.")
+    bonus_earned: bool = False
 
 
 class SipDetail(SipSummary):
@@ -198,6 +200,7 @@ class CompleteOut(BaseModel):
     progress: Progress
     stars: int
     streak_days: int
+    module_bonus: int = Field(default=0, description="Bonus stars earned now: this lesson finished its module.")
 
 
 class StatsOut(BaseModel):

@@ -49,3 +49,26 @@ async def test_cors_preflight(client):
         headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST"},
     )
     assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
+async def test_finishing_a_module_gives_bonus_stars(auth_client):
+    sip_id = (await auth_client.post("/sips", json={"input": "taux"})).json()["id"]
+    await drain(FakeClient())
+    module = (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]
+    assert module["bonus_stars"] == 3 and module["bonus_earned"] is False
+    *firsts, last = module["lessons"]
+    for l in firsts:
+        await auth_client.get(f"/lessons/{l['id']}")
+        await drain(FakeClient())
+        r = await auth_client.post(f"/lessons/{l['id']}/complete", json={})
+        assert r.json()["module_bonus"] == 0
+    await auth_client.get(f"/lessons/{last['id']}")
+    await drain(FakeClient())
+    r = await auth_client.post(f"/lessons/{last['id']}/complete", json={})
+    assert r.json()["module_bonus"] == 3
+    # a replay does not pay twice
+    r = await auth_client.post(f"/lessons/{last['id']}/complete", json={})
+    assert r.json()["module_bonus"] == 0
+    assert (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["bonus_earned"] is True
+    s = (await auth_client.get("/auth/me/stats")).json()
+    assert s["total_stars"] == 3 * len(module["lessons"]) + 3

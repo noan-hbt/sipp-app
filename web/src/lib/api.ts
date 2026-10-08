@@ -46,6 +46,9 @@ export interface ModuleOut {
   role: string
   objectives: string[]
   lessons: LessonBrief[]
+  /** Stars earned once every lesson of the module is finished. */
+  bonus_stars?: number
+  bonus_earned?: boolean
 }
 export interface Profile {
   topic: string
@@ -115,6 +118,8 @@ export interface CompleteOut {
   progress: Progress
   stars: number
   streak_days: number
+  /** Bonus stars earned right now: this lesson finished its module. */
+  module_bonus?: number
 }
 export interface Stats {
   streak_days: number
