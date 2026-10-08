@@ -104,10 +104,13 @@ function layout(modules: ModuleOut[], width: number) {
     last: number;
     done: number;
     reached: boolean;
+    pad: number;
   }[] = [];
   for (const m of modules) {
     if (!m.lessons.length) continue;
-    acc += BANNER_GAP;
+    // The current lesson's bubble hangs below its node: keep it clear of the banner.
+    const pad = li === nowIdx ? 40 : 0;
+    acc += BANNER_GAP + pad;
     const first = acc;
     let done = 0;
     let reached = false;
@@ -145,7 +148,7 @@ function layout(modules: ModuleOut[], width: number) {
       },
       fromBottom: acc,
     });
-    zonesRaw.push({ module: m, first, last: acc, done, reached });
+    zonesRaw.push({ module: m, first, last: acc, done, reached, pad });
     acc += GAP;
     k++;
   }
@@ -153,9 +156,9 @@ function layout(modules: ModuleOut[], width: number) {
   const points = raw.map((r) => ({ ...r.node, y: height - r.fromBottom }));
   const zones: Zone[] = zonesRaw.map((z) => ({
     module: z.module,
-    bannerY: height - z.first + 58,
+    bannerY: height - z.first + 58 + z.pad,
     top: height - z.last - 70,
-    bottom: height - z.first + 100,
+    bottom: height - z.first + 100 + z.pad,
     reached: z.reached,
     done: z.done,
   }));
@@ -199,9 +202,11 @@ export function SipPathMap({
   justCompleted,
   fresh,
   bottomPad,
+  reviewDue = 0,
   onBack,
   onList,
   onOpen,
+  onReview,
 }: {
   modules: ModuleOut[];
   title: string;
@@ -211,7 +216,9 @@ export function SipPathMap({
   justCompleted: boolean;
   fresh: boolean;
   bottomPad: number;
+  reviewDue?: number;
   onBack: () => void;
+  onReview?: () => void;
   onList: () => void;
   onOpen: (lessonId: string) => void;
 }) {
@@ -502,6 +509,34 @@ export function SipPathMap({
               </svg>
               {streak} {streak > 1 ? "jours" : "jour"}
             </span>
+          )}
+          {reviewDue > 0 && onReview && (
+            <motion.button
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 400, damping: 16, delay: 0.5 }}
+              onClick={() => {
+                play("tap");
+                onReview();
+              }}
+              aria-label={`Réviser ${reviewDue} notion${reviewDue > 1 ? "s" : ""}`}
+              style={{
+                border: "none",
+                height: 28,
+                padding: "0 11px",
+                borderRadius: 14,
+                background: C.butter,
+                color: C.butterInk,
+                boxShadow: `0 3px 0 ${C.butterLip}`,
+                fontFamily: FONT,
+                fontSize: 13,
+                fontWeight: 900,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Révision · {reviewDue}
+            </motion.button>
           )}
         </div>
       </header>

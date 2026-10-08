@@ -43,6 +43,7 @@ export function SipMap() {
     }
   };
   const stats = useQuery({ queryKey: ["stats"], queryFn: Api.stats });
+  const review = useQuery({ queryKey: ["review"], queryFn: Api.review });
   const sip = useQuery({
     queryKey: ["sip", sipId],
     queryFn: () => Api.sip(sipId),
@@ -144,6 +145,8 @@ export function SipMap() {
           onBack={() => nav(programId ? `/programs/${programId}` : "/")}
           onList={toggleView}
           onOpen={(id) => nav(`/lessons/${id}`)}
+          reviewDue={review.data?.due_count}
+          onReview={() => nav("/review")}
         />
       ) : (
         <div

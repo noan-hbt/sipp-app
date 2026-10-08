@@ -49,7 +49,7 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
         "plan": name,
         "on_trial": on_trial,
         "plan_expires_at": user.plan_expires_at if name != "free" else None,
-        "trial_available": user.trial_started_at is None,
+        "trial_available": user.trial_started_at is None and name == "free",
         "trial_days": s.trial_days,
         "slots": limits["slots"],
         "slots_used": used or 0,
