@@ -172,7 +172,7 @@ export function LessonPlayer({
         <IconButton label="Quitter la leçon" onClick={onClose}>
           {Icon.close}
         </IconButton>
-        <ProgressBar value={revealed / blocks.length} />
+        <ProgressBar value={revealed / blocks.length} height={8} />
         <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)', minWidth: 34, textAlign: 'right' }}>
           {revealed}/{blocks.length}
         </span>
@@ -183,10 +183,10 @@ export function LessonPlayer({
         className="scroll"
         style={{ padding: '6px 20px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
       >
-        <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 20 }}>
+        <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 22 }}>
           <RichText text={title} />
         </motion.h1>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
           {blocks.slice(0, revealed).map((b, i) => (
             <motion.div
               ref={(el) => {
