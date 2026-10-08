@@ -10,6 +10,22 @@ from app.config import get_settings
 from app.models import Program, Sip, SipStatus, User, utcnow
 
 
+MAX_ACTIVE_BUILDS = 3
+
+
+async def check_active_builds(session: AsyncSession, user: User) -> None:
+    active = await session.scalar(
+        select(func.count())
+        .select_from(Sip)
+        .where(Sip.user_id == user.id, Sip.status.in_([SipStatus.QUEUED, SipStatus.GENERATING]))
+    )
+    if active >= MAX_ACTIVE_BUILDS:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            {"code": "too_many_active_builds", "message": "too many sips being generated"},
+        )
+
+
 def effective_plan(user: User) -> str:
     s = get_settings()
     exp = user.plan_expires_at
@@ -59,15 +75,15 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
     }
 
 
-async def check_plan(session: AsyncSession, user: User, new_slot: bool = True) -> dict:
-    """`new_slot=False` for a chapter of an existing program: only the monthly count applies."""
+async def check_plan(session: AsyncSession, user: User, new_slot: bool = True, monthly: bool = True) -> dict:
+    """Chapters reuse a slot; retries reuse their monthly generation."""
     p = await plan_status(session, user)
     if new_slot and p["slots_used"] >= p["slots"]:
         raise HTTPException(
             status.HTTP_402_PAYMENT_REQUIRED,
             {"code": "no_free_slot", "message": "library is full: delete a Sip or upgrade"},
         )
-    if p["sips_this_month"] >= p["sips_per_month"]:
+    if monthly and p["sips_this_month"] >= p["sips_per_month"]:
         raise HTTPException(
             status.HTTP_402_PAYMENT_REQUIRED,
             {"code": "monthly_limit", "message": "monthly generations used up"},

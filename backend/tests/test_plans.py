@@ -1,10 +1,11 @@
+import asyncio
 from datetime import timedelta
 
-from sqlalchemy import update
+from sqlalchemy import func, select, update
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import Sip, User, utcnow
+from app.models import Job, Sip, User, utcnow
 
 
 async def _set_plan(plan: str, expires=None):
@@ -56,3 +57,62 @@ async def test_public_plans(client):
     plans = (await client.get("/auth/plans")).json()
     assert [p["name"] for p in plans] == ["free", "basic", "plus"]
     assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True}
+
+
+async def test_concurrent_creations_reserve_last_slot(auth_client):
+    await _set_plan("free")
+    responses = await asyncio.gather(
+        auth_client.post("/sips", json={"input": "le café"}),
+        auth_client.post("/sips", json={"input": "la bière"}),
+    )
+    assert sorted(r.status_code for r in responses) == [202, 402]
+    plan = (await auth_client.get("/auth/me/plan")).json()
+    assert plan["slots_used"] == plan["sips_this_month"] == 1
+    async with SessionLocal() as s:
+        assert await s.scalar(select(func.count()).select_from(Job)) == 1
+
+
+async def test_concurrent_creations_limit_active_builds(auth_client):
+    responses = await asyncio.gather(
+        *(auth_client.post("/sips", json={"input": f"Sujet {i}"}) for i in range(4))
+    )
+    assert sorted(r.status_code for r in responses) == [202, 202, 202, 429]
+    rejected = next(r for r in responses if r.status_code == 429)
+    assert rejected.json()["detail"]["code"] == "too_many_active_builds"
+    assert (await auth_client.get("/auth/me/plan")).json()["sips_this_month"] == 3
+
+
+async def test_retry_requires_free_slot_without_monthly_charge(auth_client):
+    await _set_plan("free")
+    async with SessionLocal() as s:
+        user = await s.scalar(select(User))
+        user.gen_month, user.gen_count = utcnow().strftime("%Y-%m"), 1
+        failed = Sip(user_id=user.id, input_text="le café", status="failed")
+        ready = Sip(user_id=user.id, input_text="le thé", status="ready")
+        s.add_all([failed, ready])
+        await s.commit()
+        failed_id, ready_id = failed.id, ready.id
+
+    r = await auth_client.post(f"/sips/{failed_id}/retry")
+    assert r.status_code == 402 and r.json()["detail"]["code"] == "no_free_slot"
+    assert (await auth_client.get("/auth/me/plan")).json()["slots_used"] == 1
+    await auth_client.delete(f"/sips/{ready_id}")
+    r = await auth_client.post(f"/sips/{failed_id}/retry")
+    assert r.status_code == 202, r.text
+    plan = (await auth_client.get("/auth/me/plan")).json()
+    assert plan["slots_used"] == plan["sips_this_month"] == 1
+
+
+async def test_retry_checks_active_build_limit(auth_client):
+    async with SessionLocal() as s:
+        user_id = await s.scalar(select(User.id))
+        failed = Sip(user_id=user_id, input_text="le café", status="failed")
+        s.add(failed)
+        s.add_all(Sip(user_id=user_id, input_text=f"Sujet {i}") for i in range(3))
+        await s.commit()
+        failed_id = failed.id
+    r = await auth_client.post(f"/sips/{failed_id}/retry")
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "too_many_active_builds"
+    async with SessionLocal() as s:
+        assert (await s.get(Sip, failed_id)).status == "failed"
+        assert await s.scalar(select(func.count()).select_from(Job)) == 0

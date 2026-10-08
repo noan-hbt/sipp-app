@@ -105,6 +105,7 @@ class Sip(TimestampMixin, Base):
         ForeignKey("programs.id", ondelete="CASCADE"), index=True
     )
     chapter: Mapped[int | None] = mapped_column(Integer)
+    adjustment_queued: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     modules: Mapped[list["Module"]] = relationship(
         back_populates="sip", cascade="all, delete-orphan", order_by="Module.position"
@@ -211,6 +212,12 @@ class ConceptCard(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class BudgetLock(Base):
+    __tablename__ = "budget_lock"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
 class LLMCall(Base):
     """Usage log for cost tracking and debugging."""
 
@@ -221,7 +228,7 @@ class LLMCall(Base):
     model: Mapped[str] = mapped_column(String(100))
     sip_id: Mapped[str | None] = mapped_column(String(36), index=True)
     lesson_id: Mapped[str | None] = mapped_column(String(36))
-    # Calls made outside a Sip build (profile preview, in-lesson help) are billed to the user.
+    # Kept independently of the Sip, including after deletion.
     user_id: Mapped[str | None] = mapped_column(String(36), index=True)
     prompt_tokens: Mapped[int | None] = mapped_column(Integer)
     completion_tokens: Mapped[int | None] = mapped_column(Integer)
@@ -229,4 +236,5 @@ class LLMCall(Base):
     latency_ms: Mapped[int | None] = mapped_column(Integer)
     ok: Mapped[bool] = mapped_column(default=True)
     error: Mapped[str | None] = mapped_column(Text)
+    reserved_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

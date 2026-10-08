@@ -121,9 +121,11 @@ class CallRecord:
     ok: bool
     completion: Completion | None = None
     error: str | None = None
+    reservation_id: str | None = None
 
 
 Recorder = Callable[[CallRecord], Awaitable[None]]
+Reserver = Callable[[str, str], Awaitable[str]]
 
 
 @dataclass
@@ -134,6 +136,7 @@ class StructuredLLM:
     recorder: Recorder | None = None
     settings: Any = field(default_factory=get_settings)
     lite: bool = False  # free plan: one small model, no escalation
+    reserver: Reserver | None = None
 
     async def generate(
         self,
@@ -162,17 +165,22 @@ class StructuredLLM:
                 {"role": "user", "content": user},
             ]
             for _ in range(self.settings.llm_validation_retries + 1):
+                reservation_id = await self.reserver(stage, model) if self.reserver else None
                 t0 = time.monotonic()
                 try:
-                    completion = await self.client.complete(model, messages, out.__name__, schema)
-                except LLMError as e:
-                    await self._record(stage, model, t0, None, str(e))
+                    async with asyncio.timeout(self.settings.llm_timeout_seconds * 3 + 10):
+                        completion = await self.client.complete(model, messages, out.__name__, schema)
+                except (LLMError, TimeoutError) as e:
+                    await self._record(stage, model, t0, None, str(e) or "provider timeout", reservation_id)
                     last_error = e
                     break  # provider error: move to escalation model
+                except BaseException as e:
+                    await self._record(stage, model, t0, None, str(e) or type(e).__name__, reservation_id)
+                    raise
                 try:
                     result = out.model_validate(extract_json(completion.text))
                 except (ValidationError, json.JSONDecodeError, ValueError) as e:
-                    await self._record(stage, model, t0, completion, f"invalid output: {e}")
+                    await self._record(stage, model, t0, completion, f"invalid output: {e}", reservation_id)
                     last_error = e
                     messages = messages + [
                         {"role": "assistant", "content": completion.text},
@@ -184,12 +192,12 @@ class StructuredLLM:
                         },
                     ]
                     continue
-                await self._record(stage, model, t0, completion, None)
+                await self._record(stage, model, t0, completion, None, reservation_id)
                 return result
             log.warning("stage %s failed on %s, escalating", stage, model)
         raise LLMError(f"stage '{stage}' failed: {last_error}")
 
-    async def _record(self, stage, model, t0, completion, error) -> None:
+    async def _record(self, stage, model, t0, completion, error, reservation_id=None) -> None:
         if not self.recorder:
             return
         rec = CallRecord(
@@ -199,8 +207,11 @@ class StructuredLLM:
             ok=error is None,
             completion=completion,
             error=error,
+            reservation_id=reservation_id,
         )
+        task = asyncio.create_task(self.recorder(rec))
         try:
-            await self.recorder(rec)
-        except Exception:  # never fail generation because of logging
-            log.exception("failed to record LLM call")
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            await task
+            raise

@@ -21,15 +21,27 @@ async def run_job(job: Job, client=None) -> None:
     async with SessionLocal() as session:
         if job.type == engine.JOB_BUILD_SIP:
             sip_id = job.payload["sip_id"]
-            await engine.build_sip(session, make_llm(client, sip_id=sip_id), sip_id)
+            sip = await session.get(Sip, sip_id)
+            if sip is None:
+                return
+            await engine.build_sip(session, make_llm(client, sip_id=sip_id, user_id=sip.user_id), sip_id)
         elif job.type == programs.JOB_EXTEND_PROGRAM:
-            await programs.extend_program(session, make_llm(client), job.payload["program_id"])
+            program = await session.get(Program, job.payload["program_id"])
+            if program is None:
+                return
+            await programs.extend_program(session, make_llm(client, user_id=program.user_id), program.id)
         elif job.type == programs.JOB_ADJUST_PROGRAM:
-            await programs.adjust_program(session, make_llm(client), job.payload["program_id"])
+            program = await session.get(Program, job.payload["program_id"])
+            if program is None:
+                return
+            await programs.adjust_program(session, make_llm(client, user_id=program.user_id), program.id)
         elif job.type == engine.JOB_GENERATE_LESSON:
             lesson_id = job.payload["lesson_id"]
             lesson = await session.get(Lesson, lesson_id)
-            llm = make_llm(client, sip_id=lesson.sip_id if lesson else None, lesson_id=lesson_id)
+            sip = await session.get(Sip, lesson.sip_id) if lesson else None
+            if sip is None:
+                return
+            llm = make_llm(client, sip_id=sip.id, lesson_id=lesson_id, user_id=sip.user_id)
             await engine.generate_lesson(session, llm, lesson_id, chain=job.payload.get("chain", False))
         else:
             raise ValueError(f"unknown job type {job.type}")

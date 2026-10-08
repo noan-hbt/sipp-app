@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
@@ -15,11 +16,12 @@ from app.api.schemas import (
 )
 from app.auth import (
     current_user,
-    hash_password,
+    hash_password_async,
     issue_tokens,
+    limit_auth_attempts,
     revoke_refresh_token,
     rotate_refresh_token,
-    verify_password,
+    verify_password_async,
 )
 from app.concepts import sync_cards
 from app.config import get_settings
@@ -32,28 +34,37 @@ from app.quota import usage
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=TokenOut, status_code=201)
+@router.post("/register", response_model=TokenOut, status_code=201, dependencies=[Depends(limit_auth_attempts)])
 async def register(body: Credentials, session: AsyncSession = Depends(get_session)):
     email = body.email.lower()
     if (await session.execute(select(User).where(User.email == email))).scalar_one_or_none():
         raise HTTPException(status.HTTP_409_CONFLICT, "email already registered")
-    user = User(email=email, password_hash=hash_password(body.password))
+    user = User(email=email, password_hash=await hash_password_async(body.password))
     session.add(user)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        if str(exc.orig) == "UNIQUE constraint failed: users.email" or (
+            getattr(exc.orig, "sqlstate", None) == "23505"
+            and getattr(exc.orig.__cause__, "constraint_name", None) == "ix_users_email"
+        ):
+            raise HTTPException(status.HTTP_409_CONFLICT, "email already registered") from exc
+        raise
     return await issue_tokens(session, user)
 
 
-@router.post("/login", response_model=TokenOut)
+@router.post("/login", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
 async def login(body: Credentials, session: AsyncSession = Depends(get_session)):
     user = (
         await session.execute(select(User).where(User.email == body.email.lower()))
     ).scalar_one_or_none()
-    if user is None or not verify_password(body.password, user.password_hash):
+    if user is None or not await verify_password_async(body.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid credentials")
     return await issue_tokens(session, user)
 
 
-@router.post("/refresh", response_model=TokenOut)
+@router.post("/refresh", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
 async def refresh(body: RefreshIn, session: AsyncSession = Depends(get_session)):
     return await rotate_refresh_token(session, body.refresh_token)
 
@@ -169,7 +180,7 @@ async def delete_account(
     session: AsyncSession = Depends(get_session),
 ):
     """Permanently deletes the account and all its data (sips, lessons, tokens)."""
-    if not verify_password(body.password, user.password_hash):
+    if not await verify_password_async(body.password, user.password_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid password")
     await session.execute(delete(User).where(User.id == user.id))  # FK cascades
     await session.commit()

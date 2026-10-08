@@ -2,7 +2,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import ValidationError
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
@@ -24,13 +24,11 @@ from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Program, ProgramStatus, Sip, SipStatus, User, utcnow
 from app.pipeline import engine, programs
 from app.pipeline.schemas import LearningProfile
-from app.plans import check_plan, count_generation
+from app.plans import check_active_builds, check_plan, count_generation
 from app.progress import MODULE_BONUS, finished_modules, stars_for, stats
-from app.quota import check_cost
+from app.quota import check_cost, lock_user
 
 router = APIRouter(tags=["sips"])
-
-MAX_ACTIVE_BUILDS = 3
 
 
 async def _own_sip(session: AsyncSession, user: User, sip_id: str) -> Sip:
@@ -89,19 +87,11 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
 async def create_sip(
     body: SipCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
-    active = await session.scalar(
-        select(func.count())
-        .select_from(Sip)
-        .where(Sip.user_id == user.id, Sip.status.in_([SipStatus.QUEUED, SipStatus.GENERATING]))
-    )
-    if active >= MAX_ACTIVE_BUILDS:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            {"code": "too_many_active_builds", "message": "too many sips being generated"},
-        )
+    user = await lock_user(session, user)
+    await check_active_builds(session, user)
     await check_cost(session, user)
     plan = await check_plan(session, user)
-    sip = Sip(user_id=user.id, input_text=body.input.strip(), lite=plan["lite"])
+    sip = Sip(user_id=user.id, input_text=body.input, lite=plan["lite"])
     if body.profile is not None:
         # Confirmed (and maybe edited) on the preview screen: interpretation is skipped.
         if len(json.dumps(body.profile, ensure_ascii=False)) > 8000:
@@ -207,9 +197,13 @@ async def delete_sip(
 async def retry_sip(
     sip_id: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
+    user = await lock_user(session, user)
     sip = await _own_sip(session, user, sip_id)
     if sip.status != SipStatus.FAILED:
         raise HTTPException(status.HTTP_409_CONFLICT, "sip is not in failed state")
+    await check_active_builds(session, user)
+    await check_cost(session, user)
+    await check_plan(session, user, new_slot=sip.program_id is None, monthly=False)
     sip.status, sip.error = SipStatus.QUEUED, None
     await enqueue(session, engine.JOB_BUILD_SIP, {"sip_id": sip.id})
     await session.commit()
@@ -247,8 +241,6 @@ async def get_lesson(
 ):
     """Returns the lesson. If not generated yet, generation is queued (poll until `ready`)."""
     lesson = await _own_lesson(session, user, lesson_id)
-    if lesson.status in (LessonStatus.PENDING, LessonStatus.FAILED):
-        await check_cost(session, user)
     if await engine.request_lesson(session, lesson, chain=True):
         await session.commit()
     return await _lesson_out(session, lesson)
@@ -262,6 +254,7 @@ async def complete_lesson(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    user = await lock_user(session, user)
     lesson = await _own_lesson(session, user, lesson_id)
     if lesson.status != LessonStatus.READY:
         raise HTTPException(status.HTTP_409_CONFLICT, "lesson is not ready")
@@ -277,16 +270,32 @@ async def complete_lesson(
 
     # Keep the next lesson (and the one after) warm.
     nxt = await engine.next_lesson(session, lesson)
-    if nxt is not None and not await engine.request_lesson(session, nxt, chain=True):
+    if nxt is not None and not await engine.request_lesson(session, nxt, chain=True, optional=True):
         after = await engine.next_lesson(session, nxt)
         if after is not None:
-            await engine.request_lesson(session, after, chain=False)
+            await engine.request_lesson(session, after, chain=False, optional=True)
     # Finished a chapter: re-plan the rest of the program in the background.
     sip = await session.get(Sip, lesson.sip_id)
     if await programs.should_adjust(session, sip):
-        program = await session.get(Program, sip.program_id)
-        program.status = ProgramStatus.ADJUSTING
-        await enqueue(session, programs.JOB_ADJUST_PROGRAM, {"program_id": program.id})
+        try:
+            await check_cost(session, user)
+        except HTTPException as e:
+            if (
+                e.status_code != status.HTTP_429_TOO_MANY_REQUESTS
+                or not isinstance(e.detail, dict)
+                or e.detail.get("code") not in ("daily_budget_reached", "global_daily_budget_reached")
+            ):
+                raise
+        else:
+            queued = await session.execute(
+                update(Sip)
+                .where(Sip.id == sip.id, Sip.adjustment_queued.is_(False))
+                .values(adjustment_queued=True)
+            )
+            if queued.rowcount:
+                program = await session.get(Program, sip.program_id)
+                program.status = ProgramStatus.ADJUSTING
+                await enqueue(session, programs.JOB_ADJUST_PROGRAM, {"program_id": program.id})
     await session.commit()
 
     sip_lessons = await _lessons(session, lesson.sip_id)

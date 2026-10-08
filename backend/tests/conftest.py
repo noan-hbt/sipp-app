@@ -16,6 +16,9 @@ from app.main import app  # noqa: E402
 
 @pytest.fixture(autouse=True)
 async def _db():
+    from app.auth import _auth_attempts
+
+    _auth_attempts.clear()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)

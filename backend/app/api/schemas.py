@@ -58,6 +58,7 @@ class UserOut(BaseModel):
 
 
 class SipCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     input: str = Field(min_length=3, max_length=4000, description="What the user wants to learn.")
     profile: dict[str, Any] | None = Field(
         default=None, description="The confirmed profile from `POST /sips/interpret`, possibly edited."
@@ -65,6 +66,7 @@ class SipCreate(BaseModel):
 
 
 class InterpretIn(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     input: str = Field(min_length=3, max_length=4000)
 
 

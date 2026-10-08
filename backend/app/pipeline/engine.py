@@ -9,6 +9,7 @@ import json
 import logging
 from typing import Any
 
+from fastapi import HTTPException
 from pydantic import Field, create_model, model_validator
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.jobs.queue import enqueue
 from app.llm.client import StructuredLLM
-from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus
+from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus, User
 from app.pipeline import programs, prompts
 from app.pipeline.checks import check_lesson, clean_mapping, normalize
 from app.pipeline.schemas import (
@@ -29,6 +30,7 @@ from app.pipeline.schemas import (
     ModuleMapping,
     Review,
 )
+from app.quota import check_cost
 
 log = logging.getLogger(__name__)
 
@@ -45,10 +47,22 @@ def _dump(obj: Any) -> str:
 # --- Jobs entry points ---------------------------------------------------------
 
 
-async def request_lesson(session: AsyncSession, lesson: Lesson, chain: bool = True) -> bool:
+async def request_lesson(
+    session: AsyncSession, lesson: Lesson, chain: bool = True, optional: bool = False
+) -> bool:
     """Queue generation of a lesson if needed. Returns True if a job was queued."""
     if lesson.status not in (LessonStatus.PENDING, LessonStatus.FAILED):
         return False
+    sip = await session.get(Sip, lesson.sip_id)
+    user = await session.get(User, sip.user_id)
+    try:
+        await check_cost(session, user)
+    except HTTPException as e:
+        if optional and e.status_code == 429 and isinstance(e.detail, dict) and e.detail.get("code") in (
+            "daily_budget_reached", "global_daily_budget_reached"
+        ):
+            return False
+        raise
     lesson.status = LessonStatus.QUEUED
     lesson.error = None
     await enqueue(session, JOB_GENERATE_LESSON, {"lesson_id": lesson.id, "chain": chain})
@@ -227,7 +241,7 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
 
     sip.status, sip.stage = SipStatus.READY, None
     if first is not None:
-        await request_lesson(session, first, chain=True)
+        await request_lesson(session, first, chain=True, optional=True)
     await session.commit()
 
 
@@ -378,5 +392,5 @@ async def generate_lesson(
     if chain:
         nxt = await next_lesson(session, lesson)
         if nxt is not None:
-            await request_lesson(session, nxt, chain=False)  # prefetch one ahead, no cascade
+            await request_lesson(session, nxt, chain=False, optional=True)  # prefetch one ahead, no cascade
     await session.commit()

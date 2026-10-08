@@ -11,8 +11,8 @@ from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, Program, ProgramStatus, Sip, SipStatus, User, utcnow
 from app.pipeline import engine, programs
-from app.plans import check_plan, count_generation
-from app.quota import check_cost
+from app.plans import check_active_builds, check_plan, count_generation
+from app.quota import check_cost, lock_user
 
 router = APIRouter(tags=["programs"])
 
@@ -97,6 +97,7 @@ async def start_chapter(
     session: AsyncSession = Depends(get_session),
 ):
     """Generates a chapter as a new Sip. Costs one monthly generation, no extra slot."""
+    user = await lock_user(session, user)
     program = await _own_program(session, user, program_id)
     stale = program.updated_at.replace(tzinfo=timezone.utc) if program.updated_at.tzinfo is None else program.updated_at
     if program.status == ProgramStatus.ADJUSTING and utcnow() - stale < timedelta(minutes=3):
@@ -108,6 +109,7 @@ async def start_chapter(
     exists = await session.scalar(select(Sip.id).where(Sip.program_id == program.id, Sip.chapter == position))
     if exists:
         raise HTTPException(status.HTTP_409_CONFLICT, {"code": "chapter_exists", "sip_id": exists})
+    await check_active_builds(session, user)
     await check_cost(session, user)
     plan = await check_plan(session, user, new_slot=False)
     chapter = programs.chapter_of(program, position)
@@ -134,6 +136,7 @@ async def extend_sip(
     sip_id: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
     """'Go further': turns a finished standalone Sip into chapter 1 of a new program."""
+    user = await lock_user(session, user)
     sip = await _own_sip(session, user, sip_id)
     if sip.program_id is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, {"code": "already_in_program", "program_id": sip.program_id})

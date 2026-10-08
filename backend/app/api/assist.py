@@ -2,10 +2,8 @@
 
 import dataclasses
 import json
-from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import HelpIn, HelpOut, InterpretIn, InterpretOut
@@ -15,7 +13,7 @@ from app.config import get_settings
 from app.db import get_session
 from app.llm.client import ChatClient, LLMError, OpenRouterClient
 from app.llm.record import make_llm
-from app.models import LessonStatus, LLMCall, Sip, User, utcnow
+from app.models import LessonStatus, Sip, User
 from app.pipeline import prompts
 from app.pipeline.schemas import HelpAnswer, LearningProfile
 from app.plans import check_plan, plan_status
@@ -82,7 +80,6 @@ async def lesson_help(
 ):
     """Explains one block of the lesson again: another way, simpler, an example, the hard
     words, or the learner's own question."""
-    s = get_settings()
     lesson = await _own_lesson(session, user, lesson_id)
     if lesson.status != LessonStatus.READY or not lesson.blocks:
         raise HTTPException(status.HTTP_409_CONFLICT, "lesson is not ready")
@@ -91,21 +88,6 @@ async def lesson_help(
     if body.kind == "question" and not (body.question or "").strip():
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "question is empty")
     await check_cost(session, user)
-    used = await session.scalar(
-        select(func.count())
-        .select_from(LLMCall)
-        .where(
-            LLMCall.user_id == user.id,
-            LLMCall.stage == "help",
-            LLMCall.created_at >= utcnow() - timedelta(hours=24),
-        )
-    )
-    if (used or 0) >= s.max_help_per_day:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            {"code": "help_limit", "message": "help used a lot today, retry tomorrow"},
-        )
-
     sip = await session.get(Sip, lesson.sip_id)
     profile = sip.profile or {}
     language = profile.get("language", "fr")

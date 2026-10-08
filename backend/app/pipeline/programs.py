@@ -107,7 +107,7 @@ async def _generated_chapters(session: AsyncSession, program: Program) -> list[S
 
 async def should_adjust(session: AsyncSession, sip: Sip) -> bool:
     """A chapter was just finished and chapters remain to be generated."""
-    if sip.program_id is None:
+    if sip.program_id is None or sip.adjustment_queued:
         return False
     lessons = await _lessons(session, sip)
     if not lessons or any(l.completed_at is None for l in lessons):

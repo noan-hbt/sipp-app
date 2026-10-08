@@ -3,7 +3,7 @@ from unittest.mock import patch
 from sqlalchemy import select, update
 
 from app.db import SessionLocal
-from app.models import Lesson, Program, Sip, User, utcnow
+from app.models import Job, Lesson, LLMCall, Program, Sip, User, utcnow
 from tests.fakes import PROFILE, FakeClient
 from tests.test_flow import drain
 
@@ -91,6 +91,10 @@ async def test_program_request_builds_first_chapter_with_context(auth_client):
     assert r.status_code == 200 and r.json() == program
     assert [name for name, _ in fake.calls].count("Roadmap") == 1
     assert [name for name, _ in fake.calls].count("Curriculum") == 1
+    async with SessionLocal() as s:
+        owner = await s.scalar(select(User.id))
+        calls = (await s.execute(select(LLMCall))).scalars().all()
+        assert calls and all(call.user_id == owner for call in calls)
     messages = next(call.args[1] for call in complete.await_args_list if call.args[2] == "Curriculum")
     user_message = next(m["content"] for m in messages if m["role"] == "user")
     assert f"PROGRAM: {ROADMAP['title']}" in user_message
@@ -188,6 +192,10 @@ async def test_finished_sip_extends_into_program(auth_client):
     for position, (chapter, expected) in enumerate(zip(program["chapters"][1:], EXTENSION["chapters"]), start=2):
         assert chapter == {**expected, "position": position, "sip": None}
     assert [name for name, _ in fake.calls].count("RoadmapExtension") == 1
+    async with SessionLocal() as s:
+        owner = await s.scalar(select(User.id))
+        call = await s.scalar(select(LLMCall).where(LLMCall.stage == "roadmap", LLMCall.sip_id.is_(None)))
+        assert call is not None and call.user_id == owner
     updated = (await auth_client.get(f"/sips/{sip_id}")).json()
     assert updated["program_id"] == program["id"] and updated["chapter"] == 1
     assert [m["id"] for m in updated["modules"]] == [m["id"] for m in sip["modules"]]
@@ -263,6 +271,10 @@ async def test_finished_chapter_adjusts_remaining_roadmap(auth_client):
     assert program["status"] == "ready" and program["note"] == ADJUSTMENT["note"]
     assert [c["title"] for c in program["chapters"]] == [ROADMAP["chapters"][0]["title"]] + [c["title"] for c in ADJUSTMENT["chapters"]]
     assert program["chapters"][0]["sip"]["id"] == sip["id"]
+    async with SessionLocal() as s:
+        owner = await s.scalar(select(User.id))
+        call = await s.scalar(select(LLMCall).where(LLMCall.stage == "roadmap", LLMCall.sip_id.is_(None)))
+        assert call is not None and call.user_id == owner
 
     r = await auth_client.post(f"/programs/{pid}/chapters/2")
     assert r.status_code == 202, r.text
@@ -279,3 +291,37 @@ async def test_unchanged_adjustment_keeps_roadmap(auth_client):
     program = (await auth_client.get(f"/programs/{sip['program_id']}")).json()
     assert program["status"] == "ready" and program["note"] is None
     assert [c["title"] for c in program["chapters"]] == [c["title"] for c in ROADMAP["chapters"]]
+
+
+async def test_chapter_checks_active_build_limit(auth_client):
+    async with SessionLocal() as s:
+        user_id = await s.scalar(select(User.id))
+        program = Program(user_id=user_id, roadmap=ROADMAP["chapters"])
+        s.add(program)
+        s.add_all(Sip(user_id=user_id, input_text=f"Sujet {i}") for i in range(3))
+        await s.commit()
+        program_id = program.id
+    r = await auth_client.post(f"/programs/{program_id}/chapters/1")
+    assert r.status_code == 429 and r.json()["detail"]["code"] == "too_many_active_builds"
+    async with SessionLocal() as s:
+        assert await s.scalar(select(Sip.id).where(Sip.program_id == program_id)) is None
+        assert await s.scalar(select(Job.id)) is None
+        assert (await s.scalar(select(User))).gen_count == 0
+
+
+async def test_retry_chapter_reuses_program_slot_and_monthly_generation(auth_client):
+    async with SessionLocal() as s:
+        user = await s.scalar(select(User))
+        user.plan, user.gen_month, user.gen_count = "free", utcnow().strftime("%Y-%m"), 1
+        program = Program(user_id=user.id, roadmap=ROADMAP["chapters"])
+        s.add(program)
+        await s.flush()
+        sip = Sip(user_id=user.id, program_id=program.id, chapter=1, input_text="les taux", status="failed")
+        s.add(sip)
+        await s.commit()
+        sip_id = sip.id
+    r = await auth_client.post(f"/sips/{sip_id}/retry")
+    assert r.status_code == 202, r.text
+    plan = (await auth_client.get("/auth/me/plan")).json()
+    assert plan["slots_used"] == plan["slots"] == 1
+    assert plan["sips_this_month"] == plan["sips_per_month"] == 1

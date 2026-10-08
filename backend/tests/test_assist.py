@@ -1,10 +1,13 @@
+import asyncio
+
+import pytest
 from sqlalchemy import func, select
 
 from app.api.assist import chat_client
 from app.db import SessionLocal
 from app.llm.client import LLMError
 from app.main import app
-from app.models import LLMCall
+from app.models import LLMCall, User
 from tests.fakes import PROFILE, FakeClient
 from tests.test_flow import drain
 
@@ -89,3 +92,66 @@ async def test_help_daily_limit(auth_client, monkeypatch):
     finally:
         app.dependency_overrides.clear()
     assert r.status_code == 429 and r.json()["detail"]["code"] == "help_limit"
+
+
+class SlowClient(FakeClient):
+    def __init__(self):
+        super().__init__()
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def complete(self, *args, **kwargs):
+        self.started.set()
+        await self.release.wait()
+        return await super().complete(*args, **kwargs)
+
+
+async def test_last_help_is_reserved_during_call(auth_client, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "max_help_per_day", 1)
+    sip_id = (await auth_client.post("/sips", json={"input": "taux"})).json()["id"]
+    await drain(FakeClient())
+    lesson_id = (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["lessons"][0]["id"]
+    fake = use(SlowClient())
+    path = f"/lessons/{lesson_id}/help"
+    body = {"block": 0, "kind": "example"}
+    first = asyncio.create_task(auth_client.post(path, json=body))
+    try:
+        await asyncio.wait_for(fake.started.wait(), 5)
+        rejected = await auth_client.post(path, json=body)
+        assert rejected.status_code == 429 and rejected.json()["detail"]["code"] == "help_limit"
+        fake.release.set()
+        assert (await first).status_code == 200
+    finally:
+        fake.release.set()
+        await asyncio.gather(first, return_exceptions=True)
+        app.dependency_overrides.clear()
+    assert len(fake.calls) == 1
+
+
+@pytest.mark.parametrize("guard", ["budget", "concurrency"])
+async def test_preview_reserves_budget_and_bounds_concurrency(auth_client, monkeypatch, guard):
+    from app.config import get_settings
+
+    if guard == "budget":
+        monkeypatch.setattr(get_settings(), "max_cost_per_day_usd", 0.08)
+        async with SessionLocal() as s:
+            user = (await s.scalars(select(User))).one()
+            s.add(LLMCall(user_id=user.id, stage="interpretation", model="m", cost=0.025))
+            await s.commit()
+    else:
+        monkeypatch.setattr(get_settings(), "llm_max_concurrent_per_user", 1)
+    fake = use(SlowClient())
+    first = asyncio.create_task(auth_client.post("/sips/interpret", json={"input": "taux"}))
+    try:
+        await asyncio.wait_for(fake.started.wait(), 5)
+        rejected = await auth_client.post("/sips/interpret", json={"input": "taux"})
+        assert rejected.status_code == 429
+        fake.release.set()
+        assert (await first).status_code == 200
+    finally:
+        fake.release.set()
+        await asyncio.gather(first, return_exceptions=True)
+        app.dependency_overrides.clear()
+    assert len(fake.calls) == 1

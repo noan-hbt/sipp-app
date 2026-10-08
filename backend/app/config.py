@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 60
     refresh_token_days: int = 60
+    auth_rate_limit_window_seconds: int = Field(default=60, ge=1)
+    auth_rate_limits: dict[str, int] = {"register": 5, "login": 20, "refresh": 30}
+    auth_password_workers: int = Field(default=2, ge=1)
 
     # OpenRouter
     openrouter_api_key: str = ""
@@ -53,6 +56,10 @@ class Settings(BaseSettings):
 
     # Per-user spending guards (rolling 24h)
     max_cost_per_day_usd: float = 1.0
+    max_global_cost_per_day_usd: float = Field(default=50.0, gt=0)
+    llm_reservation_cost_usd: float = Field(default=0.05, gt=0)
+    # Above worker_concurrency: a user's build + preloads + help must never trip it.
+    llm_max_concurrent_per_user: int = Field(default=5, ge=1)
     max_help_per_day: int = 30
 
     # Plans: library slots (Sips kept at once) and new Sips per calendar month.
@@ -86,6 +93,13 @@ class Settings(BaseSettings):
             v = "postgresql://" + v[len("postgres://"):]
         if v.startswith("postgresql://"):
             v = "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
+
+    @field_validator("auth_rate_limits")
+    @classmethod
+    def _auth_limits(cls, v: dict[str, int]) -> dict[str, int]:
+        if set(v) != {"register", "login", "refresh"} or any(limit < 1 for limit in v.values()):
+            raise ValueError("auth_rate_limits must contain positive register, login and refresh limits")
         return v
 
     def model_for(self, stage: str) -> str:

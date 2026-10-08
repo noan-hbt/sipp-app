@@ -78,7 +78,7 @@ class FakeClient:
         if isinstance(value, Exception):
             raise value
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
-        return Completion(text=text, model=model, prompt_tokens=10, completion_tokens=20)
+        return Completion(text=text, model=model, prompt_tokens=10, completion_tokens=20, cost=0.001)
 
 
 __all__ = ["FakeClient", "LLMError"]

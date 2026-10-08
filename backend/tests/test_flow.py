@@ -4,7 +4,7 @@ from sqlalchemy import func, select, update
 
 from app.db import SessionLocal
 from app.jobs import worker
-from app.models import Job, Lesson, LLMCall, utcnow
+from app.models import Job, Lesson, LLMCall, Sip, utcnow
 from app.pipeline.engine import build_lesson_context
 from tests.fakes import REVIEW_REVISE, FakeClient
 
@@ -63,6 +63,10 @@ async def test_end_to_end(auth_client, client):
 
     async with SessionLocal() as s:
         assert await s.scalar(select(func.count()).select_from(LLMCall)) > 0
+        owner_id = (await s.get(Sip, sip_id)).user_id
+        assert not (await s.scalars(select(LLMCall).where(LLMCall.user_id != owner_id))).all()
+        assert await s.scalar(select(func.count()).select_from(LLMCall).where(LLMCall.user_id.is_(None))) == 0
+    spent = (await auth_client.get("/auth/me/usage")).json()["cost_last_24h_usd"]
 
     # another user cannot see it
     other = await client.post("/auth/register", json={"email": "z@z.co", "password": "password123"})
@@ -73,6 +77,7 @@ async def test_end_to_end(auth_client, client):
     assert (await auth_client.delete(f"/sips/{sip_id}")).status_code == 204
     async with SessionLocal() as s:
         assert await s.scalar(select(func.count()).select_from(Lesson)) == 0
+    assert (await auth_client.get("/auth/me/usage")).json()["cost_last_24h_usd"] == spent
 
 
 async def test_lesson_context_uses_previous_lessons(auth_client):
