@@ -36,6 +36,13 @@ class PlanOut(BaseModel):
     lite: bool
 
 
+class PlanInfo(BaseModel):
+    name: str
+    slots: int
+    sips_per_month: int
+    lite: bool
+
+
 class TokenOut(BaseModel):
     access_token: str
     refresh_token: str

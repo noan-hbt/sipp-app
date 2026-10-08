@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.schemas import (
     Credentials,
     DeleteAccountIn,
+    PlanInfo,
     PlanOut,
     RefreshIn,
     StatsOut,
@@ -21,6 +22,7 @@ from app.auth import (
     verify_password,
 )
 from app.concepts import sync_cards
+from app.config import get_settings
 from app.db import get_session
 from app.models import ConceptCard, Lesson, Module, Sip, User
 from app.plans import plan_status, start_trial
@@ -84,6 +86,17 @@ async def me_stats(
 async def me_plan(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
     """Plan, library slots and monthly generations."""
     return await plan_status(session, user)
+
+
+@router.get("/plans", response_model=list[PlanInfo])
+async def list_plans():
+    """The public plans and their limits (the internal team plan is left out)."""
+    s = get_settings()
+    return [
+        PlanInfo(name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]), lite=bool(p["lite"]))
+        for name, p in s.plans.items()
+        if name != "max"
+    ]
 
 
 @router.post("/me/trial", response_model=PlanOut)
