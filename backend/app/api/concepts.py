@@ -34,7 +34,7 @@ def _out(card: ConceptCard, sip: Sip, lesson: Lesson) -> ConceptOut:
         lesson_title=lesson.title,
         mastery=mastery(card),
         due=is_due(card),
-        learned_at=card.created_at,
+        learned_at=lesson.completed_at or card.created_at,
         last_reviewed_at=card.last_reviewed_at,
     )
 
@@ -62,11 +62,16 @@ async def review_card(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    card = await session.get(ConceptCard, card_id)
-    if card is None or card.user_id != user.id:
+    card = await session.scalar(
+        select(ConceptCard)
+        .where(ConceptCard.id == card_id, ConceptCard.user_id == user.id)
+        .with_for_update()
+    )
+    if card is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "card not found")
-    review(card, body.knew)
+    await review(session, card, body.knew)
     await session.commit()
+    await session.refresh(card)
     sip = await session.get(Sip, card.sip_id)
     lesson = await session.get(Lesson, card.lesson_id)
     return _out(card, sip, lesson)

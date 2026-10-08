@@ -14,12 +14,15 @@ import sys
 def parse() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("input")
-    p.add_argument("--lessons", type=int, default=1)
+    p.add_argument("--lessons", type=int, default=1, help="number of lessons to generate; 0 builds only the roadmap")
     p.add_argument("--keys", default="", help="comma-separated lesson keys, overrides --lessons")
     p.add_argument("--sip", default="", help="reuse an existing sip id in --db (skips roadmap)")
     p.add_argument("--db", default="real.db")
     p.add_argument("--out", default=None, help="write full JSON dump here")
-    return p.parse_args()
+    args = p.parse_args()
+    if args.lessons < 0:
+        p.error("--lessons must be non-negative (0 builds only the roadmap)")
+    return args
 
 
 args = parse()

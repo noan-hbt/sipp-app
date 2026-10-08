@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models import Program, Sip, SipStatus, User, utcnow
+from app.models import Program, ProgramStatus, Sip, SipStatus, User, utcnow
 
 
 MAX_ACTIVE_BUILDS = 3
@@ -57,7 +57,9 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
         .select_from(Sip)
         .where(Sip.user_id == user.id, Sip.program_id.is_(None), Sip.status != SipStatus.FAILED)
     )
-    programs = await session.scalar(select(func.count()).select_from(Program).where(Program.user_id == user.id))
+    programs = await session.scalar(
+        select(func.count()).select_from(Program).where(Program.user_id == user.id, Program.status != ProgramStatus.FAILED)
+    )
     used = (standalone or 0) + (programs or 0)
     this_month = user.gen_count if user.gen_month == _month() else 0
     on_trial = user.trial_started_at is not None and name == s.trial_plan and user.plan_expires_at is not None

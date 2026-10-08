@@ -18,14 +18,14 @@ from app.api.schemas import (
     SipSummary,
 )
 from app.auth import current_user
-from app.concepts import cards_from_lesson
+from app.concepts import add_cards
 from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Program, ProgramStatus, Sip, SipStatus, User, utcnow
 from app.pipeline import engine, programs
 from app.pipeline.schemas import LearningProfile
 from app.plans import check_active_builds, check_plan, count_generation
-from app.progress import MODULE_BONUS, finished_modules, stars_for, stats
+from app.progress import MODULE_BONUS, finished_modules, score_for, stars_for, stats
 from app.quota import check_cost, lock_user
 
 router = APIRouter(tags=["sips"])
@@ -203,7 +203,11 @@ async def retry_sip(
         raise HTTPException(status.HTTP_409_CONFLICT, "sip is not in failed state")
     await check_active_builds(session, user)
     await check_cost(session, user)
-    await check_plan(session, user, new_slot=sip.program_id is None, monthly=False)
+    program = await session.get(Program, sip.program_id) if sip.program_id else None
+    failed_program = program is not None and program.status == ProgramStatus.FAILED
+    await check_plan(session, user, new_slot=sip.program_id is None or failed_program, monthly=False)
+    if failed_program:
+        program.status, program.error = ProgramStatus.READY, None
     sip.status, sip.error = SipStatus.QUEUED, None
     await enqueue(session, engine.JOB_BUILD_SIP, {"sip_id": sip.id})
     await session.commit()
@@ -235,6 +239,13 @@ async def _lesson_out(session: AsyncSession, lesson: Lesson) -> LessonOut:
     )
 
 
+def _answers(lesson: Lesson, body: CompleteIn | ResumeIn) -> list[dict]:
+    blocks = lesson.blocks or []
+    if len(body.answers) > len(blocks) or any(a.block >= len(blocks) for a in body.answers):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "answers reference unknown blocks")
+    return [a.model_dump(exclude_unset=True) for a in body.answers]
+
+
 @router.get("/lessons/{lesson_id}", response_model=LessonOut)
 async def get_lesson(
     lesson_id: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
@@ -258,14 +269,16 @@ async def complete_lesson(
     lesson = await _own_lesson(session, user, lesson_id)
     if lesson.status != LessonStatus.READY:
         raise HTTPException(status.HTTP_409_CONFLICT, "lesson is not ready")
-    first_time = lesson.completed_at is None
+    answers = _answers(lesson, body)
+    completed = await session.execute(
+        update(Lesson).where(Lesson.id == lesson.id, Lesson.completed_at.is_(None)).values(completed_at=utcnow())
+    )
+    first_time = bool(completed.rowcount)
     if first_time:
-        lesson.completed_at = utcnow()
-        for card in cards_from_lesson(lesson, user.id, lesson.completed_at):
-            session.add(card)
-    lesson.answers = body.answers
+        await add_cards(session, lesson, user.id, lesson.completed_at)
+    lesson.answers = answers
     lesson.resume = None
-    stars = stars_for(body.score)
+    stars = stars_for(score_for(lesson.blocks or [], answers, body.score))
     lesson.stars = max(lesson.stars or 0, stars)
 
     # Keep the next lesson (and the one after) warm.
@@ -321,5 +334,5 @@ async def save_resume(
 ):
     """Saves where the learner stopped, so reopening the lesson resumes at that block."""
     lesson = await _own_lesson(session, user, lesson_id)
-    lesson.resume = body.model_dump()
+    lesson.resume = {"step": body.step, "answers": _answers(lesson, body)}
     await session.commit()

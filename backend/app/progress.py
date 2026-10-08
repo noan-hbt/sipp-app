@@ -1,6 +1,7 @@
 """Gamification: stars per lesson and daily streak."""
 
 from datetime import date, timedelta, timezone
+import math
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import func, select
@@ -28,6 +29,43 @@ def stars_for(score: Score | None) -> int:
     if ratio >= 0.5:
         return 2
     return 1
+
+
+def score_for(blocks: list[dict], answers: list[dict], fallback: Score | None) -> Score | None:
+    by_block = {a["block"]: a for a in answers}
+    correct = total = 0
+    for i, block in enumerate(blocks):
+        answer = by_block.get(i, {})
+        value = answer.get("value", answer.get("choice"))
+        type_ = block.get("type")
+        kind = block.get("kind")
+        if type_ == "question" and kind in ("single_choice", "multiple_choice") and block.get("correct_option_ids"):
+            if isinstance(value, str):
+                value = [value]
+            ok = (
+                isinstance(value, list) and all(isinstance(v, str) for v in value)
+                and len(value) == len(set(value)) and set(value) == set(block["correct_option_ids"])
+            )
+        elif type_ == "question" and kind == "true_false" and isinstance(block.get("answer"), bool):
+            ok = isinstance(value, bool) and value == block["answer"]
+        elif type_ == "misconception" and isinstance(block.get("is_true"), bool):
+            ok = isinstance(value, bool) and value == block["is_true"]
+        elif type_ == "fill_blanks" and block.get("blanks"):
+            expected = [b["answer"].strip().casefold() for b in block["blanks"]]
+            ok = (
+                isinstance(value, list) and all(isinstance(v, str) for v in value)
+                and [v.strip().casefold() for v in value] == expected
+            )
+        elif type_ == "estimate" and isinstance(block.get("answer"), (int, float)):
+            ok = (
+                isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+                and abs(value - block["answer"]) <= block.get("tolerance", 0)
+            )
+        else:
+            continue
+        total += 1
+        correct += bool(ok)
+    return Score(correct=correct, total=total) if total else fallback
 
 
 def _zone(tz: str):

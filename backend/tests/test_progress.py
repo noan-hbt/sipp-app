@@ -27,7 +27,10 @@ async def test_complete_gives_stars_and_streak(auth_client):
     await drain(FakeClient())
     l1 = (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["lessons"][0]
     r = await auth_client.post(
-        f"/lessons/{l1['id']}/complete?tz=Europe/Paris", json={"score": {"correct": 1, "total": 2}}
+        f"/lessons/{l1['id']}/complete?tz=Europe/Paris", json={
+            "answers": [{"block": 3, "value": False}, {"block": 4, "value": ["a"]}, {"block": 5, "value": False}],
+            "score": {"correct": 1, "total": 2},
+        }
     )
     assert r.json()["stars"] == 2 and r.json()["streak_days"] == 1
     # replay keeps the best
@@ -71,4 +74,4 @@ async def test_finishing_a_module_gives_bonus_stars(auth_client):
     assert r.json()["module_bonus"] == 0
     assert (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]["bonus_earned"] is True
     s = (await auth_client.get("/auth/me/stats")).json()
-    assert s["total_stars"] == 3 * len(module["lessons"]) + 3
+    assert s["total_stars"] == len(module["lessons"]) + 3

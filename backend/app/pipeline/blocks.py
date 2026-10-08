@@ -8,6 +8,7 @@ dollars, e.g. "la clé $k_i$". Display formulas go in a `math` block.
 """
 
 import re
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -164,6 +165,8 @@ class QuestionBlock(_Block):
                 raise ValueError(f"{self.kind} needs 2-6 options")
             if not self.correct_option_ids:
                 raise ValueError(f"{self.kind} needs correct_option_ids")
+            if len(set(self.correct_option_ids)) != len(self.correct_option_ids):
+                raise ValueError("correct_option_ids must be unique")
             unknown = set(self.correct_option_ids) - set(ids)
             if unknown:
                 raise ValueError(f"correct_option_ids reference unknown ids {sorted(unknown)}")
@@ -236,6 +239,8 @@ class MatchBlock(_Block):
 
 
 class EstimateBlock(_Block):
+    model_config = ConfigDict(allow_inf_nan=False)
+
     type: Literal["estimate"]
     prompt: Str = Field(description="A question whose answer is a number.")
     min: float
@@ -254,6 +259,10 @@ class EstimateBlock(_Block):
             raise ValueError("estimate step too small for the range (max 2000 positions)")
         if self.tolerance >= (self.max - self.min) / 2:
             raise ValueError("estimate tolerance too wide for the range")
+        minimum, maximum, step, answer = (Decimal(str(value)) for value in (self.min, self.max, self.step, self.answer))
+        position = min(round((answer - minimum) / step), int((maximum - minimum) / step))
+        if abs(minimum + position * step - answer) > Decimal(str(self.tolerance)):
+            raise ValueError("estimate answer is unreachable with this step and tolerance")
         return self
 
 

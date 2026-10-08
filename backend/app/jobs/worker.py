@@ -4,14 +4,12 @@ import asyncio
 import logging
 import signal
 
-from sqlalchemy import update
-
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
 from app.llm.client import OpenRouterClient
 from app.llm.record import make_llm
-from app.models import Job, Lesson, LessonStatus, Program, ProgramStatus, Sip, SipStatus
+from app.models import Job, Lesson, Program, Sip
 from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
@@ -19,6 +17,9 @@ log = logging.getLogger("sipp.worker")
 
 async def run_job(job: Job, client=None) -> None:
     async with SessionLocal() as session:
+        session.info["job_claim"] = job
+        await queue.check_claim(session)
+        await session.commit()
         if job.type == engine.JOB_BUILD_SIP:
             sip_id = job.payload["sip_id"]
             sip = await session.get(Sip, sip_id)
@@ -49,30 +50,16 @@ async def run_job(job: Job, client=None) -> None:
 
 async def on_failure(job: Job, error: str) -> None:
     async with SessionLocal() as session:
-        retry = await queue.fail(session, job.id, error)
-        if job.type == engine.JOB_BUILD_SIP:
-            sip = await session.get(Sip, job.payload["sip_id"])
-            if sip:
-                sip.status = SipStatus.QUEUED if retry else SipStatus.FAILED
-                sip.error = None if retry else error[:2000]
-        elif job.type == programs.JOB_EXTEND_PROGRAM:
-            program = await session.get(Program, job.payload["program_id"])
-            if program and not retry:
-                # Back to a standalone Sip: the learner can ask again.
-                await session.execute(
-                    update(Sip).where(Sip.program_id == program.id).values(program_id=None, chapter=None)
-                )
-                await session.delete(program)
-        elif job.type == programs.JOB_ADJUST_PROGRAM:
-            program = await session.get(Program, job.payload["program_id"])
-            if program and not retry:
-                program.status = ProgramStatus.READY  # keep the current roadmap
-        elif job.type == engine.JOB_GENERATE_LESSON:
-            lesson = await session.get(Lesson, job.payload["lesson_id"])
-            if lesson:
-                lesson.status = LessonStatus.QUEUED if retry else LessonStatus.FAILED
-                lesson.error = None if retry else error[:2000]
+        await queue.fail(session, job, error)
         await session.commit()
+
+
+async def _heartbeat(job: Job) -> None:
+    interval = max(0.1, get_settings().job_stale_minutes * 60 / 3)
+    while True:
+        await asyncio.sleep(interval)
+        async with SessionLocal() as session:
+            await queue.heartbeat(session, job)
 
 
 async def process_one(client=None) -> bool:
@@ -82,20 +69,35 @@ async def process_one(client=None) -> bool:
     if job is None:
         return False
     log.info("job %s %s attempt %d", job.id, job.type, job.attempts)
+    run = asyncio.create_task(run_job(job, client))
+    heartbeat = asyncio.create_task(_heartbeat(job))
     try:
-        await run_job(job, client)
+        done, _ = await asyncio.wait((run, heartbeat), return_when=asyncio.FIRST_COMPLETED)
+        if heartbeat in done:
+            heartbeat.result()
+        await run
     except asyncio.CancelledError:
-        # Shutdown (deploy/restart): hand the job back so another worker resumes it now.
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
         async with SessionLocal() as session:
-            await asyncio.shield(queue.release(session, job.id))
+            await asyncio.shield(queue.release(session, job))
         log.info("job %s released on shutdown", job.id)
         raise
+    except queue.ClaimLost:
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
+        log.info("job %s claim lost", job.id)
     except Exception as e:  # noqa: BLE001
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
         log.exception("job %s failed", job.id)
         await on_failure(job, f"{type(e).__name__}: {e}")
     else:
         async with SessionLocal() as session:
-            await queue.finish(session, job.id)
+            await queue.finish(session, job)
+    finally:
+        heartbeat.cancel()
+        await asyncio.gather(heartbeat, return_exceptions=True)
     return True
 
 

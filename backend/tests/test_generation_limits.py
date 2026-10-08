@@ -65,7 +65,7 @@ async def test_retry_rejects_exhausted_budget(auth_client):
 
 async def test_completion_saves_progress_when_prefetch_budget_rejected(auth_client):
     _, lessons, _ = await _lessons()
-    answers = [{"block": 1, "choice": "a"}]
+    answers = [{"block": 0, "choice": "a"}]
     r = await auth_client.post(f"/lessons/{lessons[0]}/complete", json={"answers": answers})
     assert r.status_code == 200, r.text
     assert r.json()["progress"] == {"completed": 1, "total": 2}

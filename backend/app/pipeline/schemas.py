@@ -21,7 +21,7 @@ class SkillLevel(_Out):
 
 class LearningProfile(_Out):
     topic: str
-    title: str = Field(description="Short, catchy title for this Sip, in the learner's language.")
+    title: str = Field(max_length=300, description="Short, catchy title for this Sip, in the learner's language.")
     language: str = Field(description="ISO 639-1 code of the language to teach in, e.g. 'fr'.")
     current_level: Literal["none", "beginner", "intermediate", "advanced", "expert"]
     level_details: list[SkillLevel] = Field(
@@ -54,7 +54,7 @@ class LearningProfile(_Out):
 
 
 class RoadmapChapter(_Out):
-    title: str = Field(description="Short chapter title (max ~6 words).")
+    title: str = Field(max_length=300, description="Short chapter title (max ~6 words).")
     outcome: str = Field(description="What the learner can do after it, one sentence.")
     level: Literal["core", "advanced"] = Field(
         description="core = needed to reach the goal, advanced = going further."
@@ -63,13 +63,13 @@ class RoadmapChapter(_Out):
 
 
 class Roadmap(_Out):
-    title: str = Field(description="Short title of the whole program, in the learner's language.")
+    title: str = Field(max_length=300, description="Short title of the whole program, in the learner's language.")
     summary: str = Field(description="2-3 sentences: where the program leads.")
     chapters: list[RoadmapChapter] = Field(min_length=2, max_length=15)
 
 
 class RoadmapExtension(_Out):
-    title: str = Field(description="Short title of the whole journey, in the learner's language.")
+    title: str = Field(max_length=300, description="Short title of the whole journey, in the learner's language.")
     summary: str = Field(description="2-3 sentences: where the program leads.")
     chapters: list[RoadmapChapter] = Field(
         min_length=2, max_length=6, description="Follow-up chapters only, not the finished one."
@@ -92,7 +92,7 @@ class RoadmapAdjustment(_Out):
 
 
 class CurriculumModule(_Out):
-    title: str
+    title: str = Field(max_length=300)
     role: str = Field(description="Why this module exists in the path.")
     objectives: list[str] = Field(min_length=1, max_length=6)
     estimated_lessons: int = Field(ge=1, description="Number of ~5-minute lessons needed.")
@@ -107,7 +107,7 @@ class Curriculum(_Out):
 
 
 class MappedLesson(_Out):
-    title: str
+    title: str = Field(max_length=300)
     objective: str
     prerequisites: list[str] = Field(
         default_factory=list, description="Keys of earlier lessons, e.g. 'M1L2'."

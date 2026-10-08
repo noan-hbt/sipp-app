@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Any, Literal
+import json
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, model_validator
 
 
 class Credentials(BaseModel):
@@ -179,20 +180,51 @@ class LessonOut(BaseModel):
     resume: dict[str, Any] | None = None
 
 
-class ResumeIn(BaseModel):
+class MatchAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mistakes: int = Field(ge=0, le=10000)
+
+
+AnswerText = Annotated[str, Field(max_length=4000)]
+AnswerValue = AnswerText | StrictBool | Annotated[float, Field(allow_inf_nan=False)] | Annotated[list[AnswerText], Field(max_length=50)] | MatchAnswer | None
+
+
+class BlockAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    block: int = Field(ge=0, lt=200)
+    value: AnswerValue = None
+    correct: bool | None = None
+    choice: AnswerText | None = None
+
+
+class AnswersIn(BaseModel):
+    answers: list[BlockAnswer] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def _size(self):
+        encoded = [json.dumps(a.model_dump(exclude_unset=True), ensure_ascii=False).encode() for a in self.answers]
+        if any(len(a) > 8192 for a in encoded) or sum(map(len, encoded)) > 32768:
+            raise ValueError("answers are too large")
+        if len({a.block for a in self.answers}) != len(self.answers):
+            raise ValueError("duplicate block answers")
+        return self
+
+
+class ResumeIn(AnswersIn):
     step: int = Field(ge=0, description="Index of the block the learner is on.")
-    answers: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
 
 
 class Score(BaseModel):
     correct: int = Field(ge=0)
     total: int = Field(ge=0)
 
+    @model_validator(mode="after")
+    def _bound(self):
+        self.correct = min(self.correct, self.total)
+        return self
 
-class CompleteIn(BaseModel):
-    answers: list[dict[str, Any]] = Field(
-        default_factory=list, description="Free-form per-block answers, stored as-is."
-    )
+
+class CompleteIn(AnswersIn):
     score: Score | None = Field(default=None, description="Graded questions only (not open ones).")
 
 

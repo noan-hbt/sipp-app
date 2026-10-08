@@ -2,6 +2,7 @@ from datetime import timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import ChapterOut, ProgramOut, SipSummary
@@ -125,7 +126,14 @@ async def start_chapter(
     count_generation(user)
     program.note = None  # shown until the learner moves on
     session.add(sip)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        await session.rollback()
+        exists = await session.scalar(select(Sip.id).where(Sip.program_id == program_id, Sip.chapter == position))
+        if exists:
+            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "chapter_exists", "sip_id": exists})
+        raise
     await enqueue(session, engine.JOB_BUILD_SIP, {"sip_id": sip.id})
     await session.commit()
     return _summary(sip, [])

@@ -6,7 +6,7 @@ from app.db import SessionLocal
 from app.jobs import worker
 from app.models import Job, Lesson, LLMCall, Sip, utcnow
 from app.pipeline.engine import build_lesson_context
-from tests.fakes import REVIEW_REVISE, FakeClient
+from tests.fakes import REVIEW_PASS, REVIEW_REVISE, FakeClient
 
 
 async def drain(client) -> int:
@@ -94,7 +94,7 @@ async def test_lesson_context_uses_previous_lessons(auth_client):
 
 
 async def test_review_triggers_single_revision(auth_client):
-    fake = FakeClient({"Review": [REVIEW_REVISE, REVIEW_REVISE]})
+    fake = FakeClient({"Review": [REVIEW_REVISE, REVIEW_PASS, REVIEW_REVISE, REVIEW_PASS]})
     sip_id = (await auth_client.post("/sips", json={"input": "taux"})).json()["id"]
     await drain(fake)
     async with SessionLocal() as s:
@@ -102,9 +102,9 @@ async def test_review_triggers_single_revision(auth_client):
             await s.execute(select(Lesson).where(Lesson.sip_id == sip_id, Lesson.key == "M1L1"))
         ).scalar_one()
     assert l1.revisions == 1
-    # L1 and L2 each: draft + one revision (never a second review/revision)
+    # L1 and L2 each: draft + one revision, reviewed after each version.
     assert [c for c, _ in fake.calls].count("LessonDraft") == 4
-    assert [c for c, _ in fake.calls].count("Review") == 2
+    assert [c for c, _ in fake.calls].count("Review") == 4
 
 
 async def test_failure_retries_then_fails(auth_client):

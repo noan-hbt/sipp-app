@@ -2,7 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ConceptCard, Lesson, Sip, User, utcnow
@@ -36,9 +38,29 @@ def cards_from_lesson(lesson: Lesson, user_id: str, learned_at: datetime) -> lis
                 definition=b.get("definition") or "",
                 explanation=b.get("explanation"),
                 due_at=_aware(learned_at) + timedelta(days=REVIEW_INTERVALS[0]),
+                created_at=_aware(learned_at),
             )
         )
     return out
+
+
+async def add_cards(session: AsyncSession, lesson: Lesson, user_id: str, learned_at: datetime) -> None:
+    insert = pg_insert if session.get_bind().dialect.name == "postgresql" else sqlite_insert
+    for card in cards_from_lesson(lesson, user_id, learned_at):
+        await session.execute(
+            insert(ConceptCard)
+            .values(
+                user_id=card.user_id,
+                sip_id=card.sip_id,
+                lesson_id=card.lesson_id,
+                name=card.name,
+                definition=card.definition,
+                explanation=card.explanation,
+                due_at=card.due_at,
+                created_at=card.created_at,
+            )
+            .on_conflict_do_nothing(index_elements=["lesson_id", "name"])
+        )
 
 
 async def sync_cards(session: AsyncSession, user: User) -> None:
@@ -59,12 +81,9 @@ async def sync_cards(session: AsyncSession, user: User) -> None:
         .scalars()
         .all()
     )
-    added = False
     for lesson in lessons:
-        for card in cards_from_lesson(lesson, user.id, lesson.completed_at):
-            session.add(card)
-            added = True
-    if added:
+        await add_cards(session, lesson, user.id, lesson.completed_at)
+    if lessons:
         await session.commit()
 
 
@@ -79,13 +98,20 @@ def is_due(card: ConceptCard, now: datetime | None = None) -> bool:
     return _aware(card.due_at) <= (now or utcnow())
 
 
-def review(card: ConceptCard, knew: bool) -> None:
+async def review(session: AsyncSession, card: ConceptCard, knew: bool) -> None:
     now = utcnow()
-    card.reviews += 1
-    card.last_reviewed_at = now
-    if knew:
-        card.box = min(card.box + 1, len(REVIEW_INTERVALS) - 1)
-    else:
-        card.box = 0
-        card.lapses += 1
-    card.due_at = now + timedelta(days=REVIEW_INTERVALS[card.box])
+    if not is_due(card, now):
+        return
+    box = min(card.box + 1, len(REVIEW_INTERVALS) - 1) if knew else 0
+    await session.execute(
+        update(ConceptCard)
+        .where(ConceptCard.id == card.id, ConceptCard.due_at <= now)
+        .values(
+            box=box,
+            reviews=ConceptCard.reviews + 1,
+            lapses=ConceptCard.lapses + (0 if knew else 1),
+            last_reviewed_at=now,
+            due_at=now + timedelta(days=REVIEW_INTERVALS[box]),
+        )
+        .execution_options(synchronize_session=False)
+    )

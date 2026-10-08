@@ -11,11 +11,11 @@ from typing import Any
 
 from fastapi import HTTPException
 from pydantic import Field, create_model, model_validator
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.jobs.queue import enqueue
+from app.jobs.queue import check_claim, enqueue
 from app.llm.client import StructuredLLM
 from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus, User
 from app.pipeline import programs, prompts
@@ -53,6 +53,7 @@ async def request_lesson(
     """Queue generation of a lesson if needed. Returns True if a job was queued."""
     if lesson.status not in (LessonStatus.PENDING, LessonStatus.FAILED):
         return False
+    await check_claim(session)
     sip = await session.get(Sip, lesson.sip_id)
     user = await session.get(User, sip.user_id)
     try:
@@ -63,8 +64,14 @@ async def request_lesson(
         ):
             return False
         raise
-    lesson.status = LessonStatus.QUEUED
-    lesson.error = None
+    queued = await session.execute(
+        update(Lesson).where(
+            Lesson.id == lesson.id, Lesson.status.in_((LessonStatus.PENDING, LessonStatus.FAILED))
+        ).values(status=LessonStatus.QUEUED, error=None)
+    )
+    if not queued.rowcount:
+        await session.refresh(lesson)
+        return False
     await enqueue(session, JOB_GENERATE_LESSON, {"lesson_id": lesson.id, "chain": chain})
     return True
 
@@ -108,6 +115,7 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
     sip = await session.get(Sip, sip_id)
     if sip is None or sip.status == SipStatus.READY:
         return
+    await check_claim(session)
     sip.status, sip.error = SipStatus.GENERATING, None
     if sip.lite:
         llm = dataclasses.replace(llm, lite=True)
@@ -119,6 +127,7 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         profile = await llm.generate(
             "interpretation", prompts.INTERPRETATION, sip.input_text, LearningProfile
         )
+        await check_claim(session)
         sip.profile = profile.model_dump()
         sip.title = profile.title
     profile = LearningProfile.model_validate(sip.profile)
@@ -130,20 +139,21 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         await programs.create_program(session, llm, sip, profile)
     chapter_ctx, chapter_known = await programs.program_context(session, sip)
 
+    budget_min, budget_max = s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
+    max_modules = s.max_modules
+    if sip.program_id is not None:
+        est = programs.chapter_of(await session.get(Program, sip.program_id), sip.chapter)[
+            "estimated_lessons"
+        ]
+        budget_min, budget_max = max(3, est - 3), min(est + 4, s.lesson_budget["standard"][1])
+    if sip.lite:
+        budget_min, budget_max = s.lite_lesson_budget
+        max_modules = s.lite_max_modules
+
     # 2. Curriculum (reused on retry)
     if sip.curriculum is None:
         sip.stage = "curriculum"
         await session.commit()
-        budget_min, budget_max = s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
-        max_modules = s.max_modules
-        if sip.program_id is not None:
-            est = programs.chapter_of(await session.get(Program, sip.program_id), sip.chapter)[
-                "estimated_lessons"
-            ]
-            budget_min, budget_max = max(3, est - 3), min(est + 4, s.lesson_budget["standard"][1])
-        if sip.lite:
-            budget_min, budget_max = s.lite_lesson_budget
-            max_modules = s.lite_max_modules
         bounded = _bounded_curriculum(max_modules, s.max_lessons_per_module, budget_max)
         curriculum = await llm.generate(
             "curriculum",
@@ -158,11 +168,13 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             + (f"\n\nThis path is a CHAPTER of a program:\n{chapter_ctx}" if chapter_ctx else ""),
             bounded,
         )
+        await check_claim(session)
         sip.curriculum = curriculum.model_dump()
         sip.summary = curriculum.summary
     curriculum = Curriculum.model_validate(sip.curriculum)
 
     # 3. Mapping (restart from scratch on retry: modules are cheap compared to coherence)
+    await check_claim(session)
     await session.execute(delete(Module).where(Module.sip_id == sip.id))
     overview = "\n".join(
         f"M{i}. {m.title} — {m.role}" for i, m in enumerate(curriculum.modules, start=1)
@@ -170,13 +182,16 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
     mapped: list[tuple[CurriculumModule, ModuleMapping]] = []
     known_keys: list[str] = []
     previous_lines: list[str] = []
+    remaining = budget_max
     for mi, cm in enumerate(curriculum.modules, start=1):
+        await check_claim(session)
         sip.stage = f"mapping:{mi}/{len(curriculum.modules)}"
         await session.commit()
         user = (
             f"Learning profile:\n{_dump(sip.profile)}\n\n"
             f"Curriculum:\n{overview}\n\n"
             f"Module to map: M{mi}. {cm.title}\nRole: {cm.role}\n"
+            f"Remaining global lesson budget: {remaining}; reserve one lesson per later module.\n"
             f"Objectives:\n" + "\n".join(f"- {o}" for o in cm.objectives) + "\n\n"
             "Lessons already mapped in previous modules:\n"
             + ("\n".join(previous_lines) if previous_lines else "(none)")
@@ -187,7 +202,12 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
                 else ""
             )
         )
-        max_lessons = min(s.max_lessons_per_module, cm.estimated_lessons + (0 if sip.lite else 2))
+        max_lessons = min(
+            s.max_lessons_per_module, cm.estimated_lessons + (0 if sip.lite else 2),
+            remaining - (len(curriculum.modules) - mi),
+        )
+        if max_lessons < 1:
+            raise ValueError("curriculum exceeds the total lesson budget")
         bounded_mapping = create_model(
             "ModuleMapping",
             __base__=ModuleMapping,
@@ -206,6 +226,8 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             bounded_mapping,
         )
         mapping, res = clean_mapping(mapping, mi, known_keys, max_lessons)
+        if res.errors:
+            raise ValueError("; ".join(res.errors))
         for w in res.warnings:
             log.info("sip %s mapping: %s", sip.id, w)
         for li, ml in enumerate(mapping.lessons, start=1):
@@ -213,7 +235,11 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             known_keys.append(key)
             previous_lines.append(f"{key}: {ml.title} — concepts: {', '.join(ml.concepts)}")
         mapped.append((cm, mapping))
+        remaining -= len(mapping.lessons)
 
+    if sum(len(mapping.lessons) for _, mapping in mapped) > budget_max:
+        raise ValueError("mapping exceeds the total lesson budget")
+    await check_claim(session)
     gi = 0
     first: Lesson | None = None
     for mi, (cm, mapping) in enumerate(mapped, start=1):
@@ -332,13 +358,22 @@ async def generate_lesson(
 ) -> None:
     s = get_settings()
     lesson = await session.get(Lesson, lesson_id)
-    if lesson is None or lesson.status == LessonStatus.READY:
+    if lesson is None:
+        return
+    await check_claim(session)
+    claimed = await session.execute(
+        update(Lesson).where(
+            Lesson.id == lesson_id,
+            Lesson.status.in_((LessonStatus.PENDING, LessonStatus.QUEUED, LessonStatus.FAILED)),
+        ).values(status=LessonStatus.GENERATING, error=None)
+    )
+    if not claimed.rowcount:
+        await session.commit()
         return
     sip = await session.get(Sip, lesson.sip_id)
     if sip.lite:
         llm = dataclasses.replace(llm, lite=True)
     language = (sip.profile or {}).get("language", "en")
-    lesson.status, lesson.error = LessonStatus.GENERATING, None
     await session.commit()
 
     context, known = await build_lesson_context(session, lesson)
@@ -380,16 +415,32 @@ async def generate_lesson(
         )
         revisions += 1
         checks = check_lesson(draft, lesson.concepts, known, s.lesson_minutes)
-        review_log.append({"checks": {"errors": checks.errors, "warnings": checks.warnings}})
+        review = await llm.generate(
+            "review",
+            prompts.REVIEW.format(**fmt),
+            f"{context}\n\nLESSON PLAN:\n{_dump(plan.model_dump())}\n\n"
+            f"LESSON (blocks are 0-indexed):\n{_dump(draft.model_dump())}",
+            Review,
+            escalate=False,
+        )
+        review_log.append({
+            "checks": {"errors": checks.errors, "warnings": checks.warnings},
+            "review": review.model_dump(),
+        })
 
+    await check_claim(session)
     lesson.plan = plan.model_dump()
     lesson.blocks = [b.model_dump(exclude_none=True) for b in draft.blocks]
     lesson.summary = draft.summary
     lesson.concepts_taught = draft.concepts_taught
     lesson.review = {"rounds": review_log, "unresolved_errors": checks.errors}
     lesson.revisions = revisions
-    lesson.status = LessonStatus.READY
-    if chain:
+    failed = bool(checks.errors) or review.verdict == "revise"
+    lesson.status = LessonStatus.FAILED if failed else LessonStatus.READY
+    lesson.error = "; ".join(
+        checks.errors or [i.description for i in review.issues] or ["lesson still requires revision"]
+    )[:2000] if failed else None
+    if chain and not failed:
         nxt = await next_lesson(session, lesson)
         if nxt is not None:
             await request_lesson(session, nxt, chain=False, optional=True)  # prefetch one ahead, no cascade

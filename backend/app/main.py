@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
+from starlette.responses import JSONResponse
 
 from app.api import assist, auth, concepts, programs, sips
 from app.auth import validate_jwt_secret
@@ -14,7 +15,40 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 settings = get_settings()
 validate_jwt_secret()
 
+
+class AnswerBodyLimit:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        path = scope.get("path", "")
+        if scope["type"] != "http" or not path.startswith("/lessons/") or not path.endswith(("/complete", "/resume")):
+            return await self.app(scope, receive, send)
+        body = bytearray()
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                return
+            chunk = message.get("body", b"")
+            if len(body) + len(chunk) > 65536:
+                return await JSONResponse({"detail": "request body is too large"}, status_code=413)(scope, receive, send)
+            body.extend(chunk)
+            if not message.get("more_body", False):
+                break
+        sent = False
+
+        async def replay():
+            nonlocal sent
+            if sent:
+                return await receive()
+            sent = True
+            return {"type": "http.request", "body": bytes(body), "more_body": False}
+
+        await self.app(scope, replay, send)
+
+
 app = FastAPI(title="Sipp API", version="0.1.0")
+app.add_middleware(AnswerBodyLimit)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],

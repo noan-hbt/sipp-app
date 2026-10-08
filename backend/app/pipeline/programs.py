@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.jobs.queue import check_claim
 from app.llm.client import StructuredLLM
 from app.models import Lesson, Module, Program, ProgramStatus, Sip
 from app.pipeline import prompts
@@ -41,6 +42,7 @@ async def create_program(
         f"Learner's own words:\n{sip.input_text}\n\nLearning profile:\n{_dump(sip.profile)}",
         Roadmap,
     )
+    await check_claim(session)
     program = Program(
         user_id=sip.user_id,
         title=roadmap.title,
@@ -91,6 +93,7 @@ async def extend_program(session: AsyncSession, llm: StructuredLLM, program_id: 
         "level": "core",
         "estimated_lessons": max(4, min(25, len(await _lessons(session, first)))),
     }
+    await check_claim(session)
     program.title, program.summary = ext.title, ext.summary
     program.roadmap = [done] + [c.model_dump() for c in ext.chapters]
     program.status, program.error = ProgramStatus.READY, None
@@ -162,7 +165,8 @@ async def adjust_program(session: AsyncSession, llm: StructuredLLM, program_id: 
     await session.refresh(program)
     still_fixed = max((x.chapter or 0) for x in await _generated_chapters(session, program))
     room = s.max_program_chapters - fixed
-    if adj.changed and adj.chapters and still_fixed == fixed and room > 0:
+    await check_claim(session)
+    if adj.changed and still_fixed == fixed and (room > 0 or not adj.chapters):
         program.roadmap = program.roadmap[:fixed] + [c.model_dump() for c in adj.chapters[:room]]
         program.note = adj.note
     program.status = ProgramStatus.READY

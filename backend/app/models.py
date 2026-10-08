@@ -87,6 +87,7 @@ class SipStatus:
 
 class Sip(TimestampMixin, Base):
     __tablename__ = "sips"
+    __table_args__ = (UniqueConstraint("program_id", "chapter", name="uq_sips_program_chapter"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
@@ -187,6 +188,7 @@ class Job(TimestampMixin, Base):
     max_attempts: Mapped[int] = mapped_column(Integer, default=3)
     run_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claim_token: Mapped[str | None] = mapped_column(String(36))
     error: Mapped[str | None] = mapped_column(Text)
 
 
