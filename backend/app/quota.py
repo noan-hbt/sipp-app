@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -16,10 +16,11 @@ async def usage(session: AsyncSession, user: User) -> dict:
     sips = await session.scalar(
         select(func.count()).select_from(Sip).where(Sip.user_id == user.id, Sip.created_at >= since)
     )
+    # Sip builds and lessons are billed through their Sip; previews and help carry the user.
     cost = await session.scalar(
         select(func.coalesce(func.sum(LLMCall.cost), 0.0))
-        .join(Sip, Sip.id == LLMCall.sip_id)
-        .where(Sip.user_id == user.id, LLMCall.created_at >= since)
+        .outerjoin(Sip, Sip.id == LLMCall.sip_id)
+        .where(or_(Sip.user_id == user.id, LLMCall.user_id == user.id), LLMCall.created_at >= since)
     )
     return {
         "sips_last_24h": sips or 0,

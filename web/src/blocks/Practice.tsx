@@ -5,6 +5,7 @@ import { Button } from '../components/ui'
 import type * as B from '../lib/blocks'
 import { haptic, play } from '../lib/sound'
 import type { Answer } from './Blocks'
+import { Kicker, type Tone } from './Kicker'
 
 // Deterministic shuffle so a block always looks the same across re-renders/reloads.
 function shuffled<T>(items: T[], seed: string): T[] {
@@ -24,13 +25,13 @@ function grade(correct: boolean) {
   haptic(correct ? 12 : 30)
 }
 
-function Header({ tag, bg, ink, children }: { tag: string; bg: string; ink: string; children?: ReactNode }) {
+function Header({ icon, tone, tag, children }: { icon: 'fill' | 'match' | 'estimate'; tone: Tone; tag: string; children?: ReactNode }) {
   return (
     <>
-      <span className="tag" style={{ background: bg, color: ink }}>
+      <Kicker icon={icon} tone={tone}>
         {tag}
-      </span>
-      {children && <h2 style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.3 }}>{children}</h2>}
+      </Kicker>
+      {children && <h2 className="lx-h">{children}</h2>}
     </>
   )
 }
@@ -61,8 +62,8 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Header tag="Complète" bg="var(--butter)" ink="var(--butter-ink)" />
-      <p style={{ fontSize: 19, fontWeight: 500, lineHeight: 2.1 }}>
+      <Header icon="fill" tone="butter" tag="Complète la phrase" />
+      <p className="lx-p" style={{ fontSize: 18, lineHeight: 2.1, color: 'var(--ink)' }}>
         {parts.map((part, i) => {
           if (i % 2 === 0) return <RichText key={i} text={part} />
           const slot = Number(part) - 1
@@ -121,14 +122,14 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
                   whileTap={used ? undefined : { scale: 0.94, y: 2 }}
                   onClick={() => pick(ci)}
                   disabled={used}
-                  className={used ? undefined : 'raised-sm'}
                   style={{
                     border: 'none',
                     padding: '10px 16px',
                     borderRadius: 16,
                     fontSize: 16,
                     fontWeight: 600,
-                    background: used ? 'var(--track)' : 'var(--bg)',
+                    background: used ? 'var(--track)' : 'var(--surface)',
+                    boxShadow: used ? 'none' : 'inset 0 0 0 2px var(--line-strong)',
                   }}
                 >
                   <RichText text={c} />
@@ -188,7 +189,6 @@ function MatchItem({
       whileTap={state === 'done' ? undefined : { scale: 0.96 }}
       onClick={onClick}
       disabled={state === 'done'}
-      className={state === 'idle' ? 'raised-sm' : undefined}
       style={{
         minHeight: 56,
         width: '100%',
@@ -198,11 +198,11 @@ function MatchItem({
         fontSize: 15,
         fontWeight: 600,
         lineHeight: 1.3,
-        border: state === 'selected' ? '2px solid var(--peach)' : '2px solid transparent',
-        background: state === 'done' ? color![0] : state === 'selected' ? 'var(--peach-soft)' : 'var(--bg)',
+        border: 'none',
+        background: state === 'done' ? color![0] : state === 'selected' ? 'var(--primary-soft)' : 'var(--surface)',
         color: state === 'done' ? color![1] : 'var(--ink)',
-        boxShadow: state === 'selected' ? 'inset 0 0 0 2px var(--primary)' : undefined,
-        transition: 'background .25s, color .25s, border-color .2s',
+        boxShadow: state === 'selected' ? 'inset 0 0 0 2.5px var(--primary)' : state === 'idle' ? 'inset 0 0 0 2px var(--line-strong)' : 'none',
+        transition: 'background .25s, color .25s, box-shadow .2s',
       }}
     >
       <RichText text={text} />
@@ -254,7 +254,7 @@ export function Match({ b, answer, onAnswer }: { b: B.MatchBlock; answer?: Answe
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Header tag="Associe" bg="var(--lavender)" ink="var(--lavender-ink)">
+      <Header icon="match" tone="sky" tag="Associe les paires">
         <RichText text={b.prompt} />
       </Header>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
@@ -318,7 +318,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <Header tag="Estime" bg="var(--sky)" ink="var(--sky-ink)">
+      <Header icon="estimate" tone="peach" tag="Estime">
         <RichText text={b.prompt} />
       </Header>
       <motion.div

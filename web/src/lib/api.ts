@@ -57,8 +57,34 @@ export interface Profile {
   goals: string[]
   depth: string
   scope: string
+  breadth?: string
+  prior_knowledge?: string[]
+  context?: string | null
   assumptions: string[]
+  out_of_scope?: string[]
 }
+export interface Interpretation {
+  profile: Profile
+  lessons_min: number
+  lessons_max: number
+  program: boolean
+}
+export interface Concept {
+  id: string
+  name: string
+  definition: string
+  explanation: string | null
+  sip_id: string
+  sip_title: string
+  lesson_id: string
+  lesson_title: string
+  mastery: 1 | 2 | 3
+  due: boolean
+  learned_at: string
+  last_reviewed_at: string | null
+}
+export interface ReviewSession { due_count: number; cards: Concept[] }
+export type HelpKind = 'rephrase' | 'simpler' | 'example' | 'word' | 'question'
 export interface SipDetail extends SipSummary {
   summary: string | null
   profile: Profile | null
@@ -96,6 +122,10 @@ export interface Stats {
   lessons_completed: number
   total_stars: number
   week?: boolean[]
+  month?: string
+  month_days?: number[]
+  today?: number
+  concepts?: number
 }
 export interface Chapter {
   position: number
@@ -236,10 +266,17 @@ export const Api = {
   me: () => api<{ id: string; email: string; created_at: string }>('/auth/me'),
   plan: () => api<Plan>('/auth/me/plan'),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
+  plans: () => api<{ name: Plan['plan']; slots: number; sips_per_month: number; lite: boolean }[]>('/auth/plans'),
   exportData: () => api<unknown>('/auth/me/export'),
   sips: () => api<SipSummary[]>('/sips'),
   sip: (id: string) => api<SipDetail>(`/sips/${id}`),
-  createSip: (input: string) => api<SipSummary>('/sips', { method: 'POST', json: { input } }),
+  createSip: (input: string, profile?: Profile) => api<SipSummary>('/sips', { method: 'POST', json: { input, profile } }),
+  interpret: (input: string) => api<Interpretation>('/sips/interpret', { method: 'POST', json: { input } }),
+  concepts: () => api<Concept[]>('/me/concepts'),
+  review: () => api<ReviewSession>('/me/review'),
+  reviewCard: (id: string, knew: boolean) => api<Concept>(`/me/review/${id}`, { method: 'POST', json: { knew } }),
+  help: (lessonId: string, body: { block: number; kind: HelpKind; question?: string }) =>
+    api<{ answer: string }>(`/lessons/${lessonId}/help`, { method: 'POST', json: body }),
   retrySip: (id: string) => api<SipSummary>(`/sips/${id}/retry`, { method: 'POST' }),
   deleteSip: (id: string) => api<void>(`/sips/${id}`, { method: 'DELETE' }),
   programs: () => api<Program[]>('/programs'),

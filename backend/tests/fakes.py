@@ -60,6 +60,7 @@ DEFAULTS = {
     "LessonPlan": PLAN,
     "LessonDraft": DRAFT,
     "Review": REVIEW_PASS,
+    "HelpAnswer": {"answer": "Autrement dit : le taux, c'est le **loyer** de l'argent."},
 }
 
 

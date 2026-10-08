@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BlockView, feedbackFor, type Answer } from '../blocks/Blocks'
+import { HelpSheet } from '../components/HelpSheet'
 import { Mascot } from '../components/Mascot'
 import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton, ProgressBar } from '../components/ui'
-import { Api, ApiError, type LessonOut } from '../lib/api'
+import { Api, ApiError, type HelpKind, type LessonOut } from '../lib/api'
 import { isGraded, isInteractive, type Block } from '../lib/blocks'
 import { play } from '../lib/sound'
 
@@ -54,6 +55,7 @@ export function Lesson() {
       onClose={() => nav(`/sips/${data.sip_id}`, { replace: true })}
       onFinish={(f) => complete.mutate(f)}
       finishing={complete.isPending}
+      onHelp={(block, kind, question) => Api.help(lessonId, { block, kind, question }).then((r) => r.answer)}
     />
   )
 }
@@ -99,6 +101,7 @@ export function LessonPlayer({
   onClose,
   onFinish,
   finishing,
+  onHelp,
 }: {
   title: string
   blocks: Block[]
@@ -107,10 +110,13 @@ export function LessonPlayer({
   onClose: () => void
   onFinish: (f: Finished) => void
   finishing: boolean
+  /** Explains the given block again; the help button is hidden without it (demo). */
+  onHelp?: (block: number, kind: HelpKind, question?: string) => Promise<string>
 }) {
   const [revealed, setRevealed] = useState(() => Math.min(Math.max(1, (resume?.step ?? 0) + 1), Math.max(1, blocks.length)))
   const [answers, setAnswers] = useState<Record<number, Answer>>(() => fromList(resume))
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   // Between the answer and the feedback sheet: the block shows its result, no bottom bar.
   const [grading, setGrading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -172,10 +178,27 @@ export function LessonPlayer({
         <IconButton label="Quitter la leçon" onClick={onClose}>
           {Icon.close}
         </IconButton>
-        <ProgressBar value={revealed / blocks.length} />
+        <ProgressBar value={revealed / blocks.length} height={8} />
         <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)', minWidth: 34, textAlign: 'right' }}>
           {revealed}/{blocks.length}
         </span>
+        {onHelp && (
+          <motion.button
+            aria-label="Je n’ai pas compris"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              play('tap')
+              setHelpOpen(true)
+            }}
+            className="icon-btn"
+            style={{ background: 'var(--lavender)', color: 'var(--lavender-ink)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 9a3 3 0 115 2.2c-1.2.8-2 1.4-2 2.8" />
+              <path d="M12 18h.01" />
+            </svg>
+          </motion.button>
+        )}
       </header>
 
       <div
@@ -183,10 +206,10 @@ export function LessonPlayer({
         className="scroll"
         style={{ padding: '6px 20px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
       >
-        <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 20 }}>
+        <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 22 }}>
           <RichText text={title} />
         </motion.h1>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
           {blocks.slice(0, revealed).map((b, i) => (
             <motion.div
               ref={(el) => {
@@ -269,6 +292,7 @@ export function LessonPlayer({
           </motion.section>
         )}
       </AnimatePresence>
+      {onHelp && <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} ask={(kind, question) => onHelp(revealed - 1, kind, question)} />}
     </Screen>
   )
 }

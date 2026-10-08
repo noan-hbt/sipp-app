@@ -189,6 +189,28 @@ class Job(TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
 
 
+class ConceptCard(Base):
+    """A notion the learner met in a finished lesson, scheduled for spaced review."""
+
+    __tablename__ = "concept_cards"
+    __table_args__ = (UniqueConstraint("lesson_id", "name"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    sip_id: Mapped[str] = mapped_column(ForeignKey("sips.id", ondelete="CASCADE"), index=True)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(300))
+    definition: Mapped[str] = mapped_column(Text)
+    explanation: Mapped[str | None] = mapped_column(Text)
+    # Leitner box: 0 = just learned / forgotten, up to len(REVIEW_INTERVALS) - 1.
+    box: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reviews: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    lapses: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class LLMCall(Base):
     """Usage log for cost tracking and debugging."""
 
@@ -199,6 +221,8 @@ class LLMCall(Base):
     model: Mapped[str] = mapped_column(String(100))
     sip_id: Mapped[str | None] = mapped_column(String(36), index=True)
     lesson_id: Mapped[str | None] = mapped_column(String(36))
+    # Calls made outside a Sip build (profile preview, in-lesson help) are billed to the user.
+    user_id: Mapped[str | None] = mapped_column(String(36), index=True)
     prompt_tokens: Mapped[int | None] = mapped_column(Integer)
     completion_tokens: Mapped[int | None] = mapped_column(Integer)
     cost: Mapped[float | None] = mapped_column()

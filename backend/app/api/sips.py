@@ -1,4 +1,7 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import ValidationError
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,10 +18,12 @@ from app.api.schemas import (
     SipSummary,
 )
 from app.auth import current_user
+from app.concepts import cards_from_lesson
 from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, LessonStatus, Module, Program, ProgramStatus, Sip, SipStatus, User, utcnow
 from app.pipeline import engine, programs
+from app.pipeline.schemas import LearningProfile
 from app.plans import check_plan, count_generation
 from app.progress import stars_for, stats
 from app.quota import check_cost
@@ -97,6 +102,15 @@ async def create_sip(
     await check_cost(session, user)
     plan = await check_plan(session, user)
     sip = Sip(user_id=user.id, input_text=body.input.strip(), lite=plan["lite"])
+    if body.profile is not None:
+        # Confirmed (and maybe edited) on the preview screen: interpretation is skipped.
+        if len(json.dumps(body.profile, ensure_ascii=False)) > 8000:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "profile is too large")
+        try:
+            profile = LearningProfile.model_validate(body.profile)
+        except ValidationError as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "invalid profile") from e
+        sip.profile, sip.title = profile.model_dump(), profile.title
     count_generation(user)
     session.add(sip)
     await session.flush()
@@ -250,6 +264,8 @@ async def complete_lesson(
         raise HTTPException(status.HTTP_409_CONFLICT, "lesson is not ready")
     if lesson.completed_at is None:
         lesson.completed_at = utcnow()
+        for card in cards_from_lesson(lesson, user.id, lesson.completed_at):
+            session.add(card)
     lesson.answers = body.answers
     lesson.resume = None
     stars = stars_for(body.score)

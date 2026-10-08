@@ -29,6 +29,8 @@ export function Home() {
     refetchInterval: (q) => (q.state.data?.some((s) => s.status === 'queued' || s.status === 'generating') ? 3000 : false),
   })
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
+  const review = useQuery({ queryKey: ['review'], queryFn: Api.review })
+  const due = review.data?.due_count ?? 0
 
   const all = sips.data ?? []
   const resume = all.find((s) => s.status === 'ready' && s.progress.completed < s.progress.total)
@@ -46,13 +48,15 @@ export function Home() {
             {greeting()}
           </h1>
         </div>
-        <motion.div
+        <motion.button
           initial={{ scale: 0.6, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
+          whileTap={{ scale: 0.94 }}
           transition={{ type: 'spring', stiffness: 400, damping: 15, delay: 0.2 }}
+          onClick={() => nav('/progress')}
           className="display"
-          style={{ height: 42, padding: '0 14px', borderRadius: 21, display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, background: 'var(--primary-soft)', color: 'var(--primary-ink)' }}
-          aria-label={`Série de ${stats.data?.streak_days ?? 0} jours`}
+          style={{ height: 42, padding: '0 14px', border: 'none', borderRadius: 21, display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, background: 'var(--primary-soft)', color: 'var(--primary-ink)' }}
+          aria-label={`Série de ${stats.data?.streak_days ?? 0} jours, voir mes progrès`}
         >
           <motion.span
             animate={stats.data?.completed_today ? { scale: [1, 1.18, 1], rotate: [0, -6, 6, 0] } : { opacity: 0.45 }}
@@ -62,7 +66,7 @@ export function Home() {
             {Icon.flame}
           </motion.span>
           {stats.data?.streak_days ?? 0}
-        </motion.div>
+        </motion.button>
       </header>
 
       <div className="scroll" style={{ padding: '14px 16px 130px' }}>
@@ -74,6 +78,7 @@ export function Home() {
         ) : (
           <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
             {resume ? <Hero sip={resume} onGo={() => nav(`/sips/${resume.id}`)} /> : <NewCard onGo={() => nav('/new')} />}
+            {due > 0 && <ReviewCard due={due} onGo={() => nav('/review')} />}
 
             {topics.length > 0 && (
               <motion.div variants={item} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '12px 6px 0' }}>
@@ -166,6 +171,35 @@ function Hero({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
         {sip.progress.completed > 0 ? 'Reprendre' : 'Commencer'} · 5 min
       </Button>
     </motion.section>
+  )
+}
+
+function ReviewCard({ due, onGo }: { due: number; onGo: () => void }) {
+  return (
+    <motion.button
+      variants={item}
+      whileTap={{ scale: 0.97 }}
+      onClick={() => {
+        play('pop')
+        onGo()
+      }}
+      style={{ border: 'none', textAlign: 'left', borderRadius: 24, padding: '12px 14px', background: 'var(--surface)', display: 'flex', alignItems: 'center', gap: 12 }}
+    >
+      <span style={{ width: 48, height: 48, borderRadius: 16, background: 'var(--butter)', color: 'var(--butter-ink)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
+        </svg>
+      </span>
+      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>Révision du jour</span>
+        <span style={{ fontSize: 14, color: 'var(--muted)' }}>
+          {due} notion{due > 1 ? 's' : ''} à rafraîchir · 2 min
+        </span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
+    </motion.button>
   )
 }
 
