@@ -1,22 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ConfirmSheet } from '../components/ConfirmSheet'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
 import { SipIcon, sipPalette } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
-import { Api, ApiError, type Chapter, type Program } from '../lib/api'
+import { Api, apiErrorMessage, type Chapter, type Program } from '../lib/api'
 import { duration } from '../lib/format'
 import { play } from '../lib/sound'
-
-const ERRORS: Record<string, string> = {
-  program_adjusting: 'J’ajuste encore la suite de ton programme, réessaie dans un instant.',
-  monthly_limit: 'Tu as utilisé tes générations du mois. Ce chapitre sera disponible le mois prochain, ou avec un abonnement.',
-  daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
-}
 
 export type ChapterState = 'done' | 'current' | 'building' | 'next' | 'later'
 
@@ -38,11 +33,12 @@ export function ProgramView() {
   const qc = useQueryClient()
   const program = useQuery({
     queryKey: ['program', programId],
-    queryFn: () => Api.program(programId),
+    queryFn: ({ signal }) => Api.program(programId, signal),
     refetchInterval: (q) =>
       q.state.data?.status === 'generating' || q.state.data?.status === 'adjusting' || q.state.data?.chapters.some((c) => c.sip && c.sip.status !== 'ready' && c.sip.status !== 'failed') ? 2500 : false,
   })
   const start = useMutation({
+    networkMode: 'always',
     mutationFn: (position: number) => Api.startChapter(programId, position),
     onSuccess: (sip) => {
       play('whoosh')
@@ -54,6 +50,7 @@ export function ProgramView() {
     onError: () => play('wrong'),
   })
   const remove = useMutation({
+    networkMode: 'always',
     mutationFn: () => Api.deleteProgram(programId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['programs'] })
@@ -73,14 +70,21 @@ export function ProgramView() {
           </IconButton>
         </header>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
-          <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
-            <Mascot mood={p?.status === 'failed' ? 'oops' : 'think'} size={104} />
-          </div>
-          <h1 className="title-l">{p?.status === 'failed' ? 'La suite m’a résisté' : p ? 'Je dessine la suite…' : ''}</h1>
-          {p?.status === 'generating' && (
-            <p className="muted" style={{ fontSize: 15 }}>
-              Je cherche les prochaines étapes à partir de ce que tu as appris.
-            </p>
+          {(program.isError || program.isPaused) && (
+            <ErrorNotice message={program.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour charger ton programme.' : apiErrorMessage(program.error, 'Impossible de charger ton programme. Réessaie.')} retry={() => void program.refetch()} busy={program.isFetching} />
+          )}
+          {(p || (!program.isError && !program.isPaused)) && (
+            <>
+              <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
+                <Mascot mood={p?.status === 'failed' ? 'oops' : 'think'} size={104} />
+              </div>
+              <h1 className="title-l">{p?.status === 'failed' ? 'La suite m’a résisté' : p ? 'Je dessine la suite…' : ''}</h1>
+              {p?.status === 'generating' && (
+                <p className="muted" style={{ fontSize: 15 }}>
+                  Je cherche les prochaines étapes à partir de ce que tu as appris.
+                </p>
+              )}
+            </>
           )}
         </div>
       </Screen>
@@ -92,7 +96,7 @@ export function ProgramView() {
   const done = p.chapters.filter((c) => chapterState(c, next) === 'done').length
   const core = p.chapters.filter((c) => c.level === 'core')
   const advanced = p.chapters.filter((c) => c.level !== 'core')
-  const err = start.error instanceof ApiError ? (ERRORS[start.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : start.error ? 'Impossible de joindre Sipp.' : null
+  const err = start.error ? apiErrorMessage(start.error, 'Impossible de préparer ce chapitre. Réessaie.') : null
 
   const section = (title: string, chapters: Chapter[]) =>
     chapters.length > 0 && (
@@ -140,6 +144,12 @@ export function ProgramView() {
           </motion.div>
 
           <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {(program.isError || program.isPaused) && (
+              <ErrorNotice message={program.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton programme.' : apiErrorMessage(program.error, 'Impossible d’actualiser ton programme. Réessaie.')} retry={() => void program.refetch()} busy={program.isFetching} />
+            )}
+            {remove.isError && (
+              <ErrorNotice message={apiErrorMessage(remove.error, 'Impossible de supprimer ton programme. Réessaie.')} retry={() => remove.mutate()} busy={remove.isPending} />
+            )}
             <motion.div variants={item} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {[
                 [`${done}/${p.chapters.length}`, 'chapitres faits', 'var(--butter)'],
@@ -179,14 +189,12 @@ export function ProgramView() {
             )}
 
             {err && (
-              <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ borderRadius: 18, padding: '12px 14px', fontSize: 15, fontWeight: 600, color: 'var(--rose-ink)', background: 'var(--rose-soft)' }}>
-                {err}
-              </motion.p>
+              <ErrorNotice message={err} retry={() => { if (start.variables !== undefined) start.mutate(start.variables) }} busy={start.isPending} />
             )}
 
             {section(advanced.length ? 'Les bases' : 'Le parcours', core)}
             {section('Pour aller plus loin', advanced)}
-            <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère une place." busy={remove.isPending} onConfirm={() => remove.mutate()} />
+            <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère une place." busy={remove.isPending} failed={remove.isError} onConfirm={() => remove.mutate()} />
           </div>
         </motion.div>
       </div>
@@ -227,8 +235,9 @@ export function Confetti({ seed = 0 }: { seed?: number }) {
   )
 }
 
-export function DeleteButton({ label, confirm, busy, onConfirm }: { label: string; confirm: string; busy: boolean; onConfirm: () => void }) {
+export function DeleteButton({ label, confirm, busy, failed, onConfirm }: { label: string; confirm: string; busy: boolean; failed?: boolean; onConfirm: () => void }) {
   const [open, setOpen] = useState(false)
+  useEffect(() => { if (failed) setOpen(false) }, [failed])
   return (
     <>
       <button
@@ -262,6 +271,7 @@ function ChapterCard({
 }) {
   const s = c.sip
   const tappable = !!s
+  const Card = tappable ? motion.button : motion.div
   const badge =
     state === 'done'
       ? { bg: 'var(--mint)', fg: 'var(--mint-ink)' }
@@ -271,7 +281,9 @@ function ChapterCard({
           ? { bg: 'var(--primary-soft)', fg: 'var(--primary-ink)' }
           : { bg: 'var(--bg-deep)', fg: 'var(--faint)' }
   return (
-    <motion.div
+    <Card
+      type={tappable ? 'button' : undefined}
+      aria-label={tappable ? `Ouvrir le chapitre ${c.position} : ${c.title}` : undefined}
       whileTap={tappable ? { scale: 0.98 } : undefined}
       onClick={() => {
         if (!tappable) return
@@ -279,6 +291,10 @@ function ChapterCard({
         onOpen()
       }}
       style={{
+        width: '100%',
+        border: 'none',
+        textAlign: 'left',
+        font: 'inherit',
         borderRadius: 24,
         padding: 14,
         display: 'flex',
@@ -325,7 +341,7 @@ function ChapterCard({
             {c.estimated_lessons} leçons · {duration(c.estimated_lessons)}
           </span>
         )}
-        {state === 'next' && (
+        {state === 'next' && !tappable && (
           <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
             <Button onClick={onStart} disabled={starting || adjusting} sound="pop" style={{ height: 50, fontSize: 16 }}>
               {starting || adjusting ? <Mascot mood="think" size={30} /> : 'Préparer ce chapitre'}
@@ -333,6 +349,6 @@ function ChapterCard({
           </div>
         )}
       </div>
-    </motion.div>
+    </Card>
   )
 }

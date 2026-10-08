@@ -116,7 +116,7 @@ function layout(modules: ModuleOut[], width: number) {
     let reached = false;
     for (const l of m.lessons) {
       const state: State =
-        nowIdx === -1 || li < nowIdx
+        l.completed
           ? "done"
           : li === nowIdx
             ? "now"
@@ -236,7 +236,7 @@ export function SipPathMap({
   );
   const lessons = points.filter((p): p is LessonNode => p.kind === "lesson");
   const now = lessons.find((n) => n.state === "now");
-  const doneCount = lessons.filter((n) => n.state === "done").length;
+  const doneCount = lessons.filter((n) => n.lesson.completed).length;
 
   const doneUpTo = pNow === -1 ? points.length - 1 : pNow;
   const stub = points.length ? [{ x: points[0].x, y: points[0].y + 76 }] : [];
@@ -786,6 +786,8 @@ function MapNode({
 }) {
   const shake = useAnimationControls();
   const [hint, setHint] = useState(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
   const size = node.state === "now" ? NODE_NOW : NODE;
   const top = node.y - size / 2;
   const common = {
@@ -835,7 +837,8 @@ function MapNode({
               x: [0, -6, 6, -4, 4, 0],
               transition: { duration: 0.35 },
             });
-            setTimeout(() => setHint(false), 1800);
+            clearTimeout(hintTimer.current);
+            hintTimer.current = setTimeout(() => setHint(false), 1800);
           }}
           style={
             done
@@ -890,6 +893,7 @@ function MapNode({
         <AnimatePresence>
           {hint && lockedHint && (
             <motion.div
+              role="status"
               initial={{ opacity: 0, y: 8, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 4 }}

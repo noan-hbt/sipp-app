@@ -296,10 +296,7 @@ function FragmentRow({ children, delay }: { children: ReactNode[]; delay: number
 
 // --- Estimate --------------------------------------------------------------------
 
-const fmt = (v: number, step: number) => {
-  const decimals = step >= 1 ? 0 : Math.min(4, Math.ceil(-Math.log10(step)))
-  return v.toLocaleString('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
-}
+const fmt = (v: number) => v.toLocaleString('fr-FR', { maximumSignificantDigits: 15 })
 
 export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
   // Start away from the answer (at 20% or 80% of the range), so validating untouched is a real guess.
@@ -327,11 +324,11 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
         animate={{ scale: 1, opacity: 1 }}
         style={{ textAlign: 'center', fontSize: 40, fontWeight: 700, letterSpacing: '-0.02em', color: ok === null ? 'var(--ink)' : ok ? 'var(--mint-ink)' : 'var(--rose-ink)' }}
       >
-        {fmt(guess, b.step)}
+        {fmt(guess)}
         <span style={{ fontSize: 20, fontWeight: 600 }}>{unit}</span>
       </motion.div>
 
-      <div style={{ position: 'relative', height: 44, margin: '0 6px' }}>
+      <div className="estimate-slider" style={{ position: 'relative', height: 44, margin: '0 6px' }}>
         <div style={{ position: 'absolute', left: 0, right: 0, top: 17, height: 10, borderRadius: 5, background: 'var(--track)' }} />
         {answered && (
           <motion.div
@@ -394,18 +391,18 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '-8px 6px 0' }}>
         <span>
-          {fmt(b.min, b.step)}
+          {fmt(b.min)}
           {unit}
         </span>
         <span>
-          {fmt(b.max, b.step)}
+          {fmt(b.max)}
           {unit}
         </span>
       </div>
 
       {answered ? (
         <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: 15, fontWeight: 600, color: 'var(--mint-ink)', textAlign: 'center' }}>
-          Réponse : {fmt(b.answer, b.step)}
+          Réponse : {fmt(b.answer)}
           {unit}
         </motion.p>
       ) : (
@@ -423,4 +420,3 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
     </section>
   )
 }
-

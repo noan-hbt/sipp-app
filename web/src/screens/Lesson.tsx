@@ -1,15 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BlockView, feedbackFor, type Answer } from '../blocks/Blocks'
 import { HelpSheet } from '../components/HelpSheet'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton, ProgressBar } from '../components/ui'
-import { Api, ApiError, type HelpKind, type LessonOut } from '../lib/api'
+import { Api, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } from '../lib/api'
 import { isGraded, isInteractive, type Block } from '../lib/blocks'
+import { useLessonResume } from '../lib/resume'
 import { play } from '../lib/sound'
 
 const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
@@ -19,30 +21,43 @@ export function Lesson() {
   const { lessonId = '' } = useParams()
   const nav = useNavigate()
   const qc = useQueryClient()
+  const session = getSessionId()
+  const resume = useLessonResume(lessonId)
+  const finishing = useRef(false)
   const lesson = useQuery({
     queryKey: ['lesson', lessonId],
-    queryFn: () => Api.lesson(lessonId),
+    queryFn: ({ signal }) => Api.lesson(lessonId, signal),
     refetchInterval: (q) => (q.state.data && q.state.data.status !== 'ready' && q.state.data.status !== 'failed' ? 2000 : false),
   })
   const data = lesson.data
 
   const complete = useMutation({
-    mutationFn: ({ answers, correct, total }: Finished) =>
-      Api.complete(lessonId, {
+    networkMode: 'always',
+    mutationFn: async ({ answers, correct, total }: Finished) => {
+      await resume.queue.pause()
+      if (getSessionId() !== session) throw new DOMException('Session terminée', 'AbortError')
+      const r = await Api.complete(lessonId, {
         answers: toList(answers),
         score: { correct, total },
-      }).then((r) => ({ r, correct, total })),
+      })
+      return { r, correct, total }
+    },
     onSuccess: ({ r, correct, total }) => {
+      resume.queue.clear()
       void qc.invalidateQueries({ queryKey: ['sip', data!.sip_id] })
       void qc.invalidateQueries({ queryKey: ['sips'] })
       void qc.invalidateQueries({ queryKey: ['stats'] })
       void qc.invalidateQueries({ queryKey: ['lesson', lessonId] })
       nav(`/lessons/${lessonId}/done`, { replace: true, state: { ...r, correct, total, sipId: data!.sip_id, ...doneInfo(data!) } })
     },
+    onSettled: () => {
+      finishing.current = false
+      resume.queue.unpause()
+    },
   })
 
   if (!data || data.status !== 'ready') {
-    return <Preparing failed={data?.status === 'failed' || lesson.error instanceof ApiError} title={data?.title} onClose={() => nav(-1)} />
+    return <Preparing failed={data?.status === 'failed' || lesson.isError || lesson.isPaused} title={data?.title} error={lesson.error} onClose={() => nav(-1)} onRetry={() => void lesson.refetch()} busy={lesson.isFetching} />
   }
 
   return (
@@ -50,11 +65,21 @@ export function Lesson() {
       key={data.id}
       title={data.title}
       blocks={data.blocks ?? []}
-      resume={data.resume}
-      onSave={(step, answers) => void Api.saveResume(lessonId, { step, answers: toList(answers) }).catch(() => {})}
+      resume={data.completed_at ? null : resume.queue.resume ?? data.resume}
+      onSave={(step, answers) => resume.queue.save({ step, answers: toList(answers) })}
+      saveNotice={resume.state.status === 'error' ? (
+        <ErrorNotice message={resume.state.durable ? 'Ta progression reste sur cet appareil. Réessaie de la synchroniser.' : 'Ta progression n’est pas enregistrée. Garde cette page ouverte.'} retry={() => void resume.queue.retry()} />
+      ) : resume.queue.resume ? (
+        <p role="status" className="muted" style={{ padding: '0 20px', fontSize: 13 }}>{resume.state.status === 'saving' ? 'Synchronisation de ta progression…' : 'Progression enregistrée'}</p>
+      ) : null}
       onClose={() => nav(`/sips/${data.sip_id}`, { replace: true })}
-      onFinish={(f) => complete.mutate(f)}
+      onFinish={(f) => {
+        if (finishing.current) return
+        finishing.current = true
+        complete.mutate(f)
+      }}
       finishing={complete.isPending}
+      finishError={complete.isError ? apiErrorMessage(complete.error, 'Ta leçon n’a pas été enregistrée. Réessaie.') : undefined}
       onHelp={(block, kind, question) => Api.help(lessonId, { block, kind, question }).then((r) => r.answer)}
     />
   )
@@ -98,18 +123,22 @@ export function LessonPlayer({
   blocks,
   resume,
   onSave,
+  saveNotice,
   onClose,
   onFinish,
   finishing,
+  finishError,
   onHelp,
 }: {
   title: string
   blocks: Block[]
   resume?: LessonOut['resume']
   onSave?: (step: number, answers: Record<number, Answer>) => void
+  saveNotice?: ReactNode
   onClose: () => void
   onFinish: (f: Finished) => void
   finishing: boolean
+  finishError?: string
   /** Explains the given block again; the help button is hidden without it (demo). */
   onHelp?: (block: number, kind: HelpKind, question?: string) => Promise<string>
 }) {
@@ -144,6 +173,7 @@ export function LessonPlayer({
   }, [revealed])
 
   function next() {
+    if (finishing) return
     setSheetOpen(false)
     if (isLast) {
       const graded = blocks.map((b, i) => [b, answers[i]] as const).filter(([b]) => isGraded(b))
@@ -200,6 +230,7 @@ export function LessonPlayer({
           </motion.button>
         )}
       </header>
+      {saveNotice}
 
       <div
         ref={scrollRef}
@@ -235,9 +266,9 @@ export function LessonPlayer({
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
-            <Button onClick={next} disabled={finishing} sound={null}>
+            {finishError ? <ErrorNotice message={finishError} retry={next} busy={finishing} /> : <Button onClick={next} disabled={finishing} sound={null}>
               {finishing ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : 'Continuer'}
-            </Button>
+            </Button>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -286,7 +317,7 @@ export function LessonPlayer({
             <p style={{ fontSize: 15, lineHeight: 1.55, color: tone === 'good' ? '#2E5A43' : tone === 'bad' ? '#6B2A1A' : '#22496B' }}>
               <RichText text={fb.explanation} />
             </p>
-            <Button variant={tone === 'good' ? 'mint' : tone === 'bad' ? 'peach' : 'dark'} onClick={next} style={{ marginTop: 4 }}>
+            <Button variant={tone === 'good' ? 'mint' : tone === 'bad' ? 'peach' : 'dark'} onClick={next} disabled={finishing} style={{ marginTop: 4 }}>
               {isLast ? 'Terminer la leçon' : tone === 'bad' ? 'Compris' : 'Continuer'}
             </Button>
           </motion.section>
@@ -297,7 +328,7 @@ export function LessonPlayer({
   )
 }
 
-function Preparing({ failed, title, onClose }: { failed: boolean; title?: string; onClose: () => void }) {
+function Preparing({ failed, title, error, onClose, onRetry, busy }: { failed: boolean; title?: string; error: unknown; onClose: () => void; onRetry: () => void; busy: boolean }) {
   return (
     <Screen kind="modal">
       <header className="topbar">
@@ -326,7 +357,7 @@ function Preparing({ failed, title, onClose }: { failed: boolean; title?: string
             </motion.div>
           </div>
         )}
-        {failed && <p className="muted">Reviens dans un instant, je réessaie de mon côté.</p>}
+        {failed && <ErrorNotice message={apiErrorMessage(error, 'Ta leçon n’a pas pu se charger. Réessaie.')} retry={onRetry} busy={busy} />}
       </div>
     </Screen>
   )

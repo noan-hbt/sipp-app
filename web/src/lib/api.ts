@@ -179,9 +179,21 @@ export class ApiError extends Error {
   }
 }
 
+export function apiErrorMessage(error: unknown, fallback = 'Impossible de joindre Sipp. Réessaie dans un instant.') {
+  const messages: Record<string, string> = {
+    no_free_slot: 'Ta bibliothèque est pleine. Libère une place pour réessayer.',
+    monthly_limit: 'Tu as utilisé tes générations du mois. Réessaie le mois prochain.',
+    daily_budget_reached: 'Tu as atteint ta limite du jour. Réessaie demain.',
+    too_many_active_builds: 'Un Sip est déjà en préparation. Réessaie dans un instant.',
+    program_adjusting: 'J’ajuste encore la suite de ton programme. Réessaie dans un instant.',
+  }
+  return error instanceof ApiError ? messages[error.code ?? ''] ?? fallback : fallback
+}
+
 // --- Token storage ---
 
 const KEY = 'sipp.tokens'
+const SESSION_KEY = 'sipp.session'
 let tokens: Tokens | null = (() => {
   try {
     return JSON.parse(localStorage.getItem(KEY) ?? 'null')
@@ -190,11 +202,44 @@ let tokens: Tokens | null = (() => {
   }
 })()
 const listeners = new Set<() => void>()
+const sessionListeners = new Set<() => void>()
+let sessionVersion = 0
+let sessionController = new AbortController()
+let sessionId = (() => {
+  try {
+    const id = localStorage.getItem(SESSION_KEY)
+    if (tokens && id) return id
+  } catch { /* private mode */ }
+  const id = crypto.randomUUID()
+  try { localStorage.setItem(SESSION_KEY, id) } catch { /* private mode */ }
+  return id
+})()
+let cacheWork: Promise<unknown> = Promise.resolve()
+
+function cacheTask<T>(task: () => Promise<T>): Promise<T> {
+  const next = cacheWork.catch(() => {}).then(task)
+  cacheWork = next
+  return next
+}
+
+export function getSessionId() { return sessionId }
+export function getSessionUserId(): string | null {
+  try {
+    const payload = tokens?.access_token.split('.')[1]
+    if (!payload) return null
+    const sub = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).sub
+    return typeof sub === 'string' ? sub : null
+  } catch { return null }
+}
+export function onSessionChange(l: () => void) {
+  sessionListeners.add(l)
+  return () => sessionListeners.delete(l)
+}
 
 export function getTokens() {
   return tokens
 }
-export function setTokens(t: Tokens | null) {
+function storeTokens(t: Tokens | null) {
   tokens = t
   try {
     if (t) localStorage.setItem(KEY, JSON.stringify(t))
@@ -202,50 +247,133 @@ export function setTokens(t: Tokens | null) {
   } catch {
     /* private mode */
   }
-  if (!t && typeof caches !== 'undefined') void caches.delete('sipp-api').catch(() => {})
   listeners.forEach((l) => l())
+}
+export function setTokens(t: Tokens | null) {
+  sessionVersion++
+  sessionId = crypto.randomUUID()
+  sessionController.abort()
+  sessionController = new AbortController()
+  refreshing = null
+  tokens = t
+  try { localStorage.setItem(SESSION_KEY, sessionId) } catch { /* private mode */ }
+  if (typeof caches !== 'undefined') void cacheTask(() => caches.delete('sipp-api')).catch(() => {})
+  sessionListeners.forEach((l) => l())
+  storeTokens(t)
 }
 export function onTokens(l: () => void) {
   listeners.add(l)
   return () => listeners.delete(l)
 }
 
-let refreshing: Promise<boolean> | null = null
+if (typeof window !== 'undefined') window.addEventListener('storage', (event) => {
+  if (event.key !== KEY && event.key !== null) return
+  let next: Tokens | null = null
+  let nextSession: string | null = null
+  try {
+    next = JSON.parse(localStorage.getItem(KEY) ?? 'null')
+    nextSession = localStorage.getItem(SESSION_KEY)
+  } catch { /* private mode */ }
+  if (nextSession === sessionId && next) {
+    tokens = next
+    listeners.forEach((l) => l())
+    return
+  }
+  sessionVersion++
+  sessionId = nextSession ?? crypto.randomUUID()
+  sessionController.abort()
+  sessionController = new AbortController()
+  refreshing = null
+  tokens = next
+  if (typeof caches !== 'undefined') void cacheTask(() => caches.delete('sipp-api')).catch(() => {})
+  sessionListeners.forEach((l) => l())
+  listeners.forEach((l) => l())
+})
+
+let refreshing: { version: number; promise: Promise<boolean> } | null = null
 async function refresh(): Promise<boolean> {
   if (!tokens) return false
-  refreshing ??= (async () => {
+  const version = sessionVersion
+  if (refreshing?.version === version) return refreshing.promise
+  const refreshToken = tokens.refresh_token
+  const promise = (async () => {
     try {
       const r = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: tokens!.refresh_token }),
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: sessionController.signal,
       })
+      if (version !== sessionVersion) return false
       if (!r.ok) {
         setTokens(null)
         return false
       }
-      setTokens(await r.json())
+      const next = await r.json()
+      if (version !== sessionVersion) return false
+      storeTokens(next)
       return true
     } catch {
       return false
     } finally {
-      refreshing = null
+      if (refreshing?.version === version) refreshing = null
     }
   })()
-  return refreshing
+  refreshing = { version, promise }
+  return promise
+}
+
+/** AbortSignal.any is missing before iOS 17.4. */
+function anySignal(a: AbortSignal, b: AbortSignal): AbortSignal {
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any([a, b])
+  const c = new AbortController()
+  const abort = () => c.abort()
+  if (a.aborted || b.aborted) c.abort()
+  a.addEventListener('abort', abort, { once: true })
+  b.addEventListener('abort', abort, { once: true })
+  return c.signal
 }
 
 export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}, retry = true): Promise<T> {
+  const version = sessionVersion
+  const signal = init.signal ? anySignal(init.signal, sessionController.signal) : sessionController.signal
   const headers = new Headers(init.headers)
   if (init.json !== undefined) headers.set('Content-Type', 'application/json')
   if (tokens) headers.set('Authorization', `Bearer ${tokens.access_token}`)
-  const r = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers,
-    body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
-  })
+  const privateRead = tokens && (!init.method || init.method === 'GET')
+    && /^\/(sips(?:\/|$)|lessons\/|auth\/me(?:\/|$))/.test(path)
+  const cacheable = privateRead && !/^\/auth\/me\/export(?:\/|\?|$)/.test(path)
+  const cacheUrl = new URL(`${API_URL}${path}`)
+  cacheUrl.searchParams.set('__sipp_session', sessionId)
+  let r: Response
+  try {
+    // Older service workers must also receive a URL specific to this session.
+    r = await fetch(privateRead ? cacheUrl.href : `${API_URL}${path}`, {
+      ...init,
+      headers,
+      signal,
+      cache: 'no-store',
+      body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
+    })
+  } catch (error) {
+    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+    const cached = cacheable && typeof caches !== 'undefined'
+      ? await cacheTask(async () => {
+        const cache = await caches.open('sipp-api')
+        const response = await cache.match(cacheUrl.href)
+        if (response && Date.now() - Number(response.headers.get('X-Sipp-Cached-At')) < 30 * 24 * 60 * 60 * 1000) return response
+        await cache.delete(cacheUrl.href)
+        return undefined
+      }).catch(() => undefined)
+      : undefined
+    if (!cached) throw error
+    r = cached
+  }
+  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
   if (r.status === 401 && retry && tokens && !path.startsWith('/auth/login')) {
-    if (await refresh()) return api<T>(path, init, false)
+    const refreshed = await refresh()
+    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+    if (refreshed) return api<T>(path, init, false)
   }
   if (!r.ok) {
     let detail: unknown
@@ -256,7 +384,22 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     }
     throw new ApiError(r.status, detail)
   }
-  return (r.status === 204 ? undefined : await r.json()) as T
+  if (cacheable && r.status === 200 && typeof caches !== 'undefined') {
+    const cachedHeaders = new Headers(r.headers)
+    cachedHeaders.set('X-Sipp-Cached-At', String(Date.now()))
+    const copy = new Response(r.clone().body, { status: r.status, statusText: r.statusText, headers: cachedHeaders })
+    void cacheTask(async () => {
+      if (version !== sessionVersion || signal.aborted) return
+      const cache = await caches.open('sipp-api')
+      if (version !== sessionVersion || signal.aborted) return
+      await cache.put(cacheUrl.href, copy)
+      const keys = await cache.keys()
+      for (const key of keys.slice(0, Math.max(0, keys.length - 200))) await cache.delete(key)
+    }).catch(() => {})
+  }
+  const data = r.status === 204 ? undefined : await r.json()
+  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+  return data as T
 }
 
 export const Api = {
@@ -264,32 +407,35 @@ export const Api = {
     api<Tokens>('/auth/register', { method: 'POST', json: { email, password } }),
   login: (email: string, password: string) =>
     api<Tokens>('/auth/login', { method: 'POST', json: { email, password } }),
-  logout: () =>
-    tokens ? api<void>('/auth/logout', { method: 'POST', json: { refresh_token: tokens.refresh_token } }) : Promise.resolve(),
-  stats: () => api<Stats>(`/auth/me/stats?tz=${encodeURIComponent(TZ)}`),
+  logout: () => {
+    const previous = tokens
+    setTokens(null)
+    return previous ? api<void>('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${previous.access_token}` }, json: { refresh_token: previous.refresh_token } }, false) : Promise.resolve()
+  },
+  stats: ({ signal }: { signal?: AbortSignal } = {}) => api<Stats>(`/auth/me/stats?tz=${encodeURIComponent(TZ)}`, { signal }),
   deleteAccount: (password: string) => api<void>('/auth/me', { method: 'DELETE', json: { password } }),
-  me: () => api<{ id: string; email: string; created_at: string }>('/auth/me'),
-  plan: () => api<Plan>('/auth/me/plan'),
+  me: ({ signal }: { signal?: AbortSignal } = {}) => api<{ id: string; email: string; created_at: string }>('/auth/me', { signal }),
+  plan: ({ signal }: { signal?: AbortSignal } = {}) => api<Plan>('/auth/me/plan', { signal }),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
   plans: () => api<{ name: Plan['plan']; slots: number; sips_per_month: number; lite: boolean }[]>('/auth/plans'),
   exportData: () => api<unknown>('/auth/me/export'),
-  sips: () => api<SipSummary[]>('/sips'),
-  sip: (id: string) => api<SipDetail>(`/sips/${id}`),
+  sips: ({ signal }: { signal?: AbortSignal } = {}) => api<SipSummary[]>('/sips', { signal }),
+  sip: (id: string, signal?: AbortSignal) => api<SipDetail>(`/sips/${id}`, { signal }),
   createSip: (input: string, profile?: Profile) => api<SipSummary>('/sips', { method: 'POST', json: { input, profile } }),
   interpret: (input: string) => api<Interpretation>('/sips/interpret', { method: 'POST', json: { input } }),
-  concepts: () => api<Concept[]>('/me/concepts'),
-  review: () => api<ReviewSession>('/me/review'),
+  concepts: ({ signal }: { signal?: AbortSignal } = {}) => api<Concept[]>('/me/concepts', { signal }),
+  review: ({ signal }: { signal?: AbortSignal } = {}) => api<ReviewSession>('/me/review', { signal }),
   reviewCard: (id: string, knew: boolean) => api<Concept>(`/me/review/${id}`, { method: 'POST', json: { knew } }),
   help: (lessonId: string, body: { block: number; kind: HelpKind; question?: string }) =>
     api<{ answer: string }>(`/lessons/${lessonId}/help`, { method: 'POST', json: body }),
   retrySip: (id: string) => api<SipSummary>(`/sips/${id}/retry`, { method: 'POST' }),
   deleteSip: (id: string) => api<void>(`/sips/${id}`, { method: 'DELETE' }),
-  programs: () => api<Program[]>('/programs'),
-  program: (id: string) => api<Program>(`/programs/${id}`),
+  programs: ({ signal }: { signal?: AbortSignal } = {}) => api<Program[]>('/programs', { signal }),
+  program: (id: string, signal?: AbortSignal) => api<Program>(`/programs/${id}`, { signal }),
   deleteProgram: (id: string) => api<void>(`/programs/${id}`, { method: 'DELETE' }),
   startChapter: (id: string, position: number) => api<SipSummary>(`/programs/${id}/chapters/${position}`, { method: 'POST' }),
   extendSip: (id: string) => api<Program>(`/sips/${id}/extend`, { method: 'POST' }),
-  lesson: (id: string) => api<LessonOut>(`/lessons/${id}`),
+  lesson: (id: string, signal?: AbortSignal) => api<LessonOut>(`/lessons/${id}`, { signal }),
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),
   saveResume: (id: string, body: { step: number; answers: unknown[] }) =>

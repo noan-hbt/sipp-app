@@ -85,6 +85,34 @@ textarea, input { -webkit-user-select: text; user-select: text; }
 button { cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+button:focus-visible, a:focus-visible {
+  outline: 3px solid var(--lavender-ink) !important;
+  outline-offset: 3px;
+}
+.field:focus-within, .help-question:focus-within, .estimate-slider:focus-within {
+  outline: 3px solid var(--lavender-ink);
+  outline-offset: 3px;
+}
+.field input:focus-visible, .field textarea:focus-visible, .help-question input:focus-visible {
+  outline: none !important;
+}
+
+.sheet-modal {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+}
+.sheet-modal::backdrop { background: transparent; }
 
 .app {
   height: 100%;

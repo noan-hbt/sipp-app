@@ -3,10 +3,11 @@ import { AnimatePresence, animate, motion, useMotionValue, useTransform } from '
 import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
 import { Confetti } from './ProgramView'
-import { Button, Icon, IconButton } from '../components/ui'
-import { Api, type SipDetail } from '../lib/api'
+import { Icon, IconButton } from '../components/ui'
+import { Api, apiErrorMessage, type SipDetail } from '../lib/api'
 import { duration } from '../lib/format'
 import { play } from '../lib/sound'
 
@@ -60,17 +61,30 @@ export function Generating() {
   const qc = useQueryClient()
   const sip = useQuery({
     queryKey: ['sip', sipId],
-    queryFn: () => Api.sip(sipId),
+    queryFn: ({ signal }) => Api.sip(sipId, signal),
     refetchInterval: (q) => {
       const s = q.state.data
-      return s && (s.status === 'failed' || (s.status === 'ready' && s.modules[0]?.lessons[0]?.status === 'ready')) ? false : 2000
+      const first = s?.modules[0]?.lessons[0]?.status
+      return s && (s.status === 'failed' || (s.status === 'ready' && (first === 'ready' || first === 'failed'))) ? false : 2000
     },
   })
   const retry = useMutation({
-    mutationFn: () => Api.retrySip(sipId),
+    networkMode: 'always',
+    mutationFn: async () => {
+      const first = sip.data?.modules[0]?.lessons[0]
+      if (sip.data?.status === 'ready' && first?.status === 'failed') {
+        const lesson = await Api.lesson(first.id)
+        qc.setQueryData<SipDetail>(['sip', sipId], (s) => s && {
+          ...s,
+          modules: s.modules.map((m) => ({ ...m, lessons: m.lessons.map((l) => l.id === lesson.id ? { ...l, status: lesson.status } : l) })),
+        })
+      } else await Api.retrySip(sipId)
+    },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['sip', sipId] }),
   })
-  const failed = sip.data?.status === 'failed'
+  const firstFailed = sip.data?.status === 'ready' && sip.data.modules[0]?.lessons[0]?.status === 'failed'
+  const failed = sip.data?.status === 'failed' || firstFailed
+  const readError = sip.isError || sip.isPaused
   const { phase, from, to, mapped } = progressOf(sip.data)
   const lastPhase = useRef(phase)
 
@@ -112,21 +126,21 @@ export function Generating() {
 
       <div className="scroll" style={{ padding: '0 22px calc(var(--safe-bottom) + 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-          <Brew from={from} to={to} failed={failed} done={phase === 'done'} />
+          <Brew from={from} to={to} failed={failed || readError} done={phase === 'done'} />
           <AnimatePresence mode="wait">
             <motion.h1
-              key={failed ? 'failed' : phase}
+              key={failed || readError ? 'failed' : phase}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.25 }}
               className="title-l"
             >
-              {failed ? 'Oups, j’ai buggé' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
+              {firstFailed ? 'Ta première leçon m’a résisté' : failed ? 'Oups, j’ai buggé' : readError ? 'Ton parcours ne se charge pas' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
             </motion.h1>
           </AnimatePresence>
           <p className="muted" style={{ fontSize: 15, maxWidth: 320 }}>
-            {failed ? 'Ça arrive. Relance, ça ne te coûte rien.' : sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
+            {failed ? 'Tu peux relancer pour continuer.' : sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
           </p>
           {!failed && facts.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
@@ -146,10 +160,9 @@ export function Generating() {
           )}
         </div>
 
+        {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Ton parcours n’a pas pu se charger. Réessaie.')} retry={() => void sip.refetch()} busy={sip.isFetching} />}
         {failed ? (
-          <Button onClick={() => retry.mutate()} disabled={retry.isPending}>
-            Réessayer
-          </Button>
+          <ErrorNotice message={apiErrorMessage(retry.error, firstFailed ? 'Relance ta première leçon pour continuer.' : 'Relance ton parcours pour continuer.')} retry={() => retry.mutate()} busy={retry.isPending} />
         ) : (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <span className="display" style={{ fontSize: 18, marginLeft: 6 }}>
@@ -161,9 +174,9 @@ export function Generating() {
           </section>
         )}
 
-        <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, color: 'var(--faint)' }}>
+        {!failed && !readError && <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, color: 'var(--faint)' }}>
           Tu peux fermer l’app, je continue sans toi.
-        </p>
+        </p>}
       </div>
     </Screen>
   )

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { LibraryRow, SipCard, itemVariants as item, listVariants as list } from '../components/SipCard'
@@ -58,6 +59,10 @@ export function Library() {
   const shownProgs = progs.filter((pr) => (filter === 'done' ? progDone(pr) : filter === 'progress' ? !progDone(pr) : true))
   const shownSips = filter === 'programs' ? [] : all.filter((s) => (filter === 'done' ? sipDone(s) : filter === 'progress' ? !sipDone(s) : true))
   const loading = sips.isLoading || plan.isLoading || programs.isLoading
+  const queries = [sips, plan, programs]
+  const offline = queries.some((q) => q.isPaused)
+  const failed = queries.some((q) => q.isError)
+  const loaded = sips.data !== undefined && programs.data !== undefined
 
   return (
     <Screen kind="fade">
@@ -93,7 +98,9 @@ export function Library() {
         <Notebook />
       ) : (
         <div className="scroll" style={{ padding: '10px 16px 130px' }}>
-          {p && (
+          {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ta bibliothèque.' : 'Impossible d’actualiser ta bibliothèque. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
+          {loading && <p className="muted" role="status" style={{ margin: '12px 0' }}>Chargement de ta bibliothèque…</p>}
+          {p && loaded && (
             <div style={{ borderRadius: 22, background: 'var(--lavender)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)' }}>
                 <span>{unlimited ? `${kept} Sips gardés` : `${kept} place${kept > 1 ? 's' : ''} sur ${p.slots}`}</span>
@@ -141,14 +148,14 @@ export function Library() {
             ))}
           </div>
 
-          <motion.div key={filter} variants={list} initial="hidden" animate={loading ? 'hidden' : 'show'} style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+          <motion.div key={filter} variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
             {shownProgs.map((pr) => (
               <ProgramRow key={pr.id} program={pr} onOpen={() => nav(`/programs/${pr.id}`)} />
             ))}
             {shownSips.map((s) => (
               <SipCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
             ))}
-            {!loading && filter !== 'all' && shownProgs.length + shownSips.length === 0 && (
+            {loaded && filter !== 'all' && shownProgs.length + shownSips.length === 0 && (
               <motion.div variants={item} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '24px 0', textAlign: 'center' }}>
                 <img src={illustration('scene-empty')} alt="" width={150} height={150} />
                 <span className="muted" style={{ fontSize: 15 }}>
@@ -156,8 +163,8 @@ export function Library() {
                 </span>
               </motion.div>
             )}
-            {filter === 'all' && Array.from({ length: free }, (_, i) => <EmptySlot key={`free-${i}`} canGenerate={genLeft > 0} onClick={() => nav('/new')} />)}
-            {filter === 'all' && p && <UpsellSlot plan={p} onClick={() => nav('/offers')} />}
+            {loaded && filter === 'all' && Array.from({ length: free }, (_, i) => <EmptySlot key={`free-${i}`} canGenerate={genLeft > 0} onClick={() => nav('/new')} />)}
+            {loaded && filter === 'all' && p && <UpsellSlot plan={p} onClick={() => nav('/offers')} />}
           </motion.div>
         </div>
       )}

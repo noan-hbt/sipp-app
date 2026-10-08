@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { createPortal } from 'react-dom'
+import { useModal } from '../lib/useModal'
 import { Mascot } from './Mascot'
 import { Button } from './ui'
 
@@ -21,10 +22,22 @@ export function ConfirmSheet({
   onConfirm: () => void
   onClose: () => void
 }) {
+  const { dialog, onKeyDown } = useModal(open)
   const root = document.querySelector('.app')
   if (!root) return null
   return createPortal(
-    <AnimatePresence>
+    <dialog
+      ref={dialog}
+      className="sheet-modal"
+      role="alertdialog"
+      aria-label={title}
+      onKeyDown={onKeyDown}
+      onCancel={(e) => {
+        e.preventDefault()
+        if (!busy) onClose()
+      }}
+    >
+    <AnimatePresence onExitComplete={() => dialog.current?.close()}>
       {open && (
         <>
           <motion.div
@@ -37,9 +50,6 @@ export function ConfirmSheet({
           />
           <motion.div
             key="sheet"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label={title}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -63,6 +73,8 @@ export function ConfirmSheet({
               gap: 12,
               textAlign: 'center',
               boxShadow: 'none',
+              maxHeight: '100%',
+              overflowY: 'auto',
             }}
           >
             <span style={{ width: 44, height: 5, borderRadius: 3, background: 'var(--shadow-dark)' }} />
@@ -75,14 +87,15 @@ export function ConfirmSheet({
               <Button onClick={onConfirm} disabled={busy} style={{ background: 'var(--rose-ink)', color: '#fff' }}>
                 {busy ? '…' : confirmLabel}
               </Button>
-              <Button variant="ghost" onClick={onClose} disabled={busy} style={{ height: 48, fontSize: 16 }}>
+              <Button data-autofocus variant="ghost" onClick={onClose} disabled={busy} style={{ height: 48, fontSize: 16 }}>
                 Annuler
               </Button>
             </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    </dialog>,
     root,
   )
 }

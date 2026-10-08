@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
 import { SipIcon } from '../components/SipIcon'
 import { Icon, IconButton } from '../components/ui'
@@ -18,6 +19,9 @@ export function Progress() {
   const s = stats.data
   const current = (sips.data ?? []).filter(inProgress)
   const finished = (sips.data ?? []).filter((x) => x.progress.total > 0 && x.progress.completed >= x.progress.total)
+  const queries = [stats, sips]
+  const offline = queries.some((q) => q.isPaused)
+  const failed = queries.some((q) => q.isError)
 
   return (
     <Screen>
@@ -31,6 +35,8 @@ export function Progress() {
       </header>
 
       <div className="scroll" style={{ padding: '8px 20px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser tes progrès.' : 'Impossible d’actualiser tes progrès. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
+        {queries.some((q) => q.isLoading) && <p className="muted" role="status">Chargement de tes progrès…</p>}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
           <Tile value={s?.streak_days} label={s?.streak_days === 1 ? 'jour de suite' : 'jours de suite'} bg="var(--rose)" ink="var(--rose-ink)" />
           <Tile value={s?.lessons_completed} label={s?.lessons_completed === 1 ? 'leçon bue' : 'leçons bues'} />
@@ -38,6 +44,7 @@ export function Progress() {
         </div>
 
         {s?.month && <Month month={s.month} days={s.month_days ?? []} today={s.today ?? 1} />}
+        {sips.data?.length === 0 && <p className="muted" style={{ fontSize: 15 }}>Tes premiers progrès apparaîtront ici.</p>}
 
         {current.length > 0 && <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '6px 4px 0' }}>Sips en cours</h2>}
         {current.map((x, i) => (

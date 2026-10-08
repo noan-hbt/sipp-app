@@ -57,10 +57,9 @@ export function Profile() {
     },
   })
   const logout = useMutation({
+    networkMode: 'always',
     mutationFn: async () => {
       await Api.logout().catch(() => undefined)
-      queryClient.clear()
-      setTokens(null)
     },
   })
   const deleteAccount = useMutation({

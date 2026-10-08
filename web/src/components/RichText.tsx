@@ -44,7 +44,7 @@ export function RichText({ text }: { text: string }) {
     <>
       {parts.map((p, i) => {
         if (p.kind === 'math') {
-          const html = katex.renderToString(p.value, { throwOnError: false, output: 'html' })
+          const html = katex.renderToString(p.value, { throwOnError: false, output: 'htmlAndMathml' })
           return <span key={i} dangerouslySetInnerHTML={{ __html: html }} />
         }
         if (p.kind === 'code')
@@ -71,6 +71,6 @@ export function RichText({ text }: { text: string }) {
 }
 
 export function MathDisplay({ latex }: { latex: string }) {
-  const html = useMemo(() => katex.renderToString(latex, { throwOnError: false, displayMode: true, output: 'html' }), [latex])
+  const html = useMemo(() => katex.renderToString(latex, { throwOnError: false, displayMode: true, output: 'htmlAndMathml' }), [latex])
   return <div style={{ overflowX: 'auto', fontSize: 20 }} dangerouslySetInnerHTML={{ __html: html }} />
 }

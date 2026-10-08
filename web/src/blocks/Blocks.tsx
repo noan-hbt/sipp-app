@@ -6,7 +6,8 @@ import python from 'highlight.js/lib/languages/python'
 import sql from 'highlight.js/lib/languages/sql'
 import typescript from 'highlight.js/lib/languages/typescript'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { MathDisplay, RichText } from '../components/RichText'
 import { Button, Icon } from '../components/ui'
 import type * as B from '../lib/blocks'
@@ -303,6 +304,23 @@ function CauseEffect({ b }: { b: B.CauseEffectBlock }) {
 
 function Code({ b }: { b: B.CodeBlock }) {
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const [copying, setCopying] = useState(false)
+  async function copy() {
+    setCopying(true)
+    setCopied(false)
+    setCopyError(false)
+    try {
+      await navigator.clipboard.writeText(b.code)
+      setCopied(true)
+      play('pop')
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setCopyError(true)
+    } finally {
+      setCopying(false)
+    }
+  }
   const html = useMemo(() => {
     const lang = b.language.toLowerCase()
     try {
@@ -321,12 +339,10 @@ function Code({ b }: { b: B.CodeBlock }) {
           <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#9B948A' }}>{b.language}</span>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              void navigator.clipboard?.writeText(b.code)
-              setCopied(true)
-              play('pop')
-              setTimeout(() => setCopied(false), 1500)
-            }}
+            aria-live="polite"
+            aria-atomic="true"
+            disabled={copying}
+            onClick={() => void copy()}
             style={{ height: 32, padding: '0 12px', borderRadius: 16, border: 'none', background: copied ? 'var(--mint)' : '#3E372F', color: copied ? 'var(--mint-ink)' : '#F7F1E8', fontSize: 13, fontWeight: 600, transition: 'background .25s' }}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -338,6 +354,7 @@ function Code({ b }: { b: B.CodeBlock }) {
         </div>
         <pre className="code scroll" style={{ margin: 0, padding: '6px 18px 18px', overflowX: 'auto', whiteSpace: 'pre' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
+      {copyError && <ErrorNotice message="La copie a échoué. Réessaie." retry={() => void copy()} busy={copying} />}
       <P>{b.explanation}</P>
     </section>
   )
@@ -443,10 +460,11 @@ function ChoiceButton({
 const LETTERS = 'ABCDEFGH'
 
 function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
+  const inputId = useId()
   const [selected, setSelected] = useState<string[]>([])
   const [text, setText] = useState('')
   const answered = !!answer
-  const correctIds = b.correct_option_ids ?? []
+  const correctIds = [...new Set(b.correct_option_ids ?? [])]
 
   const grade = (correct: boolean, value: unknown) => {
     play(correct ? 'correct' : 'wrong')
@@ -502,8 +520,8 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
     body = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="field">
-          <label htmlFor="open">Ta réponse</label>
-          <textarea id="open" rows={3} value={answered ? String(answer!.value) : text} disabled={answered} onChange={(e) => setText(e.target.value)} placeholder="Écris ce que tu en penses…" />
+          <label htmlFor={inputId}>Ta réponse</label>
+          <textarea id={inputId} rows={3} value={answered ? String(answer!.value) : text} disabled={answered} onChange={(e) => setText(e.target.value)} placeholder="Écris ce que tu en penses…" />
         </div>
         {!answered && (
           <Button variant="dark" disabled={!text.trim()} sound="pop" onClick={() => onAnswer({ correct: null, value: text.trim() })}>
@@ -567,6 +585,7 @@ function Misconception({ b, answer, onAnswer }: { b: B.MisconceptionBlock; answe
 }
 
 function Application({ b }: { b: B.ApplicationBlock }) {
+  const inputId = useId()
   const [text, setText] = useState('')
   return (
     <section style={{ background: 'var(--mint)', borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -582,8 +601,8 @@ function Application({ b }: { b: B.ApplicationBlock }) {
         </p>
       )}
       <div className="field" style={{ boxShadow: 'none', marginTop: 2 }}>
-        <label htmlFor="apply">{b.optional === false ? 'Ta réponse' : 'Facultatif, juste pour toi'}</label>
-        <textarea id="apply" rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Note une idée…" />
+        <label htmlFor={inputId}>{b.optional === false ? 'Ta réponse' : 'Facultatif, juste pour toi'}</label>
+        <textarea id={inputId} rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Note une idée…" />
       </div>
     </section>
   )

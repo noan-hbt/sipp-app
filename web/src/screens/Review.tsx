@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { SipIcon } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
-import { Api } from '../lib/api'
+import { Api, apiErrorMessage } from '../lib/api'
 import { haptic, play } from '../lib/sound'
 
 function ago(iso: string) {
@@ -24,7 +25,19 @@ export function Review() {
   const [i, setI] = useState(0)
   const [shown, setShown] = useState(false)
   const [knew, setKnew] = useState(0)
-  const answer = useMutation({ mutationFn: ({ id, k }: { id: string; k: boolean }) => Api.reviewCard(id, k) })
+  const saving = useRef(false)
+  const answer = useMutation({
+    networkMode: 'always',
+    mutationFn: ({ id, k }: { id: string; k: boolean }) => Api.reviewCard(id, k),
+    onSuccess: (_, { k }) => {
+      play(k ? 'correct' : 'tap')
+      haptic(k ? 12 : 6)
+      if (k) setKnew((n) => n + 1)
+      setShown(false)
+      setI((n) => n + 1)
+    },
+    onSettled: () => { saving.current = false },
+  })
 
   const cards = session.data?.cards ?? []
   const card = cards[i]
@@ -36,16 +49,26 @@ export function Review() {
   }
 
   function rate(k: boolean) {
-    if (!card) return
-    play(k ? 'correct' : 'tap')
-    haptic(k ? 12 : 6)
+    if (!card || saving.current) return
+    saving.current = true
     answer.mutate({ id: card.id, k })
-    if (k) setKnew((n) => n + 1)
-    setShown(false)
-    setI((n) => n + 1)
   }
 
-  if (session.isLoading) return <Screen kind="modal">{null}</Screen>
+  if (!card && !finished) {
+    return (
+      <Screen kind="modal">
+        <header className="topbar">
+          <IconButton label="Quitter la révision" onClick={close}>{Icon.close}</IconButton>
+        </header>
+        <div style={{ flex: 1, display: 'grid', alignContent: 'center', justifyItems: 'center', gap: 18, padding: '0 24px' }}>
+          <Mascot mood={session.isError || session.isPaused ? 'oops' : 'think'} size={104} />
+          {session.isError || session.isPaused || !session.isPending ? (
+            <ErrorNotice message={apiErrorMessage(session.error, session.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Tes cartes n’ont pas pu se charger. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />
+          ) : <p className="muted">Je charge tes cartes…</p>}
+        </div>
+      </Screen>
+    )
+  }
 
   if (finished) {
     const empty = cards.length === 0
@@ -86,6 +109,7 @@ export function Review() {
           {i + 1}/{cards.length}
         </span>
       </header>
+      {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, 'Tes cartes n’ont pas pu être actualisées. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />}
 
       <div style={{ padding: '10px 20px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <h1 className="title-l" style={{ fontSize: 25 }}>
@@ -142,12 +166,13 @@ export function Review() {
       </div>
 
       <div style={{ padding: '30px 16px calc(var(--safe-bottom) + 24px)' }}>
+        {answer.isError && <ErrorNotice message={apiErrorMessage(answer.error, 'Ta réponse n’a pas été enregistrée. Réessaie.')} retry={() => rate(answer.variables!.k)} busy={answer.isPending} />}
         {shown ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-            <Button variant="soft" onClick={() => rate(false)} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
+            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
               À revoir
             </Button>
-            <Button variant="mint" onClick={() => rate(true)}>
+            <Button variant="mint" onClick={() => rate(true)} disabled={answer.isPending}>
               {Icon.check(18)} Je savais
             </Button>
           </div>

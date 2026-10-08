@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { RichText } from '../components/RichText'
 import { illustration } from '../components/SipIcon'
 import { Api, type Concept } from '../lib/api'
@@ -45,12 +46,14 @@ export function Notebook() {
   const growing = shown.filter((c) => !c.due && c.mastery < 3)
   const solid = shown.filter((c) => !c.due && c.mastery >= 3)
   const dueTotal = all.filter((c) => c.due).length
+  const error = (concepts.isError || concepts.isPaused) && <ErrorNotice message={concepts.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton carnet.' : 'Impossible d’actualiser ton carnet. Réessaie.'} retry={() => { void concepts.refetch() }} busy={concepts.isFetching} />
 
-  if (concepts.isLoading) return <div className="scroll" />
+  if (!concepts.data) return <div className="scroll" style={{ padding: '12px 16px 130px' }}>{error || <p className="muted" role="status">Chargement de ton carnet…</p>}</div>
 
   if (!all.length) {
     return (
       <div className="scroll" style={{ padding: '40px 32px 130px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+        {error}
         <img src={illustration('scene-empty')} alt="" width={160} height={160} />
         <span className="display" style={{ fontSize: 21 }}>
           Ton carnet est vide
@@ -77,6 +80,7 @@ export function Notebook() {
 
   return (
     <div className="scroll" style={{ padding: '12px 16px 130px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {error}
       {dueTotal > 0 && (
         <motion.button
           initial={{ opacity: 0, y: 8 }}

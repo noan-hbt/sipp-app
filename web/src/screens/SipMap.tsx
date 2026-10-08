@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useAnimationControls } from "motion/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Mascot } from "../components/Mascot";
+import { ErrorNotice } from "../components/ErrorNotice";
 import { Screen } from "../components/Screen";
 import { SipIcon, sipPalette } from "../components/SipIcon";
 import {
@@ -10,7 +11,7 @@ import {
   listVariants as list,
 } from "../components/SipCard";
 import { Button, Icon, IconButton, Star } from "../components/ui";
-import { Api, ApiError, type LessonBrief } from "../lib/api";
+import { Api, ApiError, apiErrorMessage, type LessonBrief } from "../lib/api";
 import { duration, LESSON_MINUTES } from "../lib/format";
 import { haptic, play } from "../lib/sound";
 import { Confetti, DeleteButton } from "./ProgramView";
@@ -46,8 +47,10 @@ export function SipMap() {
   const review = useQuery({ queryKey: ["review"], queryFn: Api.review });
   const sip = useQuery({
     queryKey: ["sip", sipId],
-    queryFn: () => Api.sip(sipId),
+    queryFn: ({ signal }) => Api.sip(sipId, signal),
     refetchInterval: (q) =>
+      q.state.data?.status === "queued" ||
+      q.state.data?.status === "generating" ||
       q.state.data?.modules.some((m) =>
         m.lessons.some(
           (l) => l.status === "queued" || l.status === "generating",
@@ -59,6 +62,7 @@ export function SipMap() {
 
   const qc = useQueryClient();
   const extend = useMutation({
+    networkMode: "always",
     mutationFn: () => Api.extendSip(sipId),
     onSuccess: (p) => {
       play("whoosh");
@@ -78,6 +82,7 @@ export function SipMap() {
   });
   const programId = sip.data?.program_id;
   const remove = useMutation({
+    networkMode: "always",
     mutationFn: () => Api.deleteSip(sipId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["sips"] });
@@ -93,13 +98,13 @@ export function SipMap() {
   const now = flat[nowIdx];
   const stateOf = (l: LessonBrief): LessonState => {
     const i = flat.indexOf(l);
-    return nowIdx === -1 || i < nowIdx
+    return l.completed
       ? "done"
       : i === nowIdx
         ? "now"
         : "locked";
   };
-  const done = nowIdx === -1 ? flat.length : nowIdx;
+  const done = flat.filter((l) => l.completed).length;
   const totalStars =
     flat.reduce((s, l) => s + (l.stars ?? 0), 0) +
     modules.reduce((s, m) => s + (m.bonus_earned ? (m.bonus_stars ?? 0) : 0), 0);
@@ -122,11 +127,29 @@ export function SipMap() {
     return () => clearTimeout(t);
   }, [justCompleted, now]);
 
-  if (sip.isLoading || !sip.data) {
+  const building = sip.data && sip.data.status !== "ready";
+  useEffect(() => {
+    if (building) nav(`/sips/${sipId}/building`, { replace: true });
+  }, [building, nav, sipId]);
+
+  if (!sip.data || building) {
     return (
       <Screen>
+        <header className="topbar">
+          <IconButton label="Retour" onClick={() => nav("/library")}>
+            {Icon.back}
+          </IconButton>
+        </header>
         <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
-          <Mascot mood="think" size={90} />
+          {sip.isError || sip.isPaused ? (
+            <ErrorNotice
+              message={sip.isPaused ? "Tu es hors ligne. Reconnecte-toi pour charger ton Sip." : apiErrorMessage(sip.error, "Impossible de charger ton Sip. Réessaie.")}
+              retry={() => void sip.refetch()}
+              busy={sip.isFetching}
+            />
+          ) : (
+            <Mascot mood="think" size={90} />
+          )}
         </div>
       </Screen>
     );
@@ -134,6 +157,24 @@ export function SipMap() {
 
   return (
     <Screen>
+      {(sip.isError || sip.isPaused || remove.isError) && (
+        <div style={{ padding: 12, flexShrink: 0 }}>
+          {(sip.isError || sip.isPaused) && (
+            <ErrorNotice
+              message={sip.isPaused ? "Tu es hors ligne. Reconnecte-toi pour actualiser ton Sip." : apiErrorMessage(sip.error, "Impossible d’actualiser ton Sip. Réessaie.")}
+              retry={() => void sip.refetch()}
+              busy={sip.isFetching}
+            />
+          )}
+          {remove.isError && (
+            <ErrorNotice
+              message={apiErrorMessage(remove.error, "Impossible de supprimer ton Sip. Réessaie.")}
+              retry={() => remove.mutate()}
+              busy={remove.isPending}
+            />
+          )}
+        </div>
+      )}
       {view === "map" ? (
         <SipPathMap
           modules={modules}
@@ -374,6 +415,7 @@ export function SipMap() {
                     : "Ta progression sera perdue. Ça libère une place."
                 }
                 busy={remove.isPending}
+                failed={remove.isError}
                 onConfirm={() => remove.mutate()}
               />
             </div>
@@ -422,6 +464,13 @@ export function SipMap() {
                 </p>
               </div>
             </div>
+            {extend.isError && (
+              <ErrorNotice
+                message={apiErrorMessage(extend.error, "Impossible de préparer la suite. Réessaie.")}
+                retry={() => extend.mutate()}
+                busy={extend.isPending}
+              />
+            )}
             {programId ? (
               <Button sound="pop" onClick={() => nav(`/programs/${programId}`)}>
                 Voir la suite du programme
@@ -580,6 +629,8 @@ function LessonRow({
 }) {
   const shake = useAnimationControls();
   const [showHint, setShowHint] = useState(false);
+  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(hintTimer.current), []);
   const done = state === "done";
   return (
     <div style={{ position: "relative" }}>
@@ -600,7 +651,8 @@ function LessonRow({
             x: [0, -6, 6, -4, 4, 0],
             transition: { duration: 0.35 },
           });
-          setTimeout(() => setShowHint(false), 1800);
+          clearTimeout(hintTimer.current);
+          hintTimer.current = setTimeout(() => setShowHint(false), 1800);
         }}
         style={{
           width: "100%",
@@ -664,6 +716,7 @@ function LessonRow({
       <AnimatePresence>
         {showHint && hint && (
           <motion.div
+            role="status"
             initial={{ opacity: 0, y: 6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4 }}

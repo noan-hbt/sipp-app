@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { ApiError, type HelpKind } from '../lib/api'
 import { play } from '../lib/sound'
+import { useModal } from '../lib/useModal'
 import { Mascot } from './Mascot'
 import { RichText } from './RichText'
 import { Button } from './ui'
@@ -26,6 +27,7 @@ export type AskHelp = (kind: HelpKind, question?: string) => Promise<string>
 
 /** "I don't understand": another explanation of the block on screen, without leaving the lesson. */
 export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () => void; ask: AskHelp }) {
+  const { dialog, onKeyDown } = useModal(open)
   const [question, setQuestion] = useState('')
   const help = useMutation({
     mutationFn: ({ kind, q }: { kind: HelpKind; q?: string }) => ask(kind, q),
@@ -46,15 +48,22 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
   }
 
   return (
-    <AnimatePresence>
+    <dialog
+      ref={dialog}
+      className="sheet-modal"
+      aria-label="Aide sur ce passage"
+      onKeyDown={onKeyDown}
+      onCancel={(e) => {
+        e.preventDefault()
+        close()
+      }}
+    >
+    <AnimatePresence onExitComplete={() => dialog.current?.close()}>
       {open && (
         <>
           <motion.div key="veil" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close} style={{ position: 'absolute', inset: 0, zIndex: 20, background: 'rgba(29,26,23,.38)' }} />
           <motion.section
             key="sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Aide sur ce passage"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -119,6 +128,7 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
             </AnimatePresence>
 
             <form
+              className="help-question"
               onSubmit={(e) => {
                 e.preventDefault()
                 const q = question.trim()
@@ -156,5 +166,6 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
         </>
       )}
     </AnimatePresence>
+    </dialog>
   )
 }

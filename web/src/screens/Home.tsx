@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
+import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
@@ -31,6 +32,9 @@ export function Home() {
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
   const review = useQuery({ queryKey: ['review'], queryFn: Api.review })
   const due = review.data?.due_count ?? 0
+  const queries = [sips, stats, review]
+  const offline = queries.some((q) => q.isPaused)
+  const failed = queries.some((q) => q.isError)
 
   const all = sips.data ?? []
   const resume = all.find((s) => s.status === 'ready' && s.progress.completed < s.progress.total)
@@ -56,7 +60,7 @@ export function Home() {
           onClick={() => nav('/progress')}
           className="display"
           style={{ height: 42, padding: '0 14px', border: 'none', borderRadius: 21, display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, background: 'var(--primary-soft)', color: 'var(--primary-ink)' }}
-          aria-label={`Série de ${stats.data?.streak_days ?? 0} jours, voir mes progrès`}
+          aria-label={stats.data ? `Série de ${stats.data.streak_days} jours, voir mes progrès` : 'Voir mes progrès'}
         >
           <motion.span
             animate={stats.data?.completed_today ? { scale: [1, 1.18, 1], rotate: [0, -6, 6, 0] } : { opacity: 0.45 }}
@@ -65,15 +69,16 @@ export function Home() {
           >
             {Icon.flame}
           </motion.span>
-          {stats.data?.streak_days ?? 0}
+          {stats.data?.streak_days ?? '—'}
         </motion.button>
       </header>
 
       <div className="scroll" style={{ padding: '14px 16px 130px' }}>
-        <Week week={stats.data?.week} />
+        {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton accueil.' : 'Impossible d’actualiser ton accueil. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
+        {stats.data && <Week week={stats.data.week} />}
         {sips.isLoading ? (
           <Skeleton />
-        ) : all.length === 0 ? (
+        ) : !sips.data ? null : all.length === 0 ? (
           <Empty onStart={() => nav('/new')} />
         ) : (
           <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
