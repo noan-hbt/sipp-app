@@ -39,6 +39,9 @@ function parse(src: string): Part[] {
   return parts
 }
 
+/** French typography: « ? ! : ; » never start a line alone (non-breaking space before them). */
+export const typo = (s: string) => s.replace(/ ([?!:;»])/g, ' $1').replace(/« /g, '« ')
+
 export function RichText({ text }: { text: string }) {
   const parts = useMemo(() => parse(text), [text])
   return (
@@ -64,8 +67,8 @@ export function RichText({ text }: { text: string }) {
               {p.value}
             </code>
           )
-        if (p.kind === 'bold') return <strong key={i} style={{ fontWeight: 700 }}>{p.value}</strong>
-        return <Fragment key={i}>{p.value}</Fragment>
+        if (p.kind === 'bold') return <strong key={i} style={{ fontWeight: 700 }}>{typo(p.value)}</strong>
+        return <Fragment key={i}>{typo(p.value)}</Fragment>
       })}
     </>
   )
