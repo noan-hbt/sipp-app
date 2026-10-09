@@ -13,13 +13,14 @@ import { Api, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } fro
 import { blockText, isGraded, isInteractive, isKeepable, type Block } from '../lib/blocks'
 import { speak, speechSupported, stopSpeaking } from '../lib/speech'
 import { useLessonResume } from '../lib/resume'
-import { play } from '../lib/sound'
+import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 
 const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
 const ALMOST = ['Presque !', 'Pas tout à fait…', 'Bien tenté !']
 
 const HELP_HINT_KEY = 'sipp.help-hint'
+const KEEP_HINT_KEY = 'sipp.keep-hint'
 
 export function Lesson() {
   const { lessonId = '' } = useParams()
@@ -200,6 +201,29 @@ export function LessonPlayer({
       /* private mode */
     }
   }
+  // Keeping a passage is a long press: a short confirmation, and a one-time tip.
+  const [toast, setToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 1800)
+    return () => clearTimeout(t)
+  }, [toast])
+  const [keepHint, setKeepHint] = useState(false)
+  useEffect(() => {
+    if (!onKeep || revealed !== 3) return
+    try {
+      if (!localStorage.getItem(KEEP_HINT_KEY)) setKeepHint(true)
+    } catch { /* private mode */ }
+  }, [revealed]) // eslint-disable-line react-hooks/exhaustive-deps
+  function dismissKeepHint() {
+    setKeepHint(false)
+    try { localStorage.setItem(KEEP_HINT_KEY, '1') } catch { /* private mode */ }
+  }
+  useEffect(() => {
+    if (!keepHint) return
+    const t = setTimeout(dismissKeepHint, 5000)
+    return () => clearTimeout(t)
+  }, [keepHint]) // eslint-disable-line react-hooks/exhaustive-deps
   // Read aloud: each block as it appears, until turned off.
   const [listening, setListening] = useState(false)
   useEffect(() => {
@@ -364,9 +388,20 @@ export function LessonPlayer({
               animate={{ opacity: i < revealed - 1 && !isInteractive(b) ? 0.92 : 1, y: 0, scale: 1, filter: 'blur(0px)' }}
               transition={{ type: 'spring', stiffness: 220, damping: 24 }}
             >
-              <BlockView block={b} answer={answers[i]} onAnswer={(a) => onAnswer(i, a)} />
-              {onKeep && isKeepable(b) && (
-                <KeepButton kept={!!kept?.has(i)} onClick={() => onKeep(i, blockText(b))} />
+              {onKeep && isKeepable(b) ? (
+                <Keepable
+                  kept={!!kept?.has(i)}
+                  onToggle={() => {
+                    const was = !!kept?.has(i)
+                    onKeep(i, blockText(b))
+                    setToast(was ? 'Retiré de ton carnet' : 'Gardé dans ton carnet')
+                    dismissKeepHint()
+                  }}
+                >
+                  <BlockView block={b} answer={answers[i]} onAnswer={(a) => onAnswer(i, a)} />
+                </Keepable>
+              ) : (
+                <BlockView block={b} answer={answers[i]} onAnswer={(a) => onAnswer(i, a)} />
               )}
             </motion.div>
           ))}
@@ -440,29 +475,82 @@ export function LessonPlayer({
           </motion.section>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {(toast || keepHint) && (
+          <motion.div
+            key={toast ?? 'hint'}
+            role="status"
+            initial={{ opacity: 0, y: 12, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 12, x: '-50%' }}
+            onClick={dismissKeepHint}
+            style={{ position: 'absolute', left: '50%', bottom: 'calc(var(--safe-bottom) + 104px)', zIndex: 20, maxWidth: 'calc(100% - 48px)', width: 'max-content', padding: '10px 14px', borderRadius: 16, background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 14, fontWeight: 600, lineHeight: 1.35, textAlign: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <Bookmark size={14} filled={!!toast && toast.startsWith('Gardé')} />
+            {toast ?? 'Astuce : appuie longuement sur un passage pour le garder dans ton carnet.'}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {onHelp && <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} ask={(kind, question) => onHelp(revealed - 1, kind, question)} />}
     </Screen>
   )
 }
 
-/** Keeps a passage in the notebook (or lets it go). */
-function KeepButton({ kept, onClick }: { kept: boolean; onClick: () => void }) {
+function Bookmark({ size = 14, filled }: { size?: number; filled: boolean }) {
   return (
-    <motion.button
-      type="button"
-      whileTap={{ scale: 0.92 }}
-      aria-pressed={kept}
-      onClick={() => {
-        play('tap')
-        onClick()
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 3h12v18l-6-4-6 4z" />
+    </svg>
+  )
+}
+
+/** A passage kept by a long press; a small ribbon marks it, and is the way back for keyboards and screen readers. */
+function Keepable({ kept, onToggle, children }: { kept: boolean; onToggle: () => void; children: ReactNode }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const start = useRef<{ x: number; y: number } | null>(null)
+  const [pressing, setPressing] = useState(false)
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = null
+    start.current = null
+    setPressing(false)
+  }
+  return (
+    <motion.div
+      animate={{ scale: pressing ? 0.985 : 1 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      style={{ position: 'relative', WebkitTouchCallout: 'none' }}
+      onContextMenu={(e) => e.preventDefault()}
+      onPointerDown={(e) => {
+        if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
+        start.current = { x: e.clientX, y: e.clientY }
+        setPressing(true)
+        timer.current = setTimeout(() => {
+          cancel()
+          haptic(15)
+          play('pop')
+          onToggle()
+        }, 480)
       }}
-      style={{ marginTop: 8, marginLeft: 'auto', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 14, padding: '6px 10px', fontSize: 13, fontWeight: 600, background: kept ? 'var(--butter)' : 'transparent', color: kept ? 'var(--butter-ink)' : 'var(--faint)' }}
+      onPointerMove={(e) => {
+        if (start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 8) cancel()
+      }}
+      onPointerUp={cancel}
+      onPointerLeave={cancel}
+      onPointerCancel={cancel}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill={kept ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" aria-hidden="true">
-        <path d="M6 3h12v18l-6-4-6 4z" />
-      </svg>
-      {kept ? 'Gardé dans mon carnet' : 'Garder'}
-    </motion.button>
+      {children}
+      <button
+        type="button"
+        aria-pressed={kept}
+        aria-label={kept ? 'Retirer ce passage de mon carnet' : 'Garder ce passage dans mon carnet'}
+        onClick={onToggle}
+        className={kept ? undefined : 'sr-only'}
+        style={kept ? { position: 'absolute', top: -6, right: 10, width: 26, height: 32, border: 'none', padding: 0, borderRadius: '0 0 6px 6px', background: 'var(--sun)', color: 'var(--butter-ink)', display: 'grid', placeItems: 'center', clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%)' } : undefined}
+      >
+        {kept && <span style={{ marginTop: -6, display: 'grid' }}><Bookmark size={12} filled /></span>}
+      </button>
+    </motion.div>
   )
 }
 

@@ -28,7 +28,7 @@ export function Notes() {
         <img src={illustration('scene-empty')} alt="" width={160} height={160} />
         <span className="display" style={{ fontSize: 21 }}>Aucune note pour l’instant</span>
         <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-          Pendant une leçon, touche « Garder » sous un passage qui te plaît : il viendra se ranger ici.
+          Pendant une leçon, appuie longuement sur un passage qui te plaît : il viendra se ranger ici.
         </p>
       </div>
     )
