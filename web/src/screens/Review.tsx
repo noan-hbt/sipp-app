@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { ErrorNotice } from '../components/ErrorNotice'
@@ -8,13 +8,25 @@ import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { SipIcon } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
-import { Api, apiErrorMessage } from '../lib/api'
+import { Api, apiErrorMessage, type Concept } from '../lib/api'
 import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 
 function ago(iso: string) {
   const days = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000))
   return days === 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `il y a ${days} jours`
+}
+
+/** Two other notions' definitions next to the right one, same Sip first. Stable for a card. */
+function choicesFor(card: Concept, all: Concept[]): { id: string; text: string }[] | null {
+  const others = all.filter((c) => c.id !== card.id && c.definition !== card.definition)
+  const ranked = [...others.filter((c) => c.sip_id === card.sip_id), ...others.filter((c) => c.sip_id !== card.sip_id)]
+  if (ranked.length < 2) return null
+  // Deterministic shuffle: the same card always shows its options in the same order.
+  let seed = [...card.id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) >>> 0, 7)
+  const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32)
+  const pool = ranked.slice(0, 6).sort(() => rand() - 0.5).slice(0, 2)
+  return [card, ...pool].map((c) => ({ id: c.id, text: c.definition })).sort(() => rand() - 0.5)
 }
 
 /** Today's spaced review: recall the notion, reveal it, say honestly whether you knew it. */
@@ -27,6 +39,8 @@ export function Review() {
   const [i, setI] = useState(0)
   const [shown, setShown] = useState(false)
   const [knew, setKnew] = useState(0)
+  const [picked, setPicked] = useState<string | null>(null)
+  const concepts = useQuery({ queryKey: ['concepts'], queryFn: Api.concepts })
   const saving = useRef(false)
   const answer = useMutation({
     networkMode: 'always',
@@ -37,6 +51,7 @@ export function Review() {
       haptic(k ? 12 : 6)
       if (k) setKnew((n) => n + 1)
       setShown(false)
+      setPicked(null)
       setI((n) => n + 1)
     },
     onSettled: () => { saving.current = false },
@@ -45,6 +60,8 @@ export function Review() {
   const cards = session.data?.cards ?? []
   const card = cards[i]
   const finished = session.data && i >= cards.length
+  // Every other card is a quick multiple choice: recognising beats nothing on a tired day.
+  const choices = useMemo(() => (card && i % 2 === 1 && concepts.data ? choicesFor(card, concepts.data) : null), [card, i, concepts.data])
   const close = () => {
     void qc.invalidateQueries({ queryKey: ['concepts'] })
     void qc.invalidateQueries({ queryKey: ['review'] })
@@ -119,7 +136,7 @@ export function Review() {
 
       <div style={{ padding: '10px 20px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <h1 className="title-l" style={{ fontSize: 25 }}>
-          Tu te souviens ?
+          {choices ? 'Quelle définition ?' : 'Tu te souviens ?'}
         </h1>
         <p className="muted" style={{ fontSize: 15 }}>
           Vue {ago(card.last_reviewed_at ?? card.learned_at)} dans « {card.sip_title} »
@@ -148,6 +165,38 @@ export function Review() {
                 <RichText text={card.name} />
               </h2>
               <div style={{ height: 1.5, background: 'var(--bg-deep)', flexShrink: 0 }} />
+              {choices ? (
+                <div role="radiogroup" aria-label="Choisis la bonne définition" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {choices.map((o) => {
+                    const right = o.id === card.id
+                    const state = !picked ? 'idle' : right ? 'right' : o.id === picked ? 'wrong' : 'idle'
+                    return (
+                      <motion.button
+                        key={o.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={picked === o.id}
+                        disabled={!!picked}
+                        whileTap={{ scale: 0.98 }}
+                        animate={state === 'wrong' ? { x: [0, -6, 6, -3, 0] } : {}}
+                        onClick={() => {
+                          setPicked(o.id)
+                          if (!right) play('wrong')
+                          if (right) setTimeout(() => rate(true), 700)
+                        }}
+                        style={{
+                          border: 'none', borderRadius: 18, padding: '12px 14px', textAlign: 'left', fontSize: 15, lineHeight: 1.4, fontWeight: 500, color: 'var(--ink)',
+                          background: state === 'right' ? 'var(--mint)' : state === 'wrong' ? 'var(--rose)' : 'var(--bg-deep)',
+                          boxShadow: state === 'right' ? 'inset 0 0 0 2.5px var(--mint-strong)' : state === 'wrong' ? 'inset 0 0 0 2.5px var(--coral)' : 'none',
+                          opacity: picked && state === 'idle' ? 0.55 : 1,
+                        }}
+                      >
+                        <RichText text={o.text} />
+                      </motion.button>
+                    )
+                  })}
+                </div>
+              ) : (
               <AnimatePresence mode="wait" initial={false}>
                 {shown ? (
                   <motion.div key="a" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -166,6 +215,7 @@ export function Review() {
                   </motion.p>
                 )}
               </AnimatePresence>
+              )}
             </motion.article>
           </AnimatePresence>
         </div>
@@ -173,7 +223,17 @@ export function Review() {
 
       <div style={{ padding: '30px 16px calc(var(--safe-bottom) + 24px)' }}>
         {answer.isError && <ErrorNotice message={apiErrorMessage(answer.error, 'Ta réponse n’a pas été enregistrée. Réessaie.')} retry={() => rate(answer.variables!.k)} busy={answer.isPending} />}
-        {shown ? (
+        {choices ? (
+          picked && picked !== card.id ? (
+            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
+              Compris, je la reverrai
+            </Button>
+          ) : (
+            <p className="muted" style={{ textAlign: 'center', fontSize: 14, minHeight: 56, display: 'grid', placeItems: 'center' }}>
+              {picked ? 'Bien vu !' : 'Touche la bonne définition.'}
+            </p>
+          )
+        ) : shown ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
             <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
               À revoir

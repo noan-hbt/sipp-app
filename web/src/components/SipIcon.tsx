@@ -3,12 +3,12 @@
 type Tone = 'coral' | 'sun' | 'mint' | 'lilac' | 'sky' | 'peach'
 
 const TONES: Record<Tone, { bg: string; ink: string; bar: string }> = {
-  coral: { bg: '#FFE1D6', ink: '#8A3D16', bar: 'var(--primary)' },
-  sun: { bg: '#FFF0C2', ink: '#6B5310', bar: 'var(--primary)' },
-  mint: { bg: '#D9F3E4', ink: '#1F6B45', bar: 'var(--primary)' },
-  lilac: { bg: '#ECE8FF', ink: '#4A3FB0', bar: 'var(--primary)' },
-  sky: { bg: '#DCEFFC', ink: '#2A6C9E', bar: 'var(--primary)' },
-  peach: { bg: '#FFE6D4', ink: '#8A3D16', bar: 'var(--primary)' },
+  coral: { bg: 'var(--coral-soft)', ink: 'var(--peach-ink)', bar: 'var(--primary)' },
+  sun: { bg: 'var(--butter)', ink: 'var(--butter-ink)', bar: 'var(--primary)' },
+  mint: { bg: 'var(--mint)', ink: 'var(--mint-ink)', bar: 'var(--primary)' },
+  lilac: { bg: 'var(--lavender)', ink: 'var(--lavender-ink)', bar: 'var(--primary)' },
+  sky: { bg: 'var(--sky)', ink: 'var(--sky-ink)', bar: 'var(--primary)' },
+  peach: { bg: 'var(--peach-soft)', ink: 'var(--peach-ink)', bar: 'var(--primary)' },
 }
 
 // key, tone, word prefixes (accent-free, lowercase). Order matters: first match wins.

@@ -94,6 +94,8 @@ export function ProgramView() {
   const next = nextChapter(p)
   const totalLessons = p.chapters.reduce((n, c) => n + (c.sip?.progress.total || c.estimated_lessons), 0)
   const done = p.chapters.filter((c) => chapterState(c, next) === 'done').length
+  const lessonsDone = p.chapters.reduce((n, c) => n + (c.sip?.progress.completed ?? 0), 0)
+  const ratio = Math.min(1, lessonsDone / Math.max(1, totalLessons))
   const core = p.chapters.filter((c) => c.level === 'core')
   const advanced = p.chapters.filter((c) => c.level !== 'core')
   const err = start.error ? apiErrorMessage(start.error, 'Impossible de préparer ce chapitre. Réessaie.') : null
@@ -104,6 +106,8 @@ export function ProgramView() {
         <span className="display" style={{ fontSize: 18, margin: '6px 6px 0' }}>
           {title}
         </span>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {chapters.length > 1 && <span aria-hidden="true" style={{ position: 'absolute', left: 32.5, top: 34, bottom: 34, width: 3, borderRadius: 2, background: 'var(--line-strong)' }} />}
         {chapters.map((c) => (
           <ChapterCard
             key={c.position}
@@ -116,6 +120,7 @@ export function ProgramView() {
             onStart={() => start.mutate(c.position)}
           />
         ))}
+        </div>
       </motion.section>
     )
 
@@ -140,6 +145,21 @@ export function ProgramView() {
                 {p.title}
               </h1>
               {p.summary && <p style={{ fontSize: 15, lineHeight: 1.45, color: pal.ink }}>{p.summary}</p>}
+            </div>
+            <div style={{ position: 'relative', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div
+                role="progressbar"
+                aria-label="Avancement du programme"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(ratio * 100)}
+                style={{ height: 10, borderRadius: 5, background: 'color-mix(in srgb, var(--surface) 70%, transparent)', overflow: 'hidden' }}
+              >
+                <motion.div initial={{ width: 0 }} animate={{ width: `${ratio * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.3 }} style={{ height: '100%', borderRadius: 5, background: 'var(--primary)' }} />
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: pal.ink, textAlign: 'center' }}>
+                {lessonsDone === 0 ? 'Ton programme commence ici' : `${Math.round(ratio * 100)} % du programme · ${lessonsDone} leçon${lessonsDone > 1 ? 's' : ''} bue${lessonsDone > 1 ? 's' : ''}`}
+              </span>
             </div>
           </motion.div>
 
@@ -167,7 +187,10 @@ export function ProgramView() {
 
             {current?.sip && (
               <motion.div variants={item}>
-                <Button onClick={() => nav(`/sips/${current.sip!.id}`)}>Reprendre · chapitre {current.position}</Button>
+                <Button onClick={() => nav(`/sips/${current.sip!.id}`)}>Reprendre le chapitre {current.position}</Button>
+                {current.sip.next_lesson_title && (
+                  <p className="muted" style={{ fontSize: 14, textAlign: 'center', marginTop: 8 }}>Prochaine leçon : {current.sip.next_lesson_title}</p>
+                )}
               </motion.div>
             )}
 
@@ -301,7 +324,7 @@ function ChapterCard({
         gap: 14,
         cursor: tappable ? 'pointer' : undefined,
         position: 'relative',
-        background: state === 'current' ? 'var(--primary-soft)' : state === 'later' ? 'transparent' : 'var(--surface)',
+        background: state === 'current' ? 'var(--primary-soft)' : state === 'later' ? 'var(--bg)' : 'var(--surface)',
         boxShadow: state === 'later' ? 'inset 0 0 0 2px var(--line)' : 'none',
       }}
     >
@@ -323,6 +346,11 @@ function ChapterCard({
         {state === 'done' ? Icon.check(16, 'var(--mint-ink)') : last && state === 'later' ? '★' : c.position}
       </span>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {(state === 'next' || state === 'current') && (
+          <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--primary)' }}>
+            {state === 'current' ? 'Tu es ici' : 'Prochaine étape'}
+          </span>
+        )}
         <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25, color: state === 'later' ? 'var(--muted)' : 'var(--ink)' }}>{c.title}</span>
         <span style={{ fontSize: 14, lineHeight: 1.4, color: 'var(--muted)' }}>{c.outcome}</span>
         {s && state !== 'building' ? (
