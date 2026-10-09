@@ -31,6 +31,8 @@ export function Home() {
   })
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
   const review = useQuery({ queryKey: ['review'], queryFn: Api.review })
+  const plan = useQuery({ queryKey: ['plan'], queryFn: Api.plan })
+  const roomForMore = !!plan.data && plan.data.slots_used < plan.data.slots && plan.data.sips_this_month < plan.data.sips_per_month
   const due = review.data?.due_count ?? 0
   const queries = [sips, stats, review]
   const offline = queries.some((q) => q.isPaused)
@@ -106,6 +108,20 @@ export function Home() {
               <NewCard done={finishedAll} onGo={() => nav('/new')} />
             )}
             {due > 0 && <ReviewCard due={due} onGo={() => nav('/review')} />}
+            {resume && topics.length === 0 && roomForMore && (
+              <motion.button
+                variants={item}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => nav('/new')}
+                style={{ border: '2px dashed var(--line-strong)', background: 'transparent', borderRadius: 24, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+              >
+                <span style={{ width: 40, height: 40, borderRadius: 14, background: 'var(--peach-soft)', color: 'var(--primary)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{Icon.plus}</span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>Un autre sujet en tête ?</span>
+                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>Lance un deuxième Sip en parallèle.</span>
+                </span>
+              </motion.button>
+            )}
 
             {topics.length > 0 && (
               <motion.div variants={item} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '12px 6px 0' }}>
