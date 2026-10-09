@@ -8,11 +8,11 @@ import { Mascot } from './Mascot'
 import { RichText } from './RichText'
 import { Button } from './ui'
 
-const KINDS: [HelpKind, string][] = [
-  ['rephrase', 'Explique autrement'],
-  ['simpler', 'Plus simple'],
-  ['example', 'Un exemple'],
-  ['word', 'Un mot inconnu'],
+const KINDS: [HelpKind, string, string][] = [
+  ['rephrase', 'Explique autrement', 'lavender'],
+  ['simpler', 'Plus simple', 'mint'],
+  ['example', 'Un exemple', 'butter'],
+  ['word', 'Un mot inconnu', 'sky'],
 ]
 
 const TITLES: Record<HelpKind, string> = {
@@ -72,14 +72,14 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
           >
             <span aria-hidden="true" style={{ alignSelf: 'center', width: 40, height: 5, borderRadius: 3, background: 'var(--line-strong)', flexShrink: 0 }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 48, height: 48, borderRadius: 24, background: 'var(--surface)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <span style={{ width: 48, height: 48, borderRadius: 24, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                 <Mascot mood={help.isPending ? 'think' : 'hello'} size={38} />
               </span>
-              <h2 className="title-m">Qu’est-ce qui coince ?</h2>
+              <h2 className="display" style={{ fontSize: 24, letterSpacing: '-0.04em' }}>Qu’est-ce qui coince ?</h2>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
-              {KINDS.map(([k, label]) => {
+              {KINDS.map(([k, label, tone]) => {
                 const on = kind === k && !help.isIdle
                 return (
                   <motion.button
@@ -92,14 +92,14 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
                       help.mutate({ kind: k })
                     }}
                     style={{
-                      minHeight: 52,
+                      minHeight: 56,
                       border: 'none',
-                      borderRadius: 18,
+                      borderRadius: 20,
                       fontSize: 15,
-                      fontWeight: 600,
-                      background: on ? 'var(--lavender)' : 'var(--surface)',
-                      color: on ? 'var(--lavender-ink)' : 'var(--ink)',
-                      boxShadow: on ? 'inset 0 0 0 2.5px var(--lavender-strong)' : 'inset 0 0 0 2px var(--line)',
+                      fontWeight: 700,
+                      background: on ? 'var(--ink)' : `var(--${tone})`,
+                      color: on ? 'var(--on-ink)' : `var(--${tone}-ink)`,
+                      transition: 'background .2s, color .2s',
                     }}
                   >
                     {label}
