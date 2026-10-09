@@ -27,6 +27,9 @@ export interface Answer {
   value: unknown
 }
 
+/** The model sometimes quotes the statement itself; the card already adds « ». */
+const unquote = (s: string) => s.trim().replace(/^[«"“'‘]\s*/, '').replace(/\s*[»"”'’]$/, '')
+
 const stagger = (i: number) => ({ type: 'spring' as const, stiffness: 300, damping: 24, delay: 0.12 + i * 0.09 })
 
 const P = ({ children, lead }: { children: string; lead?: boolean }) => (
@@ -582,7 +585,7 @@ function Misconception({ b, answer, onAnswer }: { b: B.MisconceptionBlock; answe
         Idée reçue ?
       </Kicker>
       <motion.p initial={{ scale: 0.96 }} animate={{ scale: 1 }} className="lx-h" style={{ fontSize: 20 }}>
-        « <RichText text={b.statement} /> »
+        « <RichText text={unquote(b.statement)} /> »
       </motion.p>
       <TrueFalse
         chosen={answer ? (answer.value as boolean) : null}

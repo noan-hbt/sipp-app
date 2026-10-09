@@ -166,7 +166,7 @@ function Hero({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
       </motion.div>
       <div style={{ position: 'relative', maxWidth: '62%', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span className="pill-tag" style={{ background: 'rgba(255,255,255,.2)' }}>
-          {sip.chapter ? `Chapitre ${sip.chapter}` : 'On reprend'} · {sip.progress.completed + 1} sur {sip.progress.total}
+          {sip.chapter ? `Chapitre ${sip.chapter}` : sip.progress.completed ? 'On reprend' : 'On commence'} · {sip.progress.completed + 1} sur {sip.progress.total}
         </span>
         <h2 className="display" style={{ fontSize: 23, lineHeight: 1.12 }}>
           {sip.next_lesson_title ?? sip.title}

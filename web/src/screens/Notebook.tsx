@@ -175,7 +175,7 @@ function NotionRow({ c, open, onToggle, onLesson }: { c: Concept; open: boolean;
             <RichText text={c.name} />
           </span>
           {!open && (
-            <span style={{ fontSize: 14, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 14, lineHeight: 1.35, color: 'var(--muted)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
               <RichText text={c.definition} />
             </span>
           )}

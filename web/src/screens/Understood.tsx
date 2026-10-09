@@ -23,6 +23,8 @@ export interface UnderstoodState {
 }
 
 /** What Sipp understood of the request, to confirm or adjust before the path is built. */
+const duration = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}` : ''}`)
+
 export function Understood() {
   const nav = useNavigate()
   const qc = useQueryClient()
@@ -162,7 +164,7 @@ export function Understood() {
                 <b style={{ fontWeight: 600 }}>
                   {interpretation.lessons_min} à {interpretation.lessons_max} leçons
                 </b>{' '}
-                de 5 minutes
+                de 5 minutes, soit {duration(interpretation.lessons_min * 5)} à {duration(interpretation.lessons_max * 5)} au total
               </>
             )}
           </span>

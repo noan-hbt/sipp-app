@@ -77,7 +77,8 @@ export function Lesson() {
       saveNotice={resume.state.status === 'error' ? (
         <ErrorNotice message={resume.state.durable ? 'Ta progression reste sur cet appareil. Réessaie de la synchroniser.' : 'Ta progression n’est pas enregistrée. Garde cette page ouverte.'} retry={() => void resume.queue.retry()} />
       ) : resume.queue.resume ? (
-        <p role="status" className="muted" style={{ padding: '0 20px', fontSize: 13 }}>{resume.state.status === 'saving' ? 'Synchronisation de ta progression…' : 'Progression enregistrée'}</p>
+        // Saving is silent when it works: a permanent "saved" line only takes room above the lesson.
+        <p role="status" className="sr-only">{resume.state.status === 'saving' ? 'Synchronisation de ta progression…' : 'Progression enregistrée'}</p>
       ) : null}
       onClose={() => nav(`/sips/${data.sip_id}`, { replace: true })}
       onFinish={(f) => {
