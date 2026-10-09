@@ -397,7 +397,7 @@ export function SipPathMap({
             style={{
               flex: 1,
               minWidth: 0,
-              height: 48,
+              minHeight: 48,
               borderRadius: 24,
               background: C.surface,
               boxShadow: RAISED_SM,
@@ -410,11 +410,15 @@ export function SipPathMap({
             <span
               style={{
                 flex: 1,
-                fontSize: 16,
+                // Two lines rather than an ellipsis: the title is the only place it is named.
+                fontSize: title.length > 24 ? 14 : 16,
+                lineHeight: 1.2,
                 fontWeight: 900,
-                whiteSpace: "nowrap",
+                padding: "6px 0",
                 overflow: "hidden",
-                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
               }}
             >
               {chapter && (
