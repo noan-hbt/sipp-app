@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
@@ -23,13 +25,17 @@ from app.auth import (
     rotate_refresh_token,
     verify_password_async,
 )
+from app.billing import live_subscription
 from app.concepts import sync_cards
 from app.config import get_settings
 from app.db import get_session
 from app.models import ConceptCard, Lesson, Module, Sip, User
+from app.paddle import PaddleClient, PaddleError, get_paddle
 from app.plans import plan_status, start_trial
 from app.progress import stats
 from app.quota import usage
+
+log = logging.getLogger("sipp.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -110,7 +116,7 @@ async def list_plans():
     return [
         PlanInfo(
             name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]),
-            lite=bool(p["lite"]), hours_per_month=hours(p),
+            lite=bool(p["lite"]), hours_per_month=hours(p), prices=s.plan_prices.get(name, {}),
         )
         for name, p in s.plans.items()
         if name != "max"
@@ -185,9 +191,24 @@ async def delete_account(
     body: DeleteAccountIn,
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
+    paddle: PaddleClient = Depends(get_paddle),
 ):
-    """Permanently deletes the account and all its data (sips, lessons, tokens)."""
+    """Permanently deletes the account and all its data (sips, lessons, tokens).
+
+    A running subscription is cancelled at Paddle first, so a deleted account is never billed
+    again; billing records stay, detached from the user, for accounting."""
     if not await verify_password_async(body.password, user.password_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid password")
+    sub = await live_subscription(session, user.id)
+    if sub is not None:
+        try:
+            await paddle.cancel_subscription(sub.id)
+        except PaddleError as e:
+            log.error("cancel %s before account deletion failed: %s", sub.id, e)
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                {"code": "billing_cancel_failed", "message": "subscription could not be cancelled, retry later"},
+            ) from e
+        sub.status = "canceled"
     await session.execute(delete(User).where(User.id == user.id))  # FK cascades
     await session.commit()

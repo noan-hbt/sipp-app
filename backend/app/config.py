@@ -64,8 +64,29 @@ class Settings(BaseSettings):
     llm_max_concurrent_per_user: int = Field(default=5, ge=1)
     max_help_per_day: int = 30
 
+    # Billing (Paddle, merchant of record). Off until every key and price id is set.
+    paddle_env: str = "sandbox"  # sandbox | production
+    paddle_api_key: str = ""
+    paddle_webhook_secret: str = ""
+    paddle_client_token: str = ""  # public, for Paddle.js
+    paddle_price_basic_month: str = ""
+    paddle_price_basic_year: str = ""
+    paddle_price_plus_month: str = ""
+    paddle_price_plus_year: str = ""
+    # Shown on the offers (cents, tax included); must match the Paddle prices.
+    plan_prices: dict[str, dict[str, int]] = {
+        "basic": {"month": 599, "year": 5990},
+        "plus": {"month": 1299, "year": 12990},
+    }
+    public_app_url: str = "http://localhost:5173"
+    # Access kept while Paddle retries a failed renewal.
+    billing_grace_days: int = 7
+    # Slack after a paid period ends, in case the renewal webhook is late.
+    billing_period_slack_hours: int = 48
+    billing_webhook_tolerance_seconds: int = 300
+
     # Plans: library slots (Sips kept at once) and new Sips per calendar month.
-    # Billing (RevenueCat) will set user.plan; until then only the trial grants a paid plan.
+    # Paddle subscriptions and the one-time trial set user.plan.
     plans: dict[str, dict[str, int | bool]] = {
         "free": {"slots": 1, "sips_per_month": 1, "lite": True},
         "basic": {"slots": 3, "sips_per_month": 4, "lite": False},
@@ -106,6 +127,23 @@ class Settings(BaseSettings):
 
     def model_for(self, stage: str) -> str:
         return getattr(self, f"model_{stage}")
+
+    def paddle_prices(self) -> dict[tuple[str, str], str]:
+        """(plan, interval) -> Paddle price id, only for configured prices."""
+        prices = {
+            ("basic", "month"): self.paddle_price_basic_month,
+            ("basic", "year"): self.paddle_price_basic_year,
+            ("plus", "month"): self.paddle_price_plus_month,
+            ("plus", "year"): self.paddle_price_plus_year,
+        }
+        return {k: v for k, v in prices.items() if v}
+
+    @property
+    def billing_enabled(self) -> bool:
+        return bool(
+            self.paddle_api_key and self.paddle_webhook_secret and self.paddle_client_token
+            and len(self.paddle_prices()) == 4
+        )
 
 
 @lru_cache

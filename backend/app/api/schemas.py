@@ -24,7 +24,16 @@ class UsageOut(BaseModel):
     max_cost_per_day_usd: float
 
 
+class SubscriptionOut(BaseModel):
+    status: str  # active, trialing, past_due
+    interval: str
+    current_period_end: datetime | None
+    cancel_at_period_end: bool
+
+
 class PlanOut(BaseModel):
+    billing_enabled: bool
+    subscription: SubscriptionOut | None
     plan: str
     on_trial: bool
     plan_expires_at: datetime | None
@@ -43,6 +52,27 @@ class PlanInfo(BaseModel):
     sips_per_month: int
     lite: bool
     hours_per_month: float
+    # Cents, tax included, per interval ("month", "year"); empty for the free plan.
+    prices: dict[str, int]
+
+
+class CheckoutIn(BaseModel):
+    plan: Literal["basic", "plus"]
+    interval: Literal["month", "year"]
+    # Express request to start before the 14-day withdrawal period ends.
+    consent: StrictBool
+
+
+class CheckoutOut(BaseModel):
+    transaction_id: str
+    client_token: str
+    environment: str
+    success_url: str
+
+
+class PortalOut(BaseModel):
+    url: str
+    cancel_url: str | None
 
 
 class TokenOut(BaseModel):

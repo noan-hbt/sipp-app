@@ -4,12 +4,14 @@ import asyncio
 import logging
 import signal
 
+from app import billing
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
 from app.llm.client import OpenRouterClient
 from app.llm.record import make_llm
 from app.models import Job, Lesson, Program, Sip
+from app.paddle import PaddleClient
 from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
@@ -133,8 +135,26 @@ async def main() -> None:
                 except TimeoutError:
                     pass
 
+    async def billing_sync() -> None:
+        """Catches webhooks Paddle never delivered; idempotent, so several workers are fine."""
+        paddle = PaddleClient()
+        while not stop.is_set():
+            if s.billing_enabled:
+                try:
+                    async with SessionLocal() as session:
+                        n = await billing.reconcile(session, paddle)
+                    if n:
+                        log.info("billing: %d subscriptions re-read from Paddle", n)
+                except Exception:  # noqa: BLE001
+                    log.exception("billing reconciliation failed")
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=6 * 3600)
+            except TimeoutError:
+                pass
+
     log.info("worker started (concurrency=%d)", s.worker_concurrency)
     tasks = [asyncio.create_task(slot()) for _ in range(s.worker_concurrency)]
+    tasks.append(asyncio.create_task(billing_sync()))
     await stop.wait()
     log.info("shutdown: releasing in-flight jobs")
     for t in tasks:

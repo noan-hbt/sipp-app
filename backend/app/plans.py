@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.billing import live_subscription
 from app.config import get_settings
 from app.models import Program, ProgramStatus, Sip, SipStatus, User, utcnow
 
@@ -62,8 +63,19 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
     )
     used = (standalone or 0) + (programs or 0)
     this_month = user.gen_count if user.gen_month == _month() else 0
-    on_trial = user.trial_started_at is not None and name == s.trial_plan and user.plan_expires_at is not None
+    sub = await live_subscription(session, user.id) if name != "free" else None
+    on_trial = (
+        sub is None and user.trial_started_at is not None and name == s.trial_plan
+        and user.plan_expires_at is not None
+    )
     return {
+        "billing_enabled": s.billing_enabled,
+        "subscription": None if sub is None else {
+            "status": sub.status,
+            "interval": sub.interval,
+            "current_period_end": sub.current_period_end,
+            "cancel_at_period_end": sub.cancel_at_period_end,
+        },
         "plan": name,
         "on_trial": on_trial,
         "plan_expires_at": user.plan_expires_at if name != "free" else None,

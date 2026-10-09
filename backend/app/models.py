@@ -39,6 +39,8 @@ class User(TimestampMixin, Base):
     # New Sips generated in `gen_month` ("YYYY-MM"); kept even if the Sip is deleted.
     gen_month: Mapped[str | None] = mapped_column(String(7))
     gen_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Paddle customer, reused across subscriptions so invoices stay on one customer.
+    billing_customer_id: Mapped[str | None] = mapped_column(String(64), index=True)
 
 
 class RefreshToken(Base):
@@ -239,4 +241,54 @@ class LLMCall(Base):
     ok: Mapped[bool] = mapped_column(default=True)
     error: Mapped[str | None] = mapped_column(Text)
     reserved_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class BillingSubscription(TimestampMixin, Base):
+    """Paddle's subscription as last seen. Paddle is the source of truth; this drives access."""
+
+    __tablename__ = "billing_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # sub_...
+    # Kept after account deletion (accounting), detached from the user.
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    customer_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    plan: Mapped[str] = mapped_column(String(20))
+    interval: Mapped[str] = mapped_column(String(10))  # month | year
+    # Paddle status: active, trialing, past_due, paused, canceled
+    status: Mapped[str] = mapped_column(String(20), index=True)
+    current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancel_at_period_end: Mapped[bool] = mapped_column(default=False, server_default=false())
+    past_due_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # occurred_at of the newest state applied: older events never overwrite it.
+    event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BillingRecord(TimestampMixin, Base):
+    """Payments (txn_) and refunds or chargebacks (adj_), for support and reconciliation."""
+
+    __tablename__ = "billing_records"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))  # transaction | adjustment
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    subscription_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    transaction_id: Mapped[str | None] = mapped_column(String(64))
+    action: Mapped[str | None] = mapped_column(String(30))  # refund, chargeback, credit...
+    status: Mapped[str] = mapped_column(String(30))
+    total: Mapped[int | None] = mapped_column(Integer)  # minor units, tax included
+    tax: Mapped[int | None] = mapped_column(Integer)
+    currency: Mapped[str | None] = mapped_column(String(3))
+    invoice_number: Mapped[str | None] = mapped_column(String(64))
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BillingEvent(Base):
+    """Webhook deliveries already handled (Paddle delivers at least once)."""
+
+    __tablename__ = "billing_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # evt_...
+    type: Mapped[str] = mapped_column(String(60))
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
