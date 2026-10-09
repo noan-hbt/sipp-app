@@ -1,29 +1,31 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'motion/react'
-import { useEffect, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { TabBar } from './components/TabBar'
 import { Api, getTokens, onTokens } from './lib/api'
 import { play } from './lib/sound'
 import { Auth } from './screens/Auth'
-import { Demo } from './screens/Demo'
 import { Generating } from './screens/Generating'
 import { Home } from './screens/Home'
-import { Lesson } from './screens/Lesson'
-import { LessonDone } from './screens/LessonDone'
 import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
 import { Offers } from './screens/Offers'
 import { BillingReturn } from './screens/BillingReturn'
-import { BlockGallery } from './screens/BlockGallery'
 import { Profile } from './screens/Profile'
 import { ProgramView } from './screens/ProgramView'
 import { Progress } from './screens/Progress'
-import { Review } from './screens/Review'
 import { SipMap } from './screens/SipMap'
 import { Understood } from './screens/Understood'
 import { Welcome } from './screens/Welcome'
 import { track } from './lib/telemetry'
+
+// The lesson player carries the block renderers and code highlighting: loaded on first use.
+const Lesson = lazy(() => import('./screens/Lesson').then((m) => ({ default: m.Lesson })))
+const LessonDone = lazy(() => import('./screens/LessonDone').then((m) => ({ default: m.LessonDone })))
+const Review = lazy(() => import('./screens/Review').then((m) => ({ default: m.Review })))
+const Demo = lazy(() => import('./screens/Demo').then((m) => ({ default: m.Demo })))
+const BlockGallery = lazy(() => import('./screens/BlockGallery').then((m) => ({ default: m.BlockGallery })))
 
 function useLoggedIn() {
   return useSyncExternalStore(onTokens, () => getTokens() !== null)
@@ -68,6 +70,7 @@ export default function App() {
   return (
     <div className="app">
       <AnimatePresence mode="popLayout" initial={false}>
+        <Suspense fallback={null}>
         <Routes location={location} key={location.pathname}>
           {!loggedIn ? (
             <>
@@ -99,6 +102,7 @@ export default function App() {
             </>
           )}
         </Routes>
+        </Suspense>
       </AnimatePresence>
       {loggedIn && <TabBar />}
     </div>

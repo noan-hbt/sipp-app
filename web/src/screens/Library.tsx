@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
@@ -10,9 +10,10 @@ import { illustration } from '../components/SipIcon'
 import { Icon } from '../components/ui'
 import { Api, type Plan, type Program, type SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
-import { Notebook } from './Notebook'
 import { chapterState, nextChapter } from './ProgramView'
 import { HScroll } from '../components/HScroll'
+
+const Notebook = lazy(() => import('./Notebook').then((m) => ({ default: m.Notebook })))
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
@@ -96,7 +97,9 @@ export function Library() {
       </div>
 
       {tab === 'notions' ? (
-        <Notebook />
+        <Suspense fallback={null}>
+          <Notebook />
+        </Suspense>
       ) : (
         <div className="scroll" style={{ padding: '10px 16px 130px' }}>
           {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ta bibliothèque.' : 'Impossible d’actualiser ta bibliothèque. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
