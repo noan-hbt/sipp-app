@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { SipIcon } from '../components/SipIcon'
-import { Confetti } from './ProgramView'
+import { RevealLines } from '../components/motion'
+import { sipPalette, topicArt } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
@@ -17,6 +17,7 @@ const IDEAS = [
   { label: 'Mieux dormir', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir' },
   { label: 'Parler italien', hint: 'Les phrases du quotidien', text: 'Je veux tenir une conversation simple en italien' },
   { label: 'Coder en Python', hint: 'Les bases, pas à pas', text: 'Je veux apprendre les bases de la programmation en Python' },
+  { label: 'L’univers', hint: 'Du Big Bang aux trous noirs', text: 'Je veux comprendre l’univers, du Big Bang aux trous noirs' },
 ]
 
 /** One-tap details that help the AI aim right; each appends or removes its phrase. */
@@ -131,36 +132,35 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           {Icon.close}
         </IconButton>
         {!guest && plan.data && plan.data.sips_per_month < 1000 && (
-          <span style={{ padding: '7px 13px', borderRadius: 15, background: 'var(--surface)', fontSize: 14, fontWeight: 500, color: 'var(--muted)' }}>
+          <span style={{ height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--surface)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: plan.data.sips_per_month > plan.data.sips_this_month ? 'var(--mint-lip)' : 'var(--rose-ink)' }} />
             {remaining(plan.data.sips_per_month - plan.data.sips_this_month)}
           </span>
         )}
       </header>
 
       <div className="scroll" style={{ padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
-          <div style={{ position: 'relative', width: 128, height: 128, borderRadius: 64, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
-            <Confetti seed={1} />
-            <Mascot size={92} />
-          </div>
-          <h1 className="title-xl" style={{ fontSize: 28 }}>
-            Qu’est-ce qu’on apprend ?
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
+          <h1 className="display" style={{ fontSize: 42, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={[{ text: 'Qu’est-ce' }, { text: 'qu’on apprend ?', color: 'var(--primary)' }]} />
           </h1>
-          <p className="muted" style={{ fontSize: 16, lineHeight: 1.45, maxWidth: 320 }}>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
             Ton sujet, ton niveau, et pourquoi. Je te prépare un Sip ou un programme sur mesure.
-          </p>
-        </motion.div>
+          </motion.p>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 14 }}
           animate={create.isError ? { x: [0, -8, 8, -4, 0], opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="card wish-box"
-          style={{ borderRadius: 24, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}
+          className="wish-box"
+          style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--dock)', color: 'var(--dock-ink)' }}
         >
+          <label htmlFor="wish" className="kicker" style={{ color: 'var(--sun)' }}>
+            Je veux…
+          </label>
           <div style={{ position: 'relative' }}>
-            <span style={{ fontSize: 19, fontWeight: 500, color: 'var(--faint)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">
-              {!text && 'Je veux '}
+            <span className="display" style={{ fontSize: 23, lineHeight: 1.2, color: 'var(--dock-muted)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">
               {!text && (
                 <AnimatePresence mode="wait">
                   <motion.span key={ph} initial={{ opacity: 0 }} animate={{ opacity: 0.7 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
@@ -181,10 +181,11 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                 setText(e.target.value)
                 if (create.isError) create.reset()
               }}
-              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 19, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink)', padding: 0, fontFamily: 'inherit' }}
+              className="display"
+              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 23, lineHeight: 1.2, color: 'var(--dock-ink)', caretColor: 'var(--primary)', padding: 0 }}
             />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10, borderTop: '1.5px solid var(--bg-deep)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {DETAILS.map((d) => {
               const on = hasDetail(text, d.text)
               return (
@@ -203,14 +204,15 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                   }}
                   aria-pressed={on}
                   style={{
-                    height: 32,
+                    height: 34,
                     padding: '0 12px',
-                    borderRadius: 16,
+                    borderRadius: 17,
                     border: 'none',
-                    background: on ? 'var(--primary)' : 'var(--bg-deep)',
-                    color: on ? '#fff' : 'var(--ink-soft)',
+                    background: on ? 'var(--primary)' : 'rgba(255,255,255,.1)',
+                    color: on ? '#fff' : 'var(--dock-ink)',
                     fontSize: 13,
-                    fontWeight: 600,
+                    fontWeight: on ? 700 : 600,
+                    transition: 'background .2s',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
@@ -238,30 +240,28 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           )}
         </AnimatePresence>
 
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span className="display" style={{ fontSize: 18, margin: '0 6px' }}>
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 10, rowGap: 16 }}>
+          <h2 className="display" style={{ gridColumn: '1 / -1', fontSize: 20, margin: '4px 4px 0' }}>
             En panne d’idée ?
-          </span>
-          {IDEAS.map((idea, i) => (
-            <motion.button
-              key={idea.label}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.15 + i * 0.05 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => pick(idea.text)}
-              style={{ border: 'none', borderRadius: 22, padding: '10px 14px 10px 10px', background: 'var(--surface)', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12 }}
-            >
-              <SipIcon text={idea.text} size={46} />
-              <span style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{idea.label}</span>
-                <span style={{ fontSize: 13, color: 'var(--faint)' }}>{idea.hint}</span>
-              </span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </motion.button>
-          ))}
+          </h2>
+          {IDEAS.map((idea, i) => {
+            const pal = sipPalette(idea.text)
+            return (
+              <motion.button
+                key={idea.label}
+                initial={{ opacity: 0, y: 16, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 20, delay: 0.2 + i * 0.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => pick(idea.text)}
+                style={{ position: 'relative', border: 'none', height: 124, borderRadius: 24, padding: 12, background: pal.bg, color: 'var(--ink)', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}
+              >
+                <img src={topicArt(idea.text)} alt="" width={72} height={72} style={{ position: 'absolute', top: -10, right: -4 }} draggable={false} />
+                <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.15 }}>{idea.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: pal.ink, lineHeight: 1.25 }}>{idea.hint}</span>
+              </motion.button>
+            )
+          })}
         </section>
       </div>
 

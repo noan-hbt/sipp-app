@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HabitSettings } from '../components/HabitSettings'
 import { Mascot } from '../components/Mascot'
+import { illustration } from '../components/SipIcon'
 import { CountUp } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
@@ -88,11 +89,16 @@ export function Profile() {
   return (
     <Screen kind="fade">
       <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 6px', gap: 14 }}>
-        <span style={{ width: 66, height: 66, borderRadius: 33, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-          <Mascot size={52} />
-        </span>
+        <motion.span
+          initial={{ scale: 0.5, rotate: -15 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 14 }}
+          style={{ width: 72, height: 72, borderRadius: 36, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}
+        >
+          <Mascot size={56} />
+        </motion.span>
         <div style={{ minWidth: 0 }}>
-          <h1 className="display" style={{ fontSize: 32 }}>Moi</h1>
+          <h1 className="display" style={{ fontSize: 36, lineHeight: 1 }}>Moi</h1>
           <p className="muted" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
             {me.data?.email ?? (me.isError ? 'Ton email est indisponible pour le moment.' : 'Chargement…')}
           </p>
@@ -104,9 +110,9 @@ export function Profile() {
           <motion.section variants={item} aria-label="Tes statistiques">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {[
-                { label: stats.data?.streak_days === 1 ? 'jour de série' : 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, bg: 'var(--peach-soft)', ink: 'var(--peach-ink)' },
-                { label: stats.data?.lessons_completed === 1 ? 'leçon' : 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--mint-ink)'), bg: 'var(--mint)', ink: 'var(--mint-ink)' },
-                { label: stats.data?.total_stars === 1 ? 'étoile' : 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, bg: 'var(--butter)', ink: 'var(--butter-ink)' },
+                { label: stats.data?.streak_days === 1 ? 'jour de série' : 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, bg: 'var(--butter)', ink: 'var(--butter-ink)' },
+                { label: stats.data?.lessons_completed === 1 ? 'leçon' : 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--peach-ink)'), bg: 'var(--peach-soft)', ink: 'var(--peach-ink)' },
+                { label: stats.data?.total_stars === 1 ? 'étoile' : 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, bg: 'var(--lavender)', ink: 'var(--lavender-ink)' },
               ].map(({ label, value, icon, bg, ink }, i) => (
                 <div key={i} style={{ borderRadius: 22, padding: 14, display: 'flex', flexDirection: 'column', gap: 6, background: bg }}>
                   <span aria-hidden="true" style={{ display: 'grid' }}>{icon}</span>
@@ -123,26 +129,30 @@ export function Profile() {
             </button>
           </motion.section>
 
-          <motion.section variants={item} aria-label="Ton abonnement" style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--lavender-strong)', position: 'relative', overflow: 'hidden' }}>
-            <span style={{ position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: 60, background: 'rgba(255,255,255,.18)' }} />
-            <svg width="26" height="26" viewBox="0 0 24 24" style={{ position: 'absolute', right: 22, top: 20 }} aria-hidden="true">
-              <path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="var(--sun)" />
-            </svg>
+          <motion.section variants={item} aria-label="Ton abonnement" style={{ borderRadius: 30, padding: 20, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', position: 'relative', overflow: 'hidden' }}>
+            <motion.span
+              aria-hidden="true"
+              initial={{ scale: 0.3 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 120, damping: 16, delay: 0.2 }}
+              style={{ position: 'absolute', right: -40, top: -40, width: 132, height: 132, borderRadius: 66, background: 'var(--primary)' }}
+            />
+            <img className="float" src={illustration('scene-premium')} alt="" width={84} height={84} style={{ position: 'absolute', right: 0, top: 0 }} />
             {subscription ? (
               <>
-                <div style={{ position: 'relative' }}>
-                  <span className="pill-tag" style={{ display: 'inline-block', background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 12, letterSpacing: '.04em' }}>
-                    {subscription.on_trial ? 'ESSAI' : 'OFFRE'} {planNames[subscription.plan].toUpperCase()}
+                <div style={{ position: 'relative', paddingRight: 92 }}>
+                  <span className="kicker" style={{ color: 'var(--sun)' }}>
+                    {subscription.on_trial ? 'Essai' : 'Offre'} {planNames[subscription.plan]}
                   </span>
-                  <h2 className="title-m" style={{ marginTop: 8 }}>{subscription.on_trial ? 'Ton essai est en cours' : planNames[subscription.plan]}</h2>
+                  <h2 className="title-m" style={{ marginTop: 6 }}>{subscription.on_trial ? 'Ton essai est en cours' : planNames[subscription.plan]}</h2>
                   {subscription.on_trial && subscription.plan_expires_at && (
-                    <p style={{ fontSize: 14, marginTop: 2, color: 'var(--lavender-deep)' }}>
+                    <p style={{ fontSize: 14, marginTop: 2, color: 'var(--dock-muted)' }}>
                       Essai gratuit · jusqu’au {new Date(subscription.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                     </p>
                   )}
                 </div>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--lavender-deep)', display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--dock-muted)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Bibliothèque</span>
                     <span>{subscription.slots_used} / {subscription.slots} places</span>
                   </p>
@@ -153,13 +163,13 @@ export function Profile() {
                     aria-valuemax={100}
                     aria-valuenow={Math.round(slotsProgress * 100)}
                     aria-valuetext={`${subscription.slots_used}/${subscription.slots} emplacements`}
-                    style={{ height: 8, borderRadius: 4, background: 'var(--frost)', overflow: 'hidden' }}
+                    style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.14)', overflow: 'hidden' }}
                   >
-                    <motion.div className="liquid" initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--ink)' }} />
+                    <motion.div className="liquid" initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--sun)' }} />
                   </div>
                 </div>
-                <p style={{ position: 'relative', fontSize: 14, color: 'var(--lavender-deep)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
-                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: 'var(--lavender-deep)' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
+                <p style={{ position: 'relative', fontSize: 14, color: 'var(--dock-muted)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
+                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: 'var(--dock-muted)' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
                 {subscription.subscription && (() => {
                   const sub = subscription.subscription
                   const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '')
@@ -178,27 +188,27 @@ export function Profile() {
                           {sub.status === 'past_due' ? 'Mettre à jour le paiement' : 'Gérer'}
                         </Button>
                         {!sub.cancel_at_period_end && (
-                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48 }}>
+                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}>
                             Résilier
                           </Button>
                         )}
                       </div>
-                      {portal.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>{apiErrorMessage(portal.error)}</p>}
+                      {portal.isError && <p role="alert" style={{ color: 'var(--coral)', fontSize: 14 }}>{apiErrorMessage(portal.error)}</p>}
                     </div>
                   )
                 })()}
                 {subscription.trial_available ? (
-                  <Button variant="soft" onClick={() => trial.mutate()} disabled={trial.isPending || busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52, boxShadow: 'none' }}>
+                  <Button onClick={() => trial.mutate()} disabled={trial.isPending || busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52 }}>
                     {trial.isPending ? 'Activation de ton essai…' : `Essayer Essentiel gratuitement · ${subscription.trial_days} jours`}
                   </Button>
                 ) : null}
-                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '4px 0', fontSize: 15, fontWeight: 600, color: 'var(--ink)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                  Voir les offres
+                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '6px 0', fontSize: 15, fontWeight: 700, color: 'var(--dock-ink)' }}>
+                  Voir les offres →
                 </button>
-                {trial.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>Ton essai n’a pas pu démarrer. Réessaie dans un instant.</p>}
+                {trial.isError && <p role="alert" style={{ color: 'var(--coral)', fontSize: 14 }}>Ton essai n’a pas pu démarrer. Réessaie dans un instant.</p>}
               </>
             ) : (
-              <p role="status" className="muted">{plan.isError ? 'Ton abonnement est indisponible pour le moment.' : 'Chargement de ton abonnement…'}</p>
+              <p role="status" style={{ position: 'relative', color: 'var(--dock-muted)' }}>{plan.isError ? 'Ton abonnement est indisponible pour le moment.' : 'Chargement de ton abonnement…'}</p>
             )}
           </motion.section>
 

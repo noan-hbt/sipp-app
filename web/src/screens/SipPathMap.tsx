@@ -40,8 +40,9 @@ const C = {
   butterInk: "var(--map-butterInk)",
   star: "var(--map-star)",
 };
-const RAISED = `6px 8px 16px ${C.shadow}, -6px -6px 14px var(--map-hi)`;
-const RAISED_SM = `4px 4px 10px ${C.shadow}, -4px -4px 10px var(--map-hi)`;
+// Flat v10: nodes sit on the path with a ring of background around them, chips have no relief.
+const RAISED = `0 0 0 6px ${C.bg}`;
+const RAISED_SM = "none";
 const FONT = "'Nunito', ui-rounded, system-ui, sans-serif";
 
 const MODULE_COLORS = [
@@ -1007,7 +1008,7 @@ function MapNode({
         style={{
           ...common,
           background: C.peach,
-          boxShadow: `0 7px 0 ${C.peachLip}, 8px 14px 22px var(--map-shadow2), -6px -6px 14px var(--map-hi)`,
+          boxShadow: `0 7px 0 ${C.peachLip}, 0 0 0 10px color-mix(in srgb, ${C.peach} 20%, transparent)`,
         }}
       >
         {Icon.play}

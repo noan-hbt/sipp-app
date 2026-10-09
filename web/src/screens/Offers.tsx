@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
-import { Button, Icon, IconButton } from '../components/ui'
+import { RevealLines } from '../components/motion'
+import { Button, Icon } from '../components/ui'
 import { Api, apiErrorMessage, type Plan, type PlanInfo } from '../lib/api'
 import { openCheckout } from '../lib/paddle'
 import { play } from '../lib/sound'
@@ -28,6 +29,14 @@ const perks = (p: PlanInfo) => [
   ...(p.features?.quiz ? ['Quiz de fin de module'] : []),
   ...(p.features ? [p.features.notes ? `${p.features.notes} passages dans ton carnet` : 'Carnet de notes illimité'] : []),
   ...(p.features ? [`${p.features.help_per_day} réexplications par jour`] : []),
+]
+
+const PERK_TONES = [
+  ['var(--peach-soft)', 'var(--peach-ink)'],
+  ['var(--lavender)', 'var(--lavender-ink)'],
+  ['var(--mint)', 'var(--mint-ink)'],
+  ['var(--butter)', 'var(--butter-ink)'],
+  ['var(--sky)', 'var(--sky-ink)'],
 ]
 
 /** The plans side by side: subscribe through Paddle, or try the paid plan once for free. */
@@ -81,45 +90,65 @@ export function Offers() {
 
   return (
     <Screen kind="modal">
-      <header className="topbar">
-        <IconButton label="Fermer" onClick={() => nav(-1)}>
-          {Icon.close}
-        </IconButton>
-      </header>
-
-      <div className="scroll" style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src={illustration('scene-celebrate')} alt="" width={104} height={104} style={{ flexShrink: 0 }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <h1 className="title-l">Apprends tout ce qui te fait envie</h1>
-            <p className="muted" style={{ fontSize: 15 }}>
-              {mine.data?.on_trial && mine.data.plan_expires_at
-                ? `Ton essai court jusqu’au ${new Date(mine.data.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
-                : 'Change ou arrête quand tu veux.'}
-            </p>
-          </div>
+      <div className="scroll" style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 24 }}>
+        <div style={{ position: 'relative', overflow: 'hidden', flexShrink: 0, background: 'var(--dock)', color: 'var(--dock-ink)', borderRadius: '0 0 40px 40px', padding: 'calc(var(--safe-top) + 14px) 20px 26px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <motion.span
+            aria-hidden="true"
+            initial={{ scale: 0.3 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 110, damping: 15 }}
+            style={{ position: 'absolute', right: -60, top: 'calc(var(--safe-top) + 20px)', width: 240, height: 240, borderRadius: 120, background: 'var(--primary)' }}
+          />
+          <motion.img
+            src={illustration('scene-premium')}
+            alt=""
+            width={164}
+            height={164}
+            initial={{ scale: 0.3, rotate: -20, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 13, delay: 0.15 }}
+            style={{ position: 'absolute', right: -4, top: 'calc(var(--safe-top) + 56px)' }}
+          />
+          <motion.button
+            aria-label="Fermer"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => nav(-1)}
+            style={{ position: 'relative', width: 44, height: 44, borderRadius: 22, border: 'none', background: 'rgba(255,255,255,.12)', color: 'var(--dock-ink)', display: 'grid', placeItems: 'center' }}
+          >
+            {Icon.close}
+          </motion.button>
+          <h1 className="display" style={{ position: 'relative', marginTop: 12, maxWidth: 210, fontSize: 40, lineHeight: 0.96, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={[{ text: 'Apprends' }, { text: 'sans' }, { text: 'compter.', color: 'var(--sun)' }]} delay={0.1} />
+          </h1>
+          <p style={{ position: 'relative', maxWidth: 200, fontSize: 15, lineHeight: 1.4, color: 'var(--dock-muted)' }}>
+            {mine.data?.on_trial && mine.data.plan_expires_at
+              ? `Ton essai court jusqu’au ${new Date(mine.data.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
+              : 'Parcours complets, quiz, écoute. Change ou arrête quand tu veux.'}
+          </p>
+          {selling && (
+            <div role="radiogroup" aria-label="Fréquence de paiement" style={{ position: 'relative', alignSelf: 'flex-start', display: 'flex', gap: 2, padding: 4, borderRadius: 24, background: 'rgba(255,255,255,.1)', marginTop: 4 }}>
+              {(['month', 'year'] as const).map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="radio"
+                  aria-checked={interval === i}
+                  onClick={() => setPeriod(i)}
+                  style={{
+                    position: 'relative', border: 'none', borderRadius: 20, minHeight: 40, padding: '0 14px', fontSize: 14, fontWeight: 700,
+                    background: 'transparent', color: interval === i ? '#1d1a17' : 'var(--dock-muted)', display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {interval === i && <motion.span layoutId="interval-pill" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: '#fff' }} />}
+                  <span style={{ position: 'relative' }}>{i === 'month' ? 'Mensuel' : 'Annuel'}</span>
+                  {i === 'year' && <span style={{ position: 'relative', height: 22, padding: '0 8px', borderRadius: 11, background: 'var(--mint-lip)', color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center' }}>2 mois offerts</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {selling && (
-          <div role="radiogroup" aria-label="Fréquence de paiement" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4, borderRadius: 16, background: 'var(--bg-deep)' }}>
-            {(['month', 'year'] as const).map((i) => (
-              <button
-                key={i}
-                type="button"
-                role="radio"
-                aria-checked={interval === i}
-                onClick={() => setPeriod(i)}
-                style={{
-                  border: 'none', borderRadius: 12, minHeight: 44, fontSize: 15, fontWeight: 600,
-                  background: interval === i ? 'var(--surface)' : 'transparent',
-                  color: interval === i ? 'var(--ink)' : 'var(--muted)',
-                }}
-              >
-                {i === 'month' ? 'Mensuel' : 'Annuel · 2 mois offerts'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div style={{ padding: '6px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
         {(plans.data ?? []).map((p, i) => {
           const isMine = p.name === current
@@ -129,9 +158,10 @@ export function Offers() {
           return (
             <motion.section
               key={p.name}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 + i * 0.06 }}
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              whileTap={pickable ? { scale: 0.98 } : undefined}
+              transition={{ type: 'spring', stiffness: 280, damping: 22, delay: 0.15 + i * 0.07 }}
               aria-label={`Offre ${NAMES[p.name]}`}
               role={pickable ? 'radio' : undefined}
               aria-checked={pickable ? p.name === chosen : undefined}
@@ -140,35 +170,35 @@ export function Offers() {
               onKeyDown={pickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setChosen(p.name as Paid) } } : undefined}
               style={{
                 position: 'relative',
-                borderRadius: 22,
-                padding: '14px 16px',
+                borderRadius: 26,
+                padding: 16,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
+                gap: 10,
                 cursor: pickable ? 'pointer' : undefined,
-                background: highlight ? 'var(--primary-soft)' : 'var(--surface)',
-                boxShadow: highlight ? 'inset 0 0 0 2.5px var(--primary)' : 'inset 0 0 0 2px var(--line)',
-                marginTop: highlight && canTry ? 6 : 0,
+                background: 'var(--surface)',
+                boxShadow: highlight ? 'inset 0 0 0 3px var(--primary)' : 'none',
+                marginTop: p.name === 'basic' && canTry ? 8 : 0,
+                transition: 'box-shadow .2s',
               }}
             >
               {p.name === 'basic' && canTry && (
-                <span style={{ position: 'absolute', top: -11, right: 16, padding: '4px 10px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+                <span className="kicker" style={{ position: 'absolute', top: -11, left: 16, height: 22, padding: '0 10px', borderRadius: 11, background: 'var(--primary)', color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center' }}>
                   {mine.data?.trial_days} jours offerts
                 </span>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 17, fontWeight: 700 }}>{NAMES[p.name]}</span>
-                <span style={{ fontSize: 14, fontWeight: 600, color: isMine ? 'var(--primary-ink)' : 'var(--muted)' }}>
+                <span className="display" style={{ fontSize: 24 }}>{NAMES[p.name]}</span>
+                <span className="display" style={{ fontSize: 18, color: isMine ? 'var(--primary)' : 'var(--ink)' }}>
                   {isMine ? (mine.data?.on_trial ? 'Ton essai' : 'Ton offre') : priceLabel(p)}
                 </span>
               </div>
               {selling && interval === 'year' && yearly != null && (
                 <span className="muted" style={{ fontSize: 13, marginTop: -6 }}>soit {euros(Math.round(yearly / 12))}/mois</span>
               )}
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {perks(p).map((t) => (
-                  <li key={t} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 15, lineHeight: 1.35, color: 'var(--ink-soft)' }}>
-                    {Icon.check(15, highlight ? 'var(--primary-ink)' : 'var(--mint-ink)')}
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {perks(p).map((t, j) => (
+                  <li key={t} style={{ padding: '6px 10px', borderRadius: 14, fontSize: 13, fontWeight: 600, lineHeight: 1.3, background: PERK_TONES[j % PERK_TONES.length][0], color: PERK_TONES[j % PERK_TONES.length][1] }}>
                     {t}
                   </li>
                 ))}
@@ -181,6 +211,7 @@ export function Offers() {
             Ton essai n’a pas pu démarrer. Réessaie dans un instant.
           </p>
         )}
+        </div>
       </div>
 
       <div className="bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

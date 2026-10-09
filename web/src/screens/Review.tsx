@@ -5,8 +5,9 @@ import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { RichText } from '../components/RichText'
+import { CountUp, LiquidBar } from '../components/motion'
 import { Screen } from '../components/Screen'
-import { SipIcon } from '../components/SipIcon'
+import { topicArt } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type Concept } from '../lib/api'
 import { haptic, play } from '../lib/sound'
@@ -94,11 +95,17 @@ export function Review() {
     const empty = cards.length === 0
     const noNotions = empty && stats.data?.concepts === 0
     return (
-      <Screen kind="fade">
+      <Screen kind="fade" bg={empty ? undefined : 'var(--lavender)'}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0 32px', textAlign: 'center' }}>
           <motion.div initial={{ scale: 0, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }}>
             <Mascot mood={empty ? 'hello' : 'bravo'} size={110} />
           </motion.div>
+          {!empty && (
+            <span className="hero-num" style={{ fontSize: 88 }}>
+              <CountUp value={knew} delay={0.3} />
+              <span style={{ fontSize: 44, color: 'var(--lavender-ink)' }}>/{cards.length}</span>
+            </span>
+          )}
           <h1 className="title-xl">{empty ? (noNotions ? 'Pas encore de notions' : 'Rien à réviser') : 'Révision finie !'}</h1>
           <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
             {empty
@@ -118,53 +125,48 @@ export function Review() {
   }
 
   return (
-    <Screen kind="modal">
+    <Screen kind="modal" bg="var(--lavender)">
       <header className="topbar">
         <IconButton label="Quitter la révision" onClick={close}>
           {Icon.close}
         </IconButton>
-        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`, gap: 4 }}>
-          {cards.map((c, j) => (
-            <motion.span key={c.id} animate={{ background: j < i ? 'var(--primary)' : j === i ? 'var(--peach-soft)' : 'var(--track)' }} style={{ height: 8, borderRadius: 4 }} />
-          ))}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>
+            Révision · {i + 1} sur {cards.length}
+          </span>
+          <span style={{ display: 'flex' }}>
+            <LiquidBar value={i / cards.length} height={8} color="var(--lavender-ink)" track="var(--frost)" delay={0} label="Avancement de la révision" />
+          </span>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)', minWidth: 34, textAlign: 'right' }}>
-          {i + 1}/{cards.length}
-        </span>
       </header>
       {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, 'Tes cartes n’ont pas pu être actualisées. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />}
 
-      <div style={{ padding: '10px 20px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <h1 className="title-l" style={{ fontSize: 25 }}>
-          {choices ? 'Quelle définition ?' : 'Tu te souviens ?'}
-        </h1>
-        <p className="muted" style={{ fontSize: 15 }}>
-          Vue {ago(card.last_reviewed_at ?? card.learned_at)} dans « {card.sip_title} »
-        </p>
-      </div>
-
-      <div style={{ flex: 1, padding: '18px 20px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div style={{ position: 'relative', flex: 1, maxHeight: 480 }}>
-          {i + 2 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 22, right: 22, top: 22, bottom: -14, borderRadius: 28, background: 'var(--bg-deep)' }} />}
-          {i + 1 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 11, right: 11, top: 11, bottom: -7, borderRadius: 28, background: 'var(--peach-soft)' }} />}
+      <div style={{ flex: 1, padding: '30px 22px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ position: 'relative', flex: 1, maxHeight: 520 }}>
+          {i + 2 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 18, right: 18, top: -16, bottom: 26, borderRadius: 32, background: 'var(--lavender-strong)', transform: 'rotate(4deg)' }} />}
+          {i + 1 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 8, right: 8, top: -8, bottom: 16, borderRadius: 32, background: 'var(--surface)', opacity: 0.6, transform: 'rotate(-3deg)' }} />}
           <AnimatePresence mode="popLayout">
             <motion.article
               key={card.id}
-              initial={{ opacity: 0, y: 24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, x: -60, rotate: -4 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              initial={{ opacity: 0, y: 30, scale: 0.92, rotate: 3 }}
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, x: -140, rotate: -12 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
               className="scroll"
-              style={{ position: 'absolute', inset: 0, borderRadius: 28, background: 'var(--surface)', padding: 22, display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 6px 20px rgba(29,26,23,.06)' }}
+              style={{ position: 'absolute', inset: '0 0 8px', borderRadius: 32, background: 'var(--surface)', padding: 22, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 40px rgba(46,38,96,.14)' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <SipIcon text={card.sip_title} size={44} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--peach-ink)' }}>Notion</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src={topicArt(card.sip_title)} alt="" width={36} height={36} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', lineHeight: 1.3 }}>
+                  {card.sip_title} · vue {ago(card.last_reviewed_at ?? card.learned_at)}
+                </span>
               </div>
-              <h2 className="display" style={{ fontSize: 30, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
+              <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>
+                {choices ? 'Quelle définition ?' : 'Tu te souviens ?'}
+              </span>
+              <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
                 <RichText text={card.name} />
-              </h2>
-              <div style={{ height: 1.5, background: 'var(--bg-deep)', flexShrink: 0 }} />
+              </h1>
               {choices ? (
                 <div role="radiogroup" aria-label="Choisis la bonne définition" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {choices.map((o) => {
@@ -185,7 +187,7 @@ export function Review() {
                           if (right) setTimeout(() => rate(true), 700)
                         }}
                         style={{
-                          border: 'none', borderRadius: 18, padding: '12px 14px', textAlign: 'left', fontSize: 15, lineHeight: 1.4, fontWeight: 500, color: 'var(--ink)',
+                          border: 'none', borderRadius: 20, padding: '12px 14px', textAlign: 'left', fontSize: 15, lineHeight: 1.4, fontWeight: 500, color: 'var(--ink)',
                           background: state === 'right' ? 'var(--mint)' : state === 'wrong' ? 'var(--rose)' : 'var(--bg-deep)',
                           boxShadow: state === 'right' ? 'inset 0 0 0 2.5px var(--mint-strong)' : state === 'wrong' ? 'inset 0 0 0 2.5px var(--coral)' : 'none',
                           opacity: picked && state === 'idle' ? 0.55 : 1,
@@ -199,7 +201,8 @@ export function Review() {
               ) : (
               <AnimatePresence mode="wait" initial={false}>
                 {shown ? (
-                  <motion.div key="a" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <motion.div key="a" initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} style={{ marginTop: 'auto', borderRadius: 22, background: 'var(--bg-deep)', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span className="kicker" style={{ color: 'var(--faint)' }}>Réponse</span>
                     <p className="lx-lead">
                       <RichText text={card.definition} />
                     </p>
@@ -229,26 +232,29 @@ export function Review() {
               Compris, je la reverrai
             </Button>
           ) : (
-            <p className="muted" style={{ textAlign: 'center', fontSize: 14, minHeight: 56, display: 'grid', placeItems: 'center' }}>
+            <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)', minHeight: 56, display: 'grid', placeItems: 'center' }}>
               {picked ? 'Bien vu !' : 'Touche la bonne définition.'}
             </p>
           )
         ) : shown ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
+            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ height: 62, borderRadius: 31, color: 'var(--rose-ink)', boxShadow: 'none' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
+              </svg>
               À revoir
             </Button>
-            <Button variant="mint" onClick={() => rate(true)} disabled={answer.isPending}>
+            <Button variant="dark" onClick={() => rate(true)} disabled={answer.isPending} style={{ height: 62, borderRadius: 31 }}>
               {Icon.check(18)} Je savais
             </Button>
           </div>
         ) : (
           <Button
-            variant="dark"
             onClick={() => {
               play('reveal')
               setShown(true)
             }}
+            style={{ height: 62, borderRadius: 31 }}
           >
             Retourner la carte
           </Button>

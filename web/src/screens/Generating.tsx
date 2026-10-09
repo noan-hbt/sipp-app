@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'motion/react'
+import { AnimatePresence, animate, motion, useMotionValue, useTransform, type MotionValue } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
-import { Confetti } from './ProgramView'
+import { illustration } from '../components/SipIcon'
 import { Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type SipDetail } from '../lib/api'
 import { duration } from '../lib/format'
@@ -87,6 +87,7 @@ export function Generating() {
   const readError = sip.isError || sip.isPaused
   const { phase, from, to, mapped } = progressOf(sip.data)
   const lastPhase = useRef(phase)
+  const done = phase === 'done'
 
   useEffect(() => {
     if (phase !== lastPhase.current) play(phase === 'done' ? 'complete' : 'unlock')
@@ -116,34 +117,30 @@ export function Generating() {
       ].filter(Boolean)
     : []
 
+  const level = useBrewLevel(from, to)
+  const pct = useTransform(level, (v) => Math.round(Math.min(1, v) * 100))
+  const bad = failed || readError
+  const heading = sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? clip(sip.data?.input_text ?? '…', 90))
+
   return (
     <Screen kind="fade">
-      <header className="topbar">
+      <Liquid level={level} failed={bad} />
+      <header className="topbar" style={{ position: 'relative' }}>
         <IconButton label="Fermer" onClick={() => nav('/', { replace: true })}>
           {Icon.close}
         </IconButton>
       </header>
 
-      <div className="scroll" style={{ padding: '0 22px calc(var(--safe-bottom) + 28px)', display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center' }}>
-          <Brew from={from} to={to} failed={failed || readError} done={phase === 'done'} />
-          <AnimatePresence mode="wait">
-            <motion.h1
-              key={failed || readError ? 'failed' : phase}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-              className="title-l"
-            >
-              {firstFailed ? 'Ta première leçon m’a résisté' : failed ? 'Oups, j’ai buggé' : readError ? 'Ton parcours ne se charge pas' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
-            </motion.h1>
-          </AnimatePresence>
-          <p className="muted" style={{ fontSize: 15, maxWidth: 320 }}>
-            {failed ? 'Tu peux relancer pour continuer.' : sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? '« ' + clip(sip.data?.input_text ?? '…', 90) + ' »')}
-          </p>
-          {!failed && facts.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
+      <div className="scroll" style={{ position: 'relative', padding: '0 20px calc(var(--safe-bottom) + 28px)', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span className="kicker" style={{ color: bad ? 'var(--rose-ink)' : 'var(--primary)' }}>
+            {bad ? 'Petit souci' : phase === 'done' ? 'C’est prêt' : 'Ton Sip infuse'}
+          </span>
+          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="display" style={{ fontSize: 34, lineHeight: 1, letterSpacing: '-0.045em', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {heading}
+          </motion.h1>
+          {!bad && facts.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
               {facts.map((f, i) => (
                 <motion.span
                   key={f}
@@ -160,23 +157,56 @@ export function Generating() {
           )}
         </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 150 }}>
+          <span className="hero-num" aria-hidden="true" style={{ fontSize: 92, color: bad ? 'var(--rose-ink)' : 'var(--ink)' }}>
+            <motion.span>{pct}</motion.span>
+            <span style={{ fontSize: 44, color: bad ? 'var(--rose-ink)' : 'var(--primary)' }}>%</span>
+          </span>
+          <motion.div
+            initial={{ scale: 0.4, rotate: -12, opacity: 0 }}
+            animate={done ? { scale: [1, 1.12, 1], rotate: 0, opacity: 1 } : { scale: 1, rotate: 0, opacity: 1 }}
+            transition={done ? { duration: 0.6 } : { type: 'spring', stiffness: 200, damping: 13, delay: 0.1 }}
+          >
+            {bad ? <Mascot mood="oops" size={130} /> : <img className="float" src={illustration(done ? 'scene-celebrate' : 'scene-brewing')} alt="" width={150} height={150} style={{ display: 'block' }} />}
+          </motion.div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.h2
+            key={bad ? 'failed' : phase}
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="display"
+            style={{ fontSize: 21, lineHeight: 1.15 }}
+          >
+            {firstFailed ? 'Ta première leçon m’a résisté' : failed ? 'Oups, j’ai buggé' : readError ? 'Ton parcours ne se charge pas' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
+          </motion.h2>
+        </AnimatePresence>
+
         {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Ton parcours n’a pas pu se charger. Réessaie.')} retry={() => void sip.refetch()} busy={sip.isFetching} />}
         {failed ? (
           <ErrorNotice message={apiErrorMessage(retry.error, firstFailed ? 'Relance ta première leçon pour continuer.' : 'Relance ton parcours pour continuer.')} retry={() => retry.mutate()} busy={retry.isPending} />
         ) : (
-          <section style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span className="display" style={{ fontSize: 18, marginLeft: 6 }}>
-              Ton parcours{lessons > 0 && <span style={{ fontFamily: 'var(--font)', fontWeight: 500, fontSize: 14, letterSpacing: 0, color: 'var(--muted)' }}> · {lessons} leçons · {duration(lessons)}</span>}
-            </span>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {lessons > 0 && (
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)', marginLeft: 4 }}>
+                {outline.length} modules · {lessons} leçons · {duration(lessons)}
+              </span>
+            )}
             {outline.length === 0
               ? [0, 1, 2].map((i) => <GhostRow key={i} delay={i * 0.15} />)
               : outline.map((title, i) => <ModuleRow key={i} index={i} title={title} state={i < mapped ? 'done' : i === mapped && phase === 'cut' ? 'active' : 'todo'} />)}
           </section>
         )}
 
-        {!failed && !readError && <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, color: 'var(--faint)' }}>
-          Tu peux fermer l’app, je continue sans toi.
-        </p>}
+        {!bad && (
+          <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--peach-ink)' }}>
+            Tu peux fermer l’app, je continue sans toi.
+          </p>
+        )}
       </div>
     </Screen>
   )
@@ -186,11 +216,8 @@ function clip(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s
 }
 
-/**
- * The mascot sits in a round window that fills like a cup being poured.
- * Within a phase the level creeps slowly toward the phase's end, so it never looks stuck.
- */
-function Brew({ from, to, failed, done }: { from: number; to: number; failed: boolean; done: boolean }) {
+/** The cup level: jumps to the phase's start, then creeps slowly toward its end so it never looks stuck. */
+function useBrewLevel(from: number, to: number) {
   const level = useMotionValue(0)
   useEffect(() => {
     let creep: ReturnType<typeof animate> | undefined
@@ -203,26 +230,24 @@ function Brew({ from, to, failed, done }: { from: number; to: number; failed: bo
       creep?.stop()
     }
   }, [from, to, level])
-  const y = useTransform(level, (v) => 168 * (1 - Math.min(1, v)))
-  const size = 168
+  return level
+}
+
+// 16 crests of 84px: the CSS `wave` keyframe slides one crest, so the loop is seamless at any screen width.
+const WAVE = `M0 8 Q 21 0 42 8 ${Array.from({ length: 31 }, (_, i) => `T ${84 + i * 42} 8`).join(' ')} V16 H0 Z`
+
+/** The whole screen fills like a cup being poured: a soft tint rises from the bottom with a wave on top. */
+function Liquid({ level, failed }: { level: MotionValue<number>; failed: boolean }) {
+  const height = useTransform(level, (v) => `${Math.min(1, v) * 100}%`)
+  const fill = failed ? 'var(--rose-mid)' : 'var(--peach-mid)'
   return (
-    <motion.div
-      animate={done ? { scale: [1, 1.07, 1] } : {}}
-      transition={{ duration: 0.6 }}
-      style={{ position: 'relative', width: size + 56, height: size + 56, borderRadius: '50%', display: 'grid', placeItems: 'center', marginTop: 4, background: failed ? 'var(--rose-soft)' : 'var(--peach-soft)' }}
-    >
-      <Confetti seed={3} />
-      <div style={{ width: size, height: size, borderRadius: '50%', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', background: 'var(--surface)' }}>
-        <motion.div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: size * 2, y }}>
-          <svg width={size * 2} height="16" viewBox="0 0 336 16" style={{ display: 'block', animation: 'wave 2.4s linear infinite' }}>
-            <path d="M0 8 Q 21 0 42 8 T 84 8 T 126 8 T 168 8 T 210 8 T 252 8 T 294 8 T 336 8 V16 H0 Z" fill={failed ? 'var(--rose-mid)' : 'var(--peach-mid)'} />
-          </svg>
-          <div style={{ height: size * 2, marginTop: -1, background: failed ? 'var(--rose-mid)' : 'var(--peach-mid)' }} />
-        </motion.div>
-        <div style={{ position: 'relative' }}>
-          <Mascot mood={failed ? 'oops' : done ? 'bravo' : 'think'} size={104} />
-        </div>
+    <motion.div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: -15, height: 16, overflow: 'hidden' }}>
+        <svg width="1344" height="16" viewBox="0 0 1344 16" style={{ display: 'block', animation: 'wave 2.4s linear infinite' }}>
+          <path d={WAVE} fill={fill} />
+        </svg>
       </div>
+      <div style={{ position: 'absolute', inset: 0, background: fill }} />
     </motion.div>
   )
 }
@@ -232,7 +257,7 @@ function GhostRow({ delay }: { delay: number }) {
     <motion.div
       animate={{ opacity: [0.45, 0.9, 0.45] }}
       transition={{ duration: 1.6, repeat: Infinity, delay }}
-      style={{ height: 58, borderRadius: 20, background: 'var(--bg-deep)' }}
+      style={{ height: 58, borderRadius: 22, background: 'var(--surface)' }}
     />
   )
 }
@@ -246,9 +271,9 @@ function ModuleRow({ index, title, state }: { index: number; title: string; stat
       transition={{ type: 'spring', stiffness: 300, damping: 24, delay: index * 0.12 }}
       onAnimationComplete={() => index === 0 && play('pop')}
       className="card"
-      style={{ borderRadius: 20, padding: '10px 14px 10px 10px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 58 }}
+      style={{ borderRadius: 22, padding: '10px 14px 10px 10px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 58 }}
     >
-      <span style={{ width: 38, height: 38, borderRadius: 13, flexShrink: 0, display: 'grid', placeItems: 'center', background: bg, color: ink, fontFamily: 'var(--display)', fontSize: 16, fontWeight: 500 }}>{index + 1}</span>
+      <span style={{ width: 38, height: 38, borderRadius: 19, flexShrink: 0, display: 'grid', placeItems: 'center', background: bg, color: ink, fontFamily: 'var(--display)', fontSize: 16, fontWeight: 800 }}>{index + 1}</span>
       <span style={{ flex: 1, fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: state === 'todo' ? 'var(--faint)' : 'var(--ink)' }}>{title}</span>
       <span style={{ width: 26, height: 26, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         <AnimatePresence mode="wait">

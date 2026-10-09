@@ -319,6 +319,8 @@ export function LessonPlayer({
 
   const fb = currentAnswer && current ? feedbackFor(current) : null
   const tone = currentAnswer?.correct === true ? 'good' : currentAnswer?.correct === false ? 'bad' : 'neutral'
+  // Solid sheets, the same in light and dark: white text stays readable on all three.
+  const sheet = { good: { bg: '#23875a', soft: '#dff7ea', ink: '#1a6a46' }, bad: { bg: '#c8452f', soft: '#ffe4dc', ink: '#9b2f1d' }, neutral: { bg: '#2a6c9e', soft: '#e1f0fb', ink: '#1f5580' } }[tone]
 
   return (
     <Screen kind="modal">
@@ -467,36 +469,52 @@ export function LessonPlayer({
               bottom: 0,
               zIndex: 10,
               borderRadius: '32px 32px 0 0',
-              padding: '20px 18px calc(var(--safe-bottom) + 22px)',
+              padding: '22px 20px calc(var(--safe-bottom) + 22px)',
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
-              background: tone === 'good' ? 'var(--mint)' : tone === 'bad' ? 'var(--rose)' : 'var(--sky)',
+              background: sheet.bg,
+              color: '#fff',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 58, height: 58, borderRadius: 29, background: 'var(--surface)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={46} />
-              </span>
+            {tone === 'good' && (
               <motion.span
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', stiffness: 500, damping: 14, delay: 0.1 }}
+                aria-hidden="true"
+                initial={{ scale: 0, rotate: -40 }}
+                animate={{ scale: 1, rotate: 10 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 12, delay: 0.15 }}
+                style={{ position: 'absolute', top: -38, right: 20, width: 76, height: 76, borderRadius: 38, background: '#ffc93d', display: 'grid', placeItems: 'center', boxShadow: '0 0 0 6px var(--bg)' }}
+              >
+                <svg width="34" height="34" viewBox="0 0 24 24">
+                  <path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6L2.5 9.3l6.6-.8z" fill="#3b2c05" />
+                </svg>
+              </motion.span>
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingRight: tone === 'good' ? 80 : 0 }}>
+              {tone !== 'good' && (
+                <span style={{ width: 52, height: 52, borderRadius: 26, background: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                  <Mascot mood={tone === 'bad' ? 'oops' : 'think'} size={42} />
+                </span>
+              )}
+              <motion.span
+                initial={{ y: 12, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.08 }}
                 className="display"
-                style={{ fontSize: 24, color: tone === 'good' ? 'var(--mint-ink)' : tone === 'bad' ? 'var(--rose-ink)' : 'var(--sky-ink)' }}
+                style={{ fontSize: 30, lineHeight: 1, letterSpacing: '-0.04em' }}
               >
                 {tone === 'good' ? PRAISE[revealed % PRAISE.length] : tone === 'bad' ? ALMOST[revealed % ALMOST.length] : 'Voilà ce que j’attendais'}
               </motion.span>
             </div>
             {fb.expected && (
-              <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.5, background: 'rgba(255,255,255,.14)', borderRadius: 16, padding: '10px 12px' }}>
                 <RichText text={fb.expected} />
               </p>
             )}
-            <p style={{ fontSize: 15, lineHeight: 1.55, color: tone === 'good' ? 'var(--mint-ink)' : tone === 'bad' ? 'var(--rose-ink)' : 'var(--sky-ink)' }}>
+            <p style={{ fontSize: 16, lineHeight: 1.5, color: sheet.soft }}>
               <RichText text={fb.explanation} />
             </p>
-            <Button variant={tone === 'good' ? 'mint' : tone === 'bad' ? 'peach' : 'dark'} onClick={next} disabled={finishing} style={{ marginTop: 4 }}>
+            <Button onClick={next} disabled={finishing} style={{ marginTop: 4, background: '#fff', color: sheet.ink }}>
               {isLast ? finishLabel : tone === 'bad' ? 'Compris' : 'Continuer'}
             </Button>
           </motion.section>

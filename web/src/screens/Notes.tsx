@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
-import { illustration } from '../components/SipIcon'
+import { illustration, sipPalette } from '../components/SipIcon'
 import { Api, type Note } from '../lib/api'
 import { play } from '../lib/sound'
 
@@ -34,57 +34,62 @@ export function Notes() {
     )
   }
 
-  const groups = new Map<string, { title: string; notes: Note[] }>()
-  for (const n of notes.data) {
-    const g = groups.get(n.sip_id) ?? { title: n.sip_title, notes: [] }
-    g.notes.push(n)
-    groups.set(n.sip_id, g)
-  }
+  // Two staggered columns of sticky notes, newest first, each in its Sip's colour.
+  const cols: Note[][] = [[], []]
+  notes.data.forEach((n, i) => cols[i % 2].push(n))
 
   return (
-    <div className="scroll" style={{ padding: '12px 16px 130px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="scroll" style={{ padding: '18px 16px 130px', display: 'flex', flexDirection: 'column', gap: 10 }}>
       {error}
-      {[...groups.entries()].map(([sipId, g]) => (
-        <section key={sipId} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '8px 4px 0' }}>{g.title}</h2>
-          <AnimatePresence initial={false}>
-            {g.notes.map((n) => (
-              <motion.article
-                key={n.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0, marginBottom: -8 }}
-                className="card"
-                style={{ borderRadius: 20, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden', borderLeft: '4px solid var(--sun)' }}
-              >
-                <p style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--ink-soft)', userSelect: 'text', WebkitUserSelect: 'text' }}>{n.quote}</p>
-                {n.text && <p style={{ fontSize: 14, color: 'var(--muted)' }}>{n.text}</p>}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      play('tap')
-                      nav(`/lessons/${n.lesson_id}`)
-                    }}
-                    style={{ border: 'none', background: 'none', padding: 0, fontSize: 13, fontWeight: 600, color: 'var(--primary)', textAlign: 'left', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        {cols.map((col, c) => (
+          <div key={c} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14, paddingTop: c ? 28 : 0 }}>
+            <AnimatePresence initial={false}>
+              {col.map((n, i) => {
+                const pal = sipPalette(n.sip_title)
+                const tilt = (c + i) % 2 ? 1.4 : -1.4
+                return (
+                  <motion.article
+                    key={n.id}
+                    layout
+                    initial={{ opacity: 0, y: 16, rotate: 0, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, rotate: tilt, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 20, delay: (i * 2 + c) * 0.04 }}
+                    style={{ borderRadius: 24, padding: '16px 14px 12px', display: 'flex', flexDirection: 'column', gap: 8, background: pal.bg }}
                   >
-                    {n.lesson_title} →
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Retirer cette note"
-                    onClick={() => remove.mutate(n.id)}
-                    style={{ border: 'none', background: 'none', padding: 4, fontSize: 13, fontWeight: 600, color: 'var(--faint)', flexShrink: 0 }}
-                  >
-                    Retirer
-                  </button>
-                </div>
-              </motion.article>
-            ))}
-          </AnimatePresence>
-        </section>
-      ))}
+                    <span aria-hidden="true" className="display" style={{ fontSize: 46, lineHeight: 0.5, height: 18, color: pal.ink, opacity: 0.45 }}>“</span>
+                    <p style={{ fontSize: 15, lineHeight: 1.45, fontWeight: 500, color: 'var(--ink)', userSelect: 'text', WebkitUserSelect: 'text', overflowWrap: 'anywhere' }}>{n.quote}</p>
+                    {n.text && <p style={{ fontSize: 13, color: 'var(--muted)' }}>{n.text}</p>}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        play('tap')
+                        nav(`/lessons/${n.lesson_id}`)
+                      }}
+                      style={{ border: 'none', background: 'none', padding: 0, fontSize: 12, fontWeight: 700, lineHeight: 1.3, color: pal.ink, textAlign: 'left' }}
+                    >
+                      {n.sip_title} · {n.lesson_title} →
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Retirer cette note"
+                      onClick={() => remove.mutate(n.id)}
+                      style={{ alignSelf: 'flex-start', border: 'none', background: 'var(--frost)', borderRadius: 14, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}
+                    >
+                      Retirer
+                    </button>
+                  </motion.article>
+                )
+              })}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+      <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, lineHeight: 1.4, color: 'var(--muted)', margin: '6px 4px 0' }}>
+        <img src={illustration('scene-notes')} alt="" width={48} height={48} style={{ flexShrink: 0 }} />
+        Dans une leçon, appuie longuement sur un passage pour le garder ici.
+      </p>
     </div>
   )
 }
