@@ -93,6 +93,7 @@ export function ProgressBar({ value, color = 'var(--primary)', height = 10 }: { 
       style={{ flex: 1, height, borderRadius: height / 2, background: 'var(--track)', overflow: 'hidden' }}
     >
       <motion.div
+        className="liquid"
         initial={false}
         animate={{ width: `${Math.max(value, 0.04) * 100}%` }}
         transition={{ type: 'spring', stiffness: 120, damping: 18 }}

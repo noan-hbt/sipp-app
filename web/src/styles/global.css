@@ -90,6 +90,12 @@
   --map-mod5-ink: #8f431c;
   --map-hi: #ffffff;
   --map-shadow2: #d3cbbf;
+  /* dock: the dark floating surfaces (tab bar, hero tiles) */
+  --dock: #1d1a17;
+  --dock-ink: #ffffff;
+  --dock-muted: #a69d95;
+  --dock-line: transparent;
+  --frost: rgba(255, 255, 255, 0.7);
 
   /* relief is gone: flat surfaces, a hairline where needed */
   --raised: none;
@@ -182,6 +188,11 @@
   --map-mod5-ink: #ffc7a6;
   --map-hi: transparent;
   --map-shadow2: #0b0907;
+  --dock: #2a231d;
+  --dock-ink: #f5ede4;
+  --dock-muted: #9a9086;
+  --dock-line: #3b322a;
+  --frost: rgba(23, 19, 15, 0.55);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -260,6 +271,11 @@
     --map-mod5-ink: #ffc7a6;
     --map-hi: transparent;
     --map-shadow2: #0b0907;
+    --dock: #2a231d;
+    --dock-ink: #f5ede4;
+    --dock-muted: #9a9086;
+    --dock-line: #3b322a;
+    --frost: rgba(23, 19, 15, 0.55);
   }
 }
 
@@ -389,9 +405,9 @@ button:focus-visible, a:focus-visible {
   font-weight: 600;
 }
 
-.title-xl { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1.08; letter-spacing: -0.03em; }
-.title-l { font-family: var(--display); font-size: 26px; font-weight: 700; line-height: 1.12; letter-spacing: -0.03em; }
-.title-m { font-family: var(--display); font-size: 21px; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+.title-xl { font-family: var(--display); font-size: 32px; font-weight: 800; line-height: 1.02; letter-spacing: -0.04em; }
+.title-l { font-family: var(--display); font-size: 27px; font-weight: 800; line-height: 1.08; letter-spacing: -0.035em; }
+.title-m { font-family: var(--display); font-size: 21px; font-weight: 800; line-height: 1.15; letter-spacing: -0.025em; }
 .muted { color: var(--muted); }
 
 .bottom-bar {
@@ -465,7 +481,23 @@ button:focus-visible, a:focus-visible {
   to { transform: translateX(-84px); }
 }
 
-.display { font-family: var(--display); font-weight: 700; letter-spacing: -0.03em; }
+.display { font-family: var(--display); font-weight: 800; letter-spacing: -0.035em; }
+/* Hero figures: streak, counts. Big, tight, tabular so count-ups don't wobble. */
+.hero-num { font-family: var(--display); font-weight: 800; letter-spacing: -0.06em; line-height: 0.82; font-variant-numeric: tabular-nums; }
+.kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Liquid fill: a slow wave of light runs across any progress fill. */
+.liquid { position: relative; overflow: hidden; }
+.liquid::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='20' viewBox='0 0 84 20' preserveAspectRatio='none'%3E%3Cpath d='M0 9 Q 21 1 42 9 T 84 9 V0 H0Z' fill='white' fill-opacity='.3'/%3E%3C/svg%3E") repeat-x 0 0 / 84px 100%;
+  animation: liquid 2.6s linear infinite;
+}
+@keyframes liquid { to { background-position: 84px 0; } }
+@keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); } 50% { transform: translateY(-6px) rotate(var(--tilt, 0deg)); } }
+.float { animation: float 4.5s ease-in-out infinite; }
 .pill-tag { align-self: flex-start; padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 
 /* Lesson reading: light body text, ink only where it matters */

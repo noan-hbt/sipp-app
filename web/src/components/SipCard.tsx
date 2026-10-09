@@ -1,98 +1,107 @@
 import { motion } from 'motion/react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
 import { Mascot } from './Mascot'
-import { SipIcon } from './SipIcon'
+import { LiquidBar } from './motion'
+import { sipPalette, topicArt } from './SipIcon'
+import { Icon } from './ui'
 
-export const listVariants = { hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }
+export const listVariants = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
 export const itemVariants = {
-  hidden: { opacity: 0, y: 18, scale: 0.97 },
-  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 260, damping: 22 } },
+  hidden: { opacity: 0, y: 22, scale: 0.94 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring' as const, stiffness: 260, damping: 20 } },
 }
 const item = itemVariants
 
-/** Library row: topic tile, title, meta line and a thin progress bar. `stacked` draws a card behind (programs). */
-export function LibraryRow({
+/** Bento tile: illustration spilling over the top corner, title, meta line and a liquid progress bar. `stacked` draws a card behind (programs). */
+export function Tile({
   name,
   meta,
+  metaColor,
   progress,
-  icon,
-  tone,
+  art,
+  bg,
+  ink,
   stacked,
+  wide,
+  index = 0,
   onOpen,
 }: {
   name: string
   meta: ReactNode
+  metaColor?: string
   progress: number | null
-  icon?: ReactNode
-  tone?: string
+  art: ReactNode
+  bg: string
+  ink: string
   stacked?: boolean
+  wide?: boolean
+  index?: number
   onOpen: () => void
 }) {
   return (
-    <motion.div variants={item} layout style={{ position: 'relative', paddingTop: stacked ? 6 : 0 }}>
-      {stacked && <span style={{ position: 'absolute', left: 12, right: 12, top: 0, height: 24, borderRadius: 18, background: 'var(--bg-deep)' }} />}
+    <motion.div variants={item} layout style={{ position: 'relative', gridColumn: wide ? '1 / -1' : undefined, paddingTop: stacked ? 9 : 0 }}>
+      {stacked && <span aria-hidden="true" style={{ position: 'absolute', left: 14, right: 14, top: 0, height: 30, borderRadius: 20, background: bg, opacity: 0.55 }} />}
       <motion.button
-        whileTap={{ scale: 0.97 }}
+        whileTap={{ scale: 0.96 }}
+        transition={{ type: 'spring', stiffness: 600, damping: 26 }}
         onClick={() => {
           play('tap')
           onOpen()
         }}
-        style={{ position: 'relative', width: '100%', border: 'none', textAlign: 'left', borderRadius: 24, padding: '10px 14px 10px 10px', display: 'flex', alignItems: 'center', gap: 12, background: tone ?? 'var(--surface)' }}
+        style={{ position: 'relative', width: '100%', height: 186, border: 'none', textAlign: 'left', borderRadius: 26, padding: 14, background: bg, color: 'var(--ink)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 6 }}
       >
-        {icon ?? <SipIcon text={name} size={60} />}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontWeight: 600, fontSize: 16, lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-            <span style={{ fontSize: 13, color: 'var(--faint)' }}>{meta}</span>
-          </div>
-          {progress !== null && (
-            <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-deep)', overflow: 'hidden' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.max(progress, 0.03) * 100}%` }}
-                transition={{ type: 'spring', stiffness: 90, damping: 18, delay: 0.2 }}
-                style={{ height: '100%', borderRadius: 3, background: progress >= 1 ? 'var(--mint-strong)' : 'var(--primary)' }}
-              />
-            </div>
-          )}
-        </div>
+        <span
+          aria-hidden="true"
+          className="float"
+          style={{ position: 'absolute', top: -12, right: -6, width: 98, height: 98, display: 'grid', placeItems: 'center', animationDelay: `${-index * 1.3}s`, '--tilt': index % 2 ? '-5deg' : '5deg' } as CSSProperties}
+        >
+          {art}
+        </span>
+        <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.18, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{name}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: metaColor ?? ink, display: 'flex', alignItems: 'center', gap: 5 }}>{meta}</span>
+        {progress !== null && (
+          <span style={{ display: 'flex' }}>
+            <LiquidBar value={progress} color={ink} track="var(--frost)" height={7} delay={0.3 + index * 0.05} />
+          </span>
+        )}
       </motion.button>
     </motion.div>
   )
 }
 
-export function SipCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }) {
+const isDone = (s: SipSummary) => s.progress.total > 0 && s.progress.completed >= s.progress.total
+
+/** A Sip as a bento tile, whatever its state (building, failed, in progress, done). */
+export function SipTile({ sip, index, onOpen }: { sip: SipSummary; index?: number; onOpen: () => void }) {
   const building = sip.status === 'queued' || sip.status === 'generating'
   const failed = sip.status === 'failed'
-  const done = sip.progress.total > 0 && sip.progress.completed >= sip.progress.total
+  const done = isDone(sip)
   const name = sip.title ?? sip.input_text
+  const pal = sipPalette(name)
   return (
-    <LibraryRow
+    <Tile
       name={name}
+      index={index}
       onOpen={onOpen}
-      tone={failed ? 'var(--rose-soft)' : undefined}
-      icon={
-        building ? (
-          <span style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
-            <Mascot mood="think" size={46} />
-          </span>
-        ) : failed ? (
-          <span style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--surface)', display: 'grid', placeItems: 'center' }}>
-            <Mascot mood="oops" size={46} />
-          </span>
-        ) : undefined
-      }
+      bg={failed ? 'var(--rose-soft)' : building ? 'var(--surface)' : pal.bg}
+      ink={failed ? 'var(--rose-ink)' : pal.ink}
+      metaColor={building ? 'var(--muted)' : undefined}
+      art={building ? <Mascot mood="think" size={80} /> : failed ? <Mascot mood="oops" size={80} /> : <img src={topicArt(name)} alt="" width={98} height={98} draggable={false} />}
       meta={
         building ? (
-          'Je trace ton chemin…'
+          'Je prépare ton parcours…'
         ) : failed ? (
-          <span style={{ color: 'var(--rose-ink)', fontWeight: 600 }}>Raté, touche pour réessayer</span>
+          'Raté, touche pour réessayer'
         ) : done ? (
-          `Terminé · ${sip.progress.total} leçons`
+          <>
+            {Icon.check(14)} Terminé · {sip.progress.total} leçons
+          </>
+        ) : sip.chapter ? (
+          `Chapitre ${sip.chapter} · ${sip.progress.completed}/${sip.progress.total}`
         ) : (
-          `${sip.progress.completed} / ${sip.progress.total} leçons${sip.lite ? ' · découverte' : ''}`
+          `${sip.progress.completed}/${sip.progress.total} leçons${sip.lite ? ' · découverte' : ''}`
         )
       }
       progress={building || failed ? null : sip.progress.completed / Math.max(1, sip.progress.total)}

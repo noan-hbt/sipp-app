@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { CountUp, RevealLines } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { RichText } from '../components/RichText'
 import { illustration } from '../components/SipIcon'
@@ -25,18 +26,18 @@ type DoneState = CompleteOut & {
   action?: string | null
 }
 
-const CONFETTI = ['#FFD7BD', 'var(--lavender-strong)', 'var(--mint-strong)', 'var(--star)', 'var(--sky-strong)', '#fff']
+const CONFETTI = ['#FFD7BD', '#a898f5', '#5ccb8e', '#ffc93d', '#6db8f2', '#fff']
 
 function Confetti() {
   const bits = useMemo(
     () =>
-      Array.from({ length: 26 }, (_, i) => ({
+      Array.from({ length: 34 }, (_, i) => ({
         x: (Math.random() - 0.5) * 340,
         y: -120 - Math.random() * 260,
         r: Math.random() * 540 - 270,
         s: 6 + Math.random() * 8,
         c: CONFETTI[i % CONFETTI.length],
-        round: i % 3 === 0,
+        shape: i % 3,
         d: Math.random() * 0.25,
       })),
     [],
@@ -49,7 +50,7 @@ function Confetti() {
           initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 0.4 }}
           animate={{ x: b.x, y: [0, b.y, b.y + 420], opacity: [1, 1, 0], rotate: b.r, scale: 1 }}
           transition={{ duration: 2.2, delay: 0.5 + b.d, ease: [0.2, 0.7, 0.4, 1], times: [0, 0.35, 1] }}
-          style={{ position: 'absolute', width: b.s, height: b.round ? b.s : b.s * 0.5, borderRadius: b.round ? b.s : 2, background: b.c }}
+          style={{ position: 'absolute', width: b.s, height: b.shape === 2 ? b.s * 1.5 : b.s, borderRadius: b.shape === 0 ? b.s : b.shape === 2 ? `${b.s}px ${b.s}px ${b.s}px 0` : 3, background: b.c }}
         />
       ))}
     </div>
@@ -230,9 +231,9 @@ export function LessonDone() {
               <Star size={34} filled={s.stars >= 3} animate delay={0.85} />
             </span>
           </div>
-          <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="display" style={{ fontSize: 36, lineHeight: 1.05 }}>
-            {s.stars === 3 ? 'Sans faute !' : s.stars === 2 ? 'Bien joué !' : 'Leçon bouclée !'}
-          </motion.h1>
+          <h1 className="display" style={{ fontSize: 46, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={[{ text: s.stars === 3 ? 'Sans faute !' : s.stars === 2 ? 'Bien joué !' : 'Gorgée bue !' }]} delay={0.3} />
+          </h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} style={{ fontSize: 16, color: 'rgba(255,255,255,.85)' }}>
             {s.title}
           </motion.p>
@@ -245,11 +246,13 @@ export function LessonDone() {
           style={{ flex: 1, borderRadius: '32px 32px 0 0', background: 'var(--bg)', padding: '22px 16px calc(var(--safe-bottom) + 22px)', display: 'flex', flexDirection: 'column', gap: 12 }}
         >
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-            {[
-              [s.total ? `${s.correct}/${s.total}` : '✓', s.total ? 'bonnes réponses' : 'leçon lue', 'var(--mint)'],
-              [`${s.streak_days} j`, 'de série', 'var(--peach-soft)'],
-              [`${pct} %`, 'du parcours', 'var(--lavender)'],
-            ].map(([v, l, bg], i) => (
+            {(
+              [
+                [s.total ? <><CountUp value={s.correct} delay={0.9} />/{s.total}</> : Icon.check(22), s.total ? 'bonnes réponses' : 'leçon lue', 'var(--mint)'],
+                [<><CountUp value={s.streak_days} delay={1} /> j</>, 'de série', 'var(--peach-soft)'],
+                [<><CountUp value={pct} delay={1.1} /> %</>, 'du parcours', 'var(--lavender)'],
+              ] as const
+            ).map(([v, l, bg], i) => (
               <motion.div
                 key={l}
                 initial={{ scale: 0.6, opacity: 0 }}
@@ -257,7 +260,7 @@ export function LessonDone() {
                 transition={{ type: 'spring', stiffness: 400, damping: 16, delay: 0.8 + i * 0.1 }}
                 style={{ borderRadius: 20, background: bg, padding: '12px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
               >
-                <span className="display" style={{ fontSize: 21 }}>
+                <span className="hero-num" style={{ fontSize: 28, display: 'flex', alignItems: 'center', minHeight: 26, paddingTop: 2 }}>
                   {v}
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>{l}</span>

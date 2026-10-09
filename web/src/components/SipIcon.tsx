@@ -79,6 +79,11 @@ export function illustration(name: string) {
   return `/illustrations/${name}.webp`
 }
 
+/** The topic's illustration, for art that sits outside a tile. */
+export function topicArt(text: string | null | undefined) {
+  return illustration('topic-' + topicOf(text).key)
+}
+
 /** Pastel tile with the topic illustration. */
 export function SipIcon({ text, size = 48, radius }: { text: string | null | undefined; size?: number; radius?: number }) {
   const { key, tone } = topicOf(text)

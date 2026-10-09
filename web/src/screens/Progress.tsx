@@ -2,10 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
+import { CountUp, LiquidBar } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { illustration, SipIcon } from '../components/SipIcon'
 import { Icon, IconButton } from '../components/ui'
-import { Api, type SipSummary, type WeekStats } from '../lib/api'
+import { Api, type SipSummary, type Stats, type WeekStats } from '../lib/api'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -29,7 +30,7 @@ export function Progress() {
         <IconButton label="Retour" onClick={() => nav(-1)}>
           {Icon.back}
         </IconButton>
-        <h1 className="display" style={{ fontSize: 24 }}>
+        <h1 className="display" style={{ fontSize: 28 }}>
           Tes progrès
         </h1>
       </header>
@@ -37,21 +38,14 @@ export function Progress() {
       <div className="scroll" style={{ padding: '8px 20px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser tes progrès.' : 'Impossible d’actualiser tes progrès. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
         {queries.some((q) => q.isLoading) && <p className="muted" role="status">Chargement de tes progrès…</p>}
+        {s && <StreakHero s={s} />}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-          <Tile value={s?.streak_days} label={s?.streak_days === 1 ? 'jour de suite' : 'jours de suite'} bg="var(--rose)" ink="var(--rose-ink)" />
-          <Tile value={s?.lessons_completed} label={s?.lessons_completed === 1 ? 'leçon bue' : 'leçons bues'} />
-          <Tile value={s?.concepts} label={s?.concepts === 1 ? 'notion' : 'notions'} onClick={() => nav('/library?tab=notions')} />
+          <Tile value={s?.lessons_completed} label={s?.lessons_completed === 1 ? 'leçon bue' : 'leçons bues'} bg="var(--peach-soft)" ink="var(--peach-ink)" delay={0.15} />
+          <Tile value={s?.concepts} label={s?.concepts === 1 ? 'notion' : 'notions'} bg="var(--lavender)" ink="var(--lavender-ink)" delay={0.25} onClick={() => nav('/library?tab=notions')} />
+          <Tile value={s?.total_stars} label={s?.total_stars === 1 ? 'étoile' : 'étoiles'} bg="var(--butter)" ink="var(--butter-ink)" delay={0.35} />
         </div>
 
         {s?.this_week && <ThisWeek w={s.this_week} last={s.last_week ?? null} />}
-        {s && s.lessons_completed > 0 && (
-          <p style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 18, background: 'var(--sky)', color: 'var(--sky-ink)', fontSize: 14, lineHeight: 1.35, margin: 0 }}>
-            <img src={illustration('scene-freeze')} alt="" width={44} height={44} style={{ flexShrink: 0, margin: '-6px 0' }} />
-            {s.freeze_available
-              ? 'Protection de série prête : si tu rates un jour cette semaine, ta série tient.'
-              : 'Protection de série utilisée. Elle revient sept jours après.'}
-          </p>
-        )}
 
         {s?.month && <Month month={s.month} days={s.month_days ?? []} today={s.today ?? 1} />}
         {s && s.lessons_completed === 0 && (
@@ -70,6 +64,57 @@ export function Progress() {
         ))}
       </div>
     </Screen>
+  )
+}
+
+/** The streak as a hero: big rolling number, freeze status underneath. */
+function StreakHero({ s }: { s: Stats }) {
+  const n = s.streak_days
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 16, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+      aria-label={`Série de ${n} jour${n > 1 ? 's' : ''}`}
+      style={{ position: 'relative', overflow: 'hidden', borderRadius: 30, padding: 20, minHeight: 200, background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}
+    >
+      <motion.span
+        aria-hidden="true"
+        initial={{ scale: 0.2 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 110, damping: 15, delay: 0.1 }}
+        style={{ position: 'absolute', right: -50, top: -50, width: 200, height: 200, borderRadius: 100, background: 'var(--primary)' }}
+      />
+      <motion.span
+        aria-hidden="true"
+        initial={{ scale: 0, rotate: -25 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.3 }}
+        style={{ position: 'absolute', right: 4, top: 4 }}
+      >
+        <img className="float" src={illustration('scene-freeze')} alt="" width={112} height={112} style={{ display: 'block' }} />
+      </motion.span>
+      <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
+        {s.completed_today ? 'Série en cours' : n ? 'Série à garder aujourd’hui' : 'Ta série'}
+      </span>
+      <span style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+        <span className="hero-num" style={{ fontSize: n > 99 ? 84 : 104 }}>
+          <CountUp value={n} delay={0.2} duration={1.2} />
+        </span>
+        <span style={{ fontSize: 16, lineHeight: 1.2, color: 'var(--dock-muted)', paddingBottom: 4 }}>
+          jour{n > 1 ? 's' : ''}
+          <br />
+          d’affilée
+        </span>
+      </span>
+      <span style={{ position: 'relative', fontSize: 13, lineHeight: 1.35, color: 'var(--dock-muted)' }}>
+        {s.lessons_completed === 0
+          ? 'Ta première leçon lance ta série.'
+          : s.freeze_available
+            ? 'Protection prête : un jour raté cette semaine, ta série tient.'
+            : 'Protection utilisée. Elle revient sept jours après.'}
+      </span>
+    </motion.section>
   )
 }
 
@@ -94,7 +139,7 @@ function ThisWeek({ w, last }: { w: WeekStats; last: WeekStats | null }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {rows.map(([label, n, before]) => (
           <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span className="display" style={{ fontSize: 24 }}>{n}</span>
+            <span className="display" style={{ fontSize: 26 }}><CountUp value={n} delay={0.3} /></span>
             <span style={{ fontSize: 13, color: 'var(--muted)' }}>{label}{before !== undefined && before > 0 ? ` · ${before} avant` : ''}</span>
           </div>
         ))}
@@ -103,22 +148,25 @@ function ThisWeek({ w, last }: { w: WeekStats; last: WeekStats | null }) {
   )
 }
 
-function Tile({ value, label, bg = 'var(--surface)', ink = 'var(--muted)', onClick }: { value?: number; label: string; bg?: string; ink?: string; onClick?: () => void }) {
+function Tile({ value, label, bg, ink, delay = 0, onClick }: { value?: number; label: string; bg: string; ink: string; delay?: number; onClick?: () => void }) {
   const body = (
     <>
-      <span className="display" style={{ fontSize: 28, color: bg === 'var(--surface)' ? 'var(--ink)' : ink }}>
-        {value ?? '—'}
+      <span className="hero-num" style={{ fontSize: 34, color: 'var(--ink)', paddingTop: 4 }}>
+        {value === undefined ? '—' : <CountUp value={value} delay={delay + 0.15} />}
       </span>
-      <span style={{ fontSize: 13, lineHeight: 1.25, color: ink }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25, color: ink }}>{label}</span>
     </>
   )
-  const style = { borderRadius: 20, background: bg, padding: 12, display: 'flex', flexDirection: 'column' as const, gap: 2, border: 'none', textAlign: 'left' as const }
+  const style = { borderRadius: 22, background: bg, padding: 14, display: 'flex', flexDirection: 'column' as const, gap: 6, border: 'none', textAlign: 'left' as const }
+  const anim = { initial: { opacity: 0, y: 14, scale: 0.92 }, animate: { opacity: 1, y: 0, scale: 1 }, transition: { type: 'spring' as const, stiffness: 300, damping: 20, delay } }
   return onClick ? (
-    <motion.button whileTap={{ scale: 0.95 }} onClick={onClick} style={style}>
+    <motion.button {...anim} whileTap={{ scale: 0.95 }} onClick={onClick} style={style}>
       {body}
     </motion.button>
   ) : (
-    <div style={style}>{body}</div>
+    <motion.div {...anim} style={style}>
+      {body}
+    </motion.div>
   )
 }
 
@@ -186,7 +234,7 @@ function SipProgress({ sip, delay, onOpen }: { sip: SipSummary; delay: number; o
       transition={{ delay: 0.1 + delay * 0.05 }}
       whileTap={{ scale: 0.98 }}
       onClick={onOpen}
-      style={{ border: 'none', borderRadius: 22, background: 'var(--surface)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+      style={{ border: 'none', borderRadius: 24, background: 'var(--surface)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
     >
       <SipIcon text={name} size={48} />
       <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
@@ -196,13 +244,8 @@ function SipProgress({ sip, delay, onOpen }: { sip: SipSummary; delay: number; o
             {sip.progress.completed}/{sip.progress.total}
           </span>
         </span>
-        <span style={{ height: 8, borderRadius: 4, background: 'var(--track)', overflow: 'hidden' }}>
-          <motion.span
-            initial={{ width: 0 }}
-            animate={{ width: `${ratio * 100}%` }}
-            transition={{ type: 'spring', stiffness: 90, damping: 18, delay: 0.2 + delay * 0.05 }}
-            style={{ display: 'block', height: '100%', borderRadius: 4, background: ratio >= 1 ? 'var(--mint-lip)' : 'var(--primary)' }}
-          />
+        <span style={{ display: 'flex' }}>
+          <LiquidBar value={ratio} height={8} color={ratio >= 1 ? 'var(--mint-lip)' : 'var(--primary)'} delay={0.2 + delay * 0.05} />
         </span>
       </span>
     </motion.button>

@@ -221,7 +221,7 @@ function Chips({ items, tone, onRemove, removeLabel }: { items: string[]; tone: 
                 play('tap')
                 onRemove(i)
               }}
-              style={{ width: 28, height: 28, borderRadius: 14, border: 'none', background: 'rgba(255,255,255,.7)', color: ink, display: 'grid', placeItems: 'center' }}
+              style={{ width: 28, height: 28, borderRadius: 14, border: 'none', background: 'var(--frost)', color: ink, display: 'grid', placeItems: 'center' }}
             >
               {Icon.cross(10)}
             </button>

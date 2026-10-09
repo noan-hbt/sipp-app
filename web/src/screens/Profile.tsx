@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HabitSettings } from '../components/HabitSettings'
 import { Mascot } from '../components/Mascot'
+import { CountUp } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
 import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
@@ -91,7 +92,7 @@ export function Profile() {
           <Mascot size={52} />
         </span>
         <div style={{ minWidth: 0 }}>
-          <h1 className="display" style={{ fontSize: 27 }}>Moi</h1>
+          <h1 className="display" style={{ fontSize: 32 }}>Moi</h1>
           <p className="muted" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
             {me.data?.email ?? (me.isError ? 'Ton email est indisponible pour le moment.' : 'Chargement…')}
           </p>
@@ -103,14 +104,14 @@ export function Profile() {
           <motion.section variants={item} aria-label="Tes statistiques">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {[
-                { label: 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, bg: 'var(--peach-soft)' },
-                { label: 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--mint-ink)'), bg: 'var(--mint)' },
-                { label: 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, bg: 'var(--butter)' },
-              ].map(({ label, value, icon, bg }) => (
-                <div key={label} style={{ borderRadius: 20, padding: 12, display: 'flex', flexDirection: 'column', gap: 4, background: bg }}>
+                { label: stats.data?.streak_days === 1 ? 'jour de série' : 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, bg: 'var(--peach-soft)', ink: 'var(--peach-ink)' },
+                { label: stats.data?.lessons_completed === 1 ? 'leçon' : 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--mint-ink)'), bg: 'var(--mint)', ink: 'var(--mint-ink)' },
+                { label: stats.data?.total_stars === 1 ? 'étoile' : 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, bg: 'var(--butter)', ink: 'var(--butter-ink)' },
+              ].map(({ label, value, icon, bg, ink }, i) => (
+                <div key={i} style={{ borderRadius: 22, padding: 14, display: 'flex', flexDirection: 'column', gap: 6, background: bg }}>
                   <span aria-hidden="true" style={{ display: 'grid' }}>{icon}</span>
-                  <span className="display" style={{ fontSize: 22 }}>{value ?? '—'}</span>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)' }}>{label}</span>
+                  <span className="hero-num" style={{ fontSize: 32, paddingTop: 2 }}>{value === undefined ? '—' : <CountUp value={value} delay={0.2 + i * 0.1} />}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: ink }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -152,9 +153,9 @@ export function Profile() {
                     aria-valuemax={100}
                     aria-valuenow={Math.round(slotsProgress * 100)}
                     aria-valuetext={`${subscription.slots_used}/${subscription.slots} emplacements`}
-                    style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.5)', overflow: 'hidden' }}
+                    style={{ height: 8, borderRadius: 4, background: 'var(--frost)', overflow: 'hidden' }}
                   >
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--ink)' }} />
+                    <motion.div className="liquid" initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--ink)' }} />
                   </div>
                 </div>
                 <p style={{ position: 'relative', fontSize: 14, color: 'var(--lavender-deep)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>

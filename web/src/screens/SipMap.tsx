@@ -234,7 +234,7 @@ export function SipMap() {
                     padding: "0 12px",
                     height: 36,
                     borderRadius: 18,
-                    background: "rgba(255,255,255,.7)",
+                    background: "var(--frost)",
                   }}
                 >
                   <Star size={16} />
@@ -272,7 +272,7 @@ export function SipMap() {
                 )}
                 <h1
                   className="display"
-                  style={{ fontSize: 26, lineHeight: 1.08 }}
+                  style={{ fontSize: 34, lineHeight: 1, letterSpacing: "-0.045em" }}
                 >
                   {name}
                 </h1>
@@ -287,13 +287,14 @@ export function SipMap() {
                   <div
                     style={{
                       flex: 1,
-                      height: 10,
-                      borderRadius: 5,
-                      background: "rgba(255,255,255,.7)",
+                      height: 12,
+                      borderRadius: 6,
+                      background: "var(--frost)",
                       overflow: "hidden",
                     }}
                   >
                     <motion.div
+                      className="liquid"
                       initial={{ width: 0 }}
                       animate={{
                         width: `${(done / Math.max(1, flat.length)) * 100}%`,
@@ -306,7 +307,7 @@ export function SipMap() {
                       }}
                       style={{
                         height: "100%",
-                        borderRadius: 5,
+                        borderRadius: 6,
                         background: "var(--primary)",
                       }}
                     />

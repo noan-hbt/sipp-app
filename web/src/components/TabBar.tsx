@@ -1,4 +1,4 @@
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { haptic } from '../lib/sound'
 import { Icon } from './ui'
@@ -13,13 +13,18 @@ export function isTabPath(path: string) {
   return TABS.some((t) => t.path === path)
 }
 
-/** Floating bottom navigation between the three main screens, plus the « new Sip » button. */
+const SPRING = { type: 'spring', stiffness: 520, damping: 40 } as const
+
+/** Floating dark dock: the active tab grows into a caramel pill with its name, plus the « new Sip » button. */
 export function TabBar() {
   const { pathname } = useLocation()
   const nav = useNavigate()
   if (!isTabPath(pathname)) return null
   return (
-    <div
+    <motion.div
+      initial={{ y: 90, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 26, delay: 0.15 }}
       style={{
         position: 'absolute',
         left: 16,
@@ -31,72 +36,87 @@ export function TabBar() {
         gap: 10,
       }}
     >
-    <nav
-      aria-label="Navigation principale"
-      style={{
-        flex: 1,
-        height: 62,
-        borderRadius: 31,
-        padding: 6,
-        display: 'flex',
-        gap: 4,
-        background: 'var(--surface)',
-        boxShadow: '0 8px 24px rgba(29,26,23,.08)',
-      }}
-    >
-      {TABS.map((t) => {
-        const active = pathname === t.path
-        return (
-          <button
-            key={t.path}
-            aria-current={active ? 'page' : undefined}
-            onClick={() => {
-              if (active) return
-              haptic()
-              nav(t.path, { replace: true })
-            }}
-            style={{
-              flex: 1,
-              border: 'none',
-              background: 'transparent',
-              position: 'relative',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              color: active ? 'var(--primary)' : 'var(--faint)',
-              fontSize: 11,
-              fontWeight: active ? 600 : 500,
-            }}
-          >
-            {active && (
-              <motion.span
-                layoutId="tab-pill"
-                style={{ position: 'absolute', inset: 0, borderRadius: 25, background: 'var(--primary-soft)' }}
-                transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-              />
-            )}
-            <span style={{ position: 'relative', display: 'grid' }}>{t.icon}</span>
-            <span style={{ position: 'relative' }}>{t.label}</span>
-          </button>
-        )
-      })}
-    </nav>
-    <motion.button
-      aria-label="Apprendre quelque chose de nouveau"
-      onClick={() => {
-        haptic()
-        nav('/new')
-      }}
-      whileTap={{ scale: 0.9 }}
-      whileHover={{ scale: 1.05 }}
-      style={{ width: 62, height: 62, borderRadius: 31, border: 'none', background: 'var(--primary)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}
-    >
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
-        <path d="M12 5v14M5 12h14" />
-      </svg>
-    </motion.button>
-    </div>
+      <nav
+        aria-label="Navigation principale"
+        style={{
+          flex: 1,
+          height: 64,
+          borderRadius: 32,
+          padding: 7,
+          display: 'flex',
+          gap: 4,
+          background: 'var(--dock)',
+          boxShadow: '0 14px 34px rgba(29,26,23,.22), inset 0 0 0 1px var(--dock-line)',
+        }}
+      >
+        {TABS.map((t) => {
+          const active = pathname === t.path
+          return (
+            <motion.button
+              key={t.path}
+              layout
+              transition={SPRING}
+              aria-label={t.label}
+              aria-current={active ? 'page' : undefined}
+              whileTap={{ scale: 0.92 }}
+              onClick={() => {
+                if (active) return
+                haptic()
+                nav(t.path, { replace: true })
+              }}
+              style={{
+                flex: active ? '1.9 1 0' : '1 1 0',
+                minWidth: 0,
+                border: 'none',
+                background: 'transparent',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 7,
+                color: active ? '#fff' : 'var(--dock-muted)',
+                fontSize: 14,
+                fontWeight: 700,
+                borderRadius: 25,
+              }}
+            >
+              {active && <motion.span layoutId="tab-pill" style={{ position: 'absolute', inset: 0, borderRadius: 25, background: 'var(--primary)' }} transition={SPRING} />}
+              <motion.span layout="position" style={{ position: 'relative', display: 'grid' }}>
+                {t.icon}
+              </motion.span>
+              <AnimatePresence initial={false}>
+                {active && (
+                  <motion.span
+                    key="label"
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0, transition: { delay: 0.08 } }}
+                    exit={{ opacity: 0, transition: { duration: 0.08 } }}
+                    style={{ position: 'relative', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    aria-hidden="true"
+                  >
+                    {t.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          )
+        })}
+      </nav>
+      <motion.button
+        aria-label="Apprendre quelque chose de nouveau"
+        onClick={() => {
+          haptic()
+          nav('/new')
+        }}
+        whileTap={{ scale: 0.88, rotate: 90 }}
+        whileHover={{ scale: 1.05 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+        style={{ width: 64, height: 64, borderRadius: 32, border: 'none', background: 'var(--primary)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 14px 30px rgba(217,98,43,.35)' }}
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </motion.button>
+    </motion.div>
   )
 }

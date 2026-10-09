@@ -5,13 +5,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { LibraryRow, SipCard, itemVariants as item, listVariants as list } from '../components/SipCard'
-import { illustration } from '../components/SipIcon'
+import { SipTile, Tile, itemVariants as item, listVariants as list } from '../components/SipCard'
+import { illustration, sipPalette, topicArt } from '../components/SipIcon'
 import { Icon } from '../components/ui'
 import { Api, type Plan, type Program, type SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
 import { chapterState, nextChapter } from './ProgramView'
 import { HScroll } from '../components/HScroll'
+import { RevealLines } from '../components/motion'
 
 const Notebook = lazy(() => import('./Notebook').then((m) => ({ default: m.Notebook })))
 const Notes = lazy(() => import('./Notes').then((m) => ({ default: m.Notes })))
@@ -70,11 +71,11 @@ export function Library() {
   return (
     <Screen kind="fade">
       <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 4px' }}>
-        <h1 className="display" style={{ fontSize: 30 }}>
-          Bibliothèque
+        <h1 className="display" style={{ fontSize: 40, lineHeight: 0.98, letterSpacing: '-0.045em' }}>
+          <RevealLines lines={[{ text: 'Ta bibliothèque' }]} />
         </h1>
       </header>
-      <div role="tablist" aria-label="Bibliothèque" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 18, background: 'var(--bg-deep)' }}>
+      <div role="tablist" aria-label="Bibliothèque" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
         {(
           [
             ['sips', 'Mes Sips'],
@@ -90,9 +91,9 @@ export function Library() {
               play('tap')
               setParams(k === 'sips' ? {} : { tab: k }, { replace: true })
             }}
-            style={{ position: 'relative', height: 40, border: 'none', borderRadius: 14, background: 'transparent', color: tab === k ? 'var(--ink)' : 'var(--muted)', fontSize: 15, fontWeight: 600 }}
+            style={{ position: 'relative', height: 42, border: 'none', borderRadius: 20, background: 'transparent', color: tab === k ? 'var(--on-ink)' : 'var(--muted)', fontSize: 15, fontWeight: 700, transition: 'color .2s' }}
           >
-            {tab === k && <motion.span layoutId="lib-tab" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 14, background: 'var(--surface)' }} />}
+            {tab === k && <motion.span layoutId="lib-tab" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--ink)' }} />}
             <span style={{ position: 'relative' }}>{label}</span>
           </button>
         ))}
@@ -158,22 +159,22 @@ export function Library() {
             ))}
           </HScroll>
 
-          <motion.div key={filter} variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-            {shownProgs.map((pr) => (
-              <ProgramRow key={pr.id} program={pr} onOpen={() => nav(`/programs/${pr.id}`)} />
+          <motion.div key={filter} variants={list} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 10, rowGap: 18, marginTop: 24 }}>
+            {shownProgs.map((pr, i) => (
+              <ProgramTile key={pr.id} program={pr} index={i} onOpen={() => nav(`/programs/${pr.id}`)} />
             ))}
-            {shownSips.map((s) => (
-              <SipCard key={s.id} sip={s} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
+            {shownSips.map((s, i) => (
+              <SipTile key={s.id} sip={s} index={shownProgs.length + i} onOpen={() => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)} />
             ))}
             {loaded && filter !== 'all' && shownProgs.length + shownSips.length === 0 && (
-              <motion.div variants={item} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '24px 0', textAlign: 'center' }}>
+              <motion.div variants={item} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '24px 0', textAlign: 'center' }}>
                 <img src={illustration('scene-empty')} alt="" width={150} height={150} />
                 <span className="muted" style={{ fontSize: 15 }}>
                   Rien ici pour l’instant.
                 </span>
               </motion.div>
             )}
-            {loaded && filter === 'all' && free > 0 && <EmptySlot free={free} canGenerate={genLeft > 0} onClick={() => nav('/new')} />}
+            {loaded && filter === 'all' && free > 0 && <EmptySlot free={free} canGenerate={genLeft > 0} compact={(shownProgs.length + shownSips.length) % 2 === 1} onClick={() => nav('/new')} />}
             {loaded && filter === 'all' && p && <UpsellSlot plan={p} onClick={() => nav('/offers')} />}
           </motion.div>
         </div>
@@ -182,31 +183,31 @@ export function Library() {
   )
 }
 
-function ProgramRow({ program: p, onOpen }: { program: Program; onOpen: () => void }) {
+function ProgramTile({ program: p, index, onOpen }: { program: Program; index: number; onOpen: () => void }) {
   const next = nextChapter(p)
   const done = p.chapters.filter((c) => chapterState(c, next) === 'done').length
   const current = p.chapters.find((c) => chapterState(c, next) !== 'done')
   const generating = p.status === 'generating'
+  const name = p.title ?? 'Programme'
+  const pal = sipPalette(name)
   return (
-    <LibraryRow
-      name={p.title ?? 'Programme'}
+    <Tile
+      name={name}
       stacked
+      index={index}
       onOpen={onOpen}
-      icon={
-        generating ? (
-          <span style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}>
-            <Mascot mood="think" size={46} />
-          </span>
-        ) : undefined
-      }
-      meta={generating ? 'Je dessine la suite…' : `Programme · ${current ? `chapitre ${current.position} sur ${p.chapters.length}` : 'terminé'}`}
+      bg={generating ? 'var(--surface)' : pal.bg}
+      ink={pal.ink}
+      metaColor={generating ? 'var(--muted)' : undefined}
+      art={generating ? <Mascot mood="think" size={80} /> : <img src={topicArt(name)} alt="" width={98} height={98} draggable={false} />}
+      meta={generating ? 'Je dessine la suite…' : current ? `Chapitre ${current.position} sur ${p.chapters.length}` : 'Programme terminé'}
       progress={generating ? null : done / Math.max(1, p.chapters.length)}
     />
   )
 }
 
 /** One card for all free places: ten identical dashed cards only add noise. */
-function EmptySlot({ free, canGenerate, onClick }: { free: number; canGenerate: boolean; onClick: () => void }) {
+function EmptySlot({ free, canGenerate, compact, onClick }: { free: number; canGenerate: boolean; compact: boolean; onClick: () => void }) {
   return (
     <motion.button
       variants={item}
@@ -217,18 +218,22 @@ function EmptySlot({ free, canGenerate, onClick }: { free: number; canGenerate: 
         onClick()
       }}
       style={{
+        gridColumn: compact ? undefined : '1 / -1',
         border: '2px dashed var(--line-strong)',
         background: 'transparent',
-        borderRadius: 24,
-        padding: 10,
+        borderRadius: compact ? 26 : 24,
+        padding: compact ? 14 : 10,
+        height: compact ? 186 : undefined,
         display: 'flex',
+        flexDirection: compact ? 'column' : 'row',
         alignItems: 'center',
-        gap: 12,
-        textAlign: 'left',
+        justifyContent: compact ? 'center' : undefined,
+        gap: compact ? 10 : 12,
+        textAlign: compact ? 'center' : 'left',
         color: 'var(--muted)',
       }}
     >
-      <span style={{ width: 56, height: 56, borderRadius: 18, background: canGenerate ? 'var(--primary)' : 'var(--bg-deep)', color: canGenerate ? '#fff' : 'var(--faint)', display: 'grid', placeItems: 'center' }}>
+      <span style={{ width: 56, height: 56, borderRadius: 28, background: canGenerate ? 'var(--primary)' : 'var(--bg-deep)', color: canGenerate ? '#fff' : 'var(--faint)', display: 'grid', placeItems: 'center' }}>
         {Icon.plus}
       </span>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -248,7 +253,7 @@ function UpsellSlot({ plan, onClick }: { plan: Plan; onClick: () => void }) {
       variants={item}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
-      style={{ border: 'none', borderRadius: 24, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', background: 'var(--butter)', color: 'var(--butter-ink)' }}
+      style={{ gridColumn: '1 / -1', border: 'none', borderRadius: 24, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', background: 'var(--butter)', color: 'var(--butter-ink)' }}
     >
       <img src={illustration('scene-full')} alt="" width={56} height={56} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
