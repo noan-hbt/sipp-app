@@ -13,6 +13,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
   const [mode, setMode] = useState<'login' | 'register'>(initial)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const shake = useAnimationControls()
@@ -109,14 +110,33 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           </div>
           <div className="field">
             <label htmlFor="password">Mot de passe</label>
-            <input
-              id="password"
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder="8 caractères minimum"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                placeholder="8 caractères minimum"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((v) => !v)}
+                style={{ border: 'none', background: 'none', padding: 4, margin: -4, color: 'var(--muted)', display: 'grid', placeItems: 'center' }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                  {showPassword && <path d="M4 4l16 16" />}
+                </svg>
+              </button>
+            </div>
+            {mode === 'register' && password.length > 0 && password.length < 8 && (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Encore {8 - password.length} caractère{8 - password.length > 1 ? 's' : ''}</span>
+            )}
           </div>
           {error && (
             <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ color: 'var(--rose-ink)', fontWeight: 600, fontSize: 15, textAlign: 'center' }}>

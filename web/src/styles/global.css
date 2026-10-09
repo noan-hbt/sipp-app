@@ -90,7 +90,12 @@ button:focus-visible, a:focus-visible {
   outline: 3px solid var(--lavender-ink) !important;
   outline-offset: 3px;
 }
-.field:focus-within, .help-question:focus-within, .estimate-slider:focus-within {
+.field:focus-within, .help-question:focus-within {
+  outline: 2.5px solid var(--primary);
+  outline-offset: 0;
+  box-shadow: 0 0 0 5px var(--primary-soft);
+}
+.estimate-slider:focus-within {
   outline: 3px solid var(--lavender-ink);
   outline-offset: 3px;
 }
