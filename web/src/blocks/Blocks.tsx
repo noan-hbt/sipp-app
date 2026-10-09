@@ -88,10 +88,13 @@ function Example({ b }: { b: B.ExampleBlock }) {
 }
 
 function Scenario({ b }: { b: B.ScenarioBlock }) {
+  // A short setting ("Au marché") is the kicker; a sentence reads as small red text there,
+  // so it opens the card instead.
+  const short = b.setting.length <= 40
   return (
     <article style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Kicker icon="scenario" tone="rose">
-        <RichText text={b.setting} />
+        {short ? <RichText text={b.setting} /> : 'Mise en situation'}
       </Kicker>
       <motion.div
         initial={{ scale: 0.9, originX: 0, originY: 0 }}
@@ -100,6 +103,11 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
         className="card"
         style={{ borderRadius: '6px 24px 24px 24px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, marginLeft: 12 }}
       >
+        {!short && (
+          <p className="lx-p" style={{ fontWeight: 600, color: 'var(--ink)' }}>
+            <RichText text={b.setting} />
+          </p>
+        )}
         <P>{b.narrative}</P>
         {b.prompt && <P lead>{b.prompt}</P>}
       </motion.div>

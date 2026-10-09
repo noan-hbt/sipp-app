@@ -89,7 +89,7 @@ export function Home() {
             {Icon.check(16, 'var(--mint-ink)')}
             {stats.data.streak_days > 1
               ? `Leçon du jour faite · ${stats.data.streak_days} jours d’affilée`
-              : 'Leçon du jour faite, ta série est lancée. À demain !'}
+              : 'Leçon du jour faite, ta série est lancée. À demain !'}
           </motion.p>
         )}
         {sips.isLoading ? (
