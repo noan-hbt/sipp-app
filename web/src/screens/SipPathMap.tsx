@@ -1007,7 +1007,7 @@ function MapNode({
         style={{
           ...common,
           background: C.peach,
-          boxShadow: `0 7px 0 ${C.peachLip}, 8px 14px 22px #d3cbbf, -6px -6px 14px var(--map-hi)`,
+          boxShadow: `0 7px 0 ${C.peachLip}, 8px 14px 22px var(--map-shadow2), -6px -6px 14px var(--map-hi)`,
         }}
       >
         {Icon.play}

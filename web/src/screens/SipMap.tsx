@@ -778,12 +778,16 @@ function QuizRow({ stars, locked, onOpen }: { stars: number | null; locked: bool
           {stars === null ? "5 questions · jusqu’à 3 étoiles" : stars >= 3 ? "Maîtrisé · refaire pour réviser" : "Retente pour 3 étoiles"}
         </span>
       </span>
-      {locked && <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 13, background: "var(--sun)", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg></span>}
       {stars !== null && (
         <span style={{ display: "flex", gap: 2 }} aria-label={`${stars} étoiles sur 3`}>
           {[1, 2, 3].map((n) => (
-            <Star key={n} size={16} filled={stars >= n} />
+            <Star key={n} size={14} filled={stars >= n} />
           ))}
+        </span>
+      )}
+      {locked ? <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, background: "var(--sun)", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg></span> : (
+        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 18, background: "var(--lavender-ink)", color: "var(--lavender)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </span>
       )}
     </motion.button>

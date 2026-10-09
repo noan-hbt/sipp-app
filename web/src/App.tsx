@@ -71,8 +71,8 @@ export default function App() {
   return (
     <div className="app">
       <AnimatePresence mode="popLayout" initial={false}>
-        <Suspense fallback={null}>
-        <Routes location={location} key={location.pathname}>
+        <Suspense key={location.pathname} fallback={null}>
+        <Routes location={location}>
           {!loggedIn ? (
             <>
               <Route path="/" element={<Welcome />} />

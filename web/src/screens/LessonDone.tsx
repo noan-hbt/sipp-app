@@ -283,21 +283,27 @@ export function LessonDone() {
           )}
 
           {!!s.module_done && s.module_id && (
-            <motion.button
+            <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.15 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => (features.quiz ? nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } }) : setUpsell('quiz'))}
-              style={{ border: 'none', borderRadius: 22, padding: '14px 16px', background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+              style={{ borderRadius: 22, padding: 16, background: 'var(--lavender)', display: 'flex', flexDirection: 'column', gap: 12 }}
             >
-              <img src={illustration('scene-quiz')} alt="" width={56} height={56} style={{ flexShrink: 0, margin: '-6px 0' }} />
-              <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 600 }}>Quiz du module</span>
-                <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>
-              </span>
-              {!features.quiz && <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 13, background: 'var(--sun)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg></span>}
-            </motion.button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <img src={illustration('scene-quiz')} alt="" width={60} height={60} style={{ flexShrink: 0, margin: '-6px 0' }} />
+                <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span className="display" style={{ fontSize: 18 }}>Quiz du module</span>
+                  <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>
+                </span>
+              </div>
+              <Button
+                sound="pop"
+                onClick={() => (features.quiz ? nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } }) : setUpsell('quiz'))}
+                style={{ height: 50, fontSize: 16, background: 'var(--lavender-ink)', color: 'var(--lavender)', boxShadow: 'none' }}
+              >
+                {features.quiz ? 'Lancer le quiz' : 'Débloquer le quiz'}
+              </Button>
+            </motion.section>
           )}
 
           {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1} />}
