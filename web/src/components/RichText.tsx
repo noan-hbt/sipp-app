@@ -1,6 +1,7 @@
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-import { Fragment, useMemo } from 'react'
+import { Fragment, useLayoutEffect, useMemo, useRef } from 'react'
+import { HScroll } from './HScroll'
 
 type Part = { kind: 'text' | 'math' | 'code' | 'bold'; value: string }
 
@@ -70,7 +71,29 @@ export function RichText({ text }: { text: string }) {
   )
 }
 
+const MATH_SIZE = 20
+const MATH_MIN = 13
+
+/** A display formula shrinks to fit the screen; past the minimum size it scrolls, with faded edges. */
 export function MathDisplay({ latex }: { latex: string }) {
   const html = useMemo(() => katex.renderToString(latex, { throwOnError: false, displayMode: true, output: 'htmlAndMathml' }), [latex])
-  return <div style={{ overflowX: 'auto', fontSize: 20 }} dangerouslySetInnerHTML={{ __html: html }} />
+  const ref = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fit = () => {
+      el.style.fontSize = `${MATH_SIZE}px`
+      const ratio = el.clientWidth / Math.max(1, el.scrollWidth)
+      if (ratio < 1) el.style.fontSize = `${Math.max(MATH_MIN, Math.floor(MATH_SIZE * ratio))}px`
+    }
+    fit()
+    const ro = new ResizeObserver(fit)
+    ro.observe(el.parentElement ?? el)
+    return () => ro.disconnect()
+  }, [html])
+  return (
+    <HScroll>
+      <div ref={ref} style={{ fontSize: MATH_SIZE }} dangerouslySetInnerHTML={{ __html: html }} />
+    </HScroll>
+  )
 }

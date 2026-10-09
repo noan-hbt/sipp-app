@@ -15,6 +15,7 @@ import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
 import { Offers } from './screens/Offers'
 import { BillingReturn } from './screens/BillingReturn'
+import { BlockGallery } from './screens/BlockGallery'
 import { Profile } from './screens/Profile'
 import { ProgramView } from './screens/ProgramView'
 import { Progress } from './screens/Progress'
@@ -86,6 +87,7 @@ export default function App() {
               <Route path="/progress" element={<Progress />} />
               <Route path="/offers" element={<Offers />} />
               <Route path="/billing/return" element={<BillingReturn />} />
+              {import.meta.env.DEV && <Route path="/dev/blocks" element={<BlockGallery />} />}
               <Route path="/sips/:sipId/building" element={<Generating />} />
               <Route path="/sips/:sipId" element={<SipMap />} />
               <Route path="/programs/:programId" element={<ProgramView />} />

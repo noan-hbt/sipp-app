@@ -163,9 +163,15 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
 
 const COLUMN_TONES: Tone[] = ['peach', 'lavender', 'mint', 'sky', 'butter']
 
+// Side by side only while every cell stays a few words; longer text reads better stacked.
+const SHORT_CELL = 40
+const SHORT_NAME = 22
+
 function Comparison({ b }: { b: B.ComparisonBlock }) {
   const tones = b.items.map((_, i) => TONES[COLUMN_TONES[i % COLUMN_TONES.length]])
-  const pair = b.items.length === 2
+  const pair =
+    b.items.length === 2 &&
+    b.items.every((it) => it.name.length <= SHORT_NAME && it.values.every((v) => (v ?? '').length <= SHORT_CELL))
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="compare" tone="lavender">
@@ -192,7 +198,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
               </span>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {b.items.map((it, i) => (
-                  <span role="cell" key={i} style={{ padding: '10px 12px', borderRadius: j === b.dimensions.length - 1 ? (i ? '8px 8px 20px 8px' : '8px 8px 8px 20px') : 8, background: 'var(--surface)', boxShadow: `inset 0 0 0 2px ${tones[i][0]}`, fontSize: 15, lineHeight: 1.4 }}>
+                  <span role="cell" key={i} style={{ padding: '10px 12px', borderRadius: j === b.dimensions.length - 1 ? (i ? '8px 8px 20px 8px' : '8px 8px 8px 20px') : 8, background: tones[i][0], color: 'var(--ink)', fontSize: 15, lineHeight: 1.4 }}>
                     <RichText text={it.values[j] ?? '–'} />
                   </span>
                 ))}
@@ -201,16 +207,24 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
           ))}
         </div>
       ) : (
-        // Three or more: one card per criterion, every item answers it on its own line.
+        // Long text or three items and more: one card per criterion; each answer sits under the
+        // item's coloured name, with the item's colour as a bar, so it never needs a column to read.
         <div role="table" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {b.items.map((it, i) => (
+              <span key={i} style={{ padding: '4px 11px', borderRadius: 12, background: tones[i][0], color: tones[i][1], fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
+                <RichText text={it.name} />
+              </span>
+            ))}
+          </div>
           {b.dimensions.map((d, j) => (
-            <motion.div key={j} role="rowgroup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + j * 0.08 }} style={{ borderRadius: 20, background: 'var(--surface)', padding: '12px 12px 6px', display: 'flex', flexDirection: 'column' }}>
-              <span role="rowheader" style={{ fontSize: 15, fontWeight: 700, padding: '0 2px 8px' }}>
+            <motion.div key={j} role="rowgroup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + j * 0.08 }} style={{ borderRadius: 20, background: 'var(--surface)', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span role="rowheader" style={{ fontSize: 15, fontWeight: 700 }}>
                 <RichText text={d} />
               </span>
               {b.items.map((it, i) => (
-                <div role="row" key={i} style={{ display: 'grid', gridTemplateColumns: '40% 1fr', alignItems: 'start', gap: 10, padding: '8px 2px', borderTop: '1.5px solid var(--line)' }}>
-                  <span style={{ justifySelf: 'start', padding: '2px 9px', borderRadius: 10, background: tones[i][0], color: tones[i][1], fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
+                <div role="row" key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: `4px solid ${tones[i][0]}` }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: tones[i][1], textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1.3 }}>
                     <RichText text={it.name} />
                   </span>
                   <span role="cell" style={{ fontSize: 15, lineHeight: 1.4 }}>
@@ -352,7 +366,7 @@ function Code({ b }: { b: B.CodeBlock }) {
             </AnimatePresence>
           </motion.button>
         </div>
-        <pre className="code scroll" style={{ margin: 0, padding: '6px 18px 18px', overflowX: 'auto', whiteSpace: 'pre' }} dangerouslySetInnerHTML={{ __html: html }} />
+        <pre className="code" style={{ margin: 0, padding: '6px 18px 18px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
       {copyError && <ErrorNotice message="La copie a échoué. Réessaie." retry={() => void copy()} busy={copying} />}
       <P>{b.explanation}</P>

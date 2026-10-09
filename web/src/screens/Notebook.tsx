@@ -7,6 +7,7 @@ import { RichText } from '../components/RichText'
 import { illustration } from '../components/SipIcon'
 import { Api, type Concept } from '../lib/api'
 import { play } from '../lib/sound'
+import { HScroll } from '../components/HScroll'
 
 const fold = (s: string) =>
   s
@@ -122,7 +123,7 @@ export function Notebook() {
       </label>
 
       {sips.length > 1 && (
-        <div style={{ display: 'flex', gap: 6, margin: '0 -16px', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <HScroll style={{ display: 'flex', gap: 6, margin: '0 -16px', padding: '0 16px' }}>
           {[[null, 'Tout'] as const, ...sips].map(([id, title]) => (
             <button
               key={id ?? 'all'}
@@ -136,7 +137,7 @@ export function Notebook() {
               {title}
             </button>
           ))}
-        </div>
+        </HScroll>
       )}
 
       {!shown.length && (

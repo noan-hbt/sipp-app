@@ -12,6 +12,7 @@ import { Api, type Plan, type Program, type SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
 import { Notebook } from './Notebook'
 import { chapterState, nextChapter } from './ProgramView'
+import { HScroll } from '../components/HScroll'
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
@@ -122,7 +123,7 @@ export function Library() {
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, margin: '14px -16px 0', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+          <HScroll style={{ display: 'flex', gap: 8, margin: '14px -16px 0', padding: '0 16px' }}>
             {FILTERS.map(([k, label]) => (
               <motion.button
                 key={k}
@@ -146,7 +147,7 @@ export function Library() {
                 {label}
               </motion.button>
             ))}
-          </div>
+          </HScroll>
 
           <motion.div key={filter} variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
             {shownProgs.map((pr) => (
@@ -163,7 +164,7 @@ export function Library() {
                 </span>
               </motion.div>
             )}
-            {loaded && filter === 'all' && Array.from({ length: free }, (_, i) => <EmptySlot key={`free-${i}`} canGenerate={genLeft > 0} onClick={() => nav('/new')} />)}
+            {loaded && filter === 'all' && free > 0 && <EmptySlot free={free} canGenerate={genLeft > 0} onClick={() => nav('/new')} />}
             {loaded && filter === 'all' && p && <UpsellSlot plan={p} onClick={() => nav('/offers')} />}
           </motion.div>
         </div>
@@ -195,7 +196,8 @@ function ProgramRow({ program: p, onOpen }: { program: Program; onOpen: () => vo
   )
 }
 
-function EmptySlot({ canGenerate, onClick }: { canGenerate: boolean; onClick: () => void }) {
+/** One card for all free places: ten identical dashed cards only add noise. */
+function EmptySlot({ free, canGenerate, onClick }: { free: number; canGenerate: boolean; onClick: () => void }) {
   return (
     <motion.button
       variants={item}
@@ -221,8 +223,10 @@ function EmptySlot({ canGenerate, onClick }: { canGenerate: boolean; onClick: ()
         {Icon.plus}
       </span>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? 'Nouveau Sip' : 'Place libre'}</span>
-        <span style={{ fontSize: 13 }}>{canGenerate ? 'Une place t’attend' : `Nouvelle création le ${nextMonth()}`}</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? 'Nouveau Sip' : free > 1 ? 'Places libres' : 'Place libre'}</span>
+        <span style={{ fontSize: 13 }}>
+          {canGenerate ? (free > 1 ? `${free} places t’attendent` : 'Une place t’attend') : `Nouvelle création le ${nextMonth()}`}
+        </span>
       </div>
     </motion.button>
   )
