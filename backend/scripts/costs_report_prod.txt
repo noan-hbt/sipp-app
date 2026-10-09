@@ -1,0 +1,81 @@
+SIPP LLM COST REPORT - USD - ROUGH PRICING EXPLORATION
+Basis: explicitly supplied database; logged OpenRouter costs.
+Sources: PostgreSQL (explicit --db source)
+Read-only: SQLite mode=ro + query_only; PostgreSQL SERIALIZABLE READ ONLY.
+
+TOTALS: 336 calls; 3 failed; $0.992237 known cost.
+Cost coverage: 336/336 calls; unknown cost is never assumed free.
+Unknown ok: 0; unknown timestamps: 0.
+Period (UTC): 2026-10-06T23:04:49.251559+00:00 to 2026-10-07T11:56:22.276057+00:00.
+Averages use known values only; totals/unit costs are lower bounds when costs are missing.
+
+COST BY STAGE (USD)
+stage                                  calls known        total     avg/call     avg in    avg out fail cost %
+mapping                                   60    60    $0.398505    $0.006642     1222.5      438.6        0.0%
+curriculum                                18    18    $0.350841    $0.019491     1718.8      791.6        0.0%
+writing                                   89    89    $0.119064    $0.001338     8988.2     1721.6        2.9%
+planning                                  74    74    $0.059116    $0.000799     2285.8     1286.1        0.0%
+review                                    74    74    $0.058912    $0.000796     4208.8      540.1        0.0%
+interpretation                            17    17    $0.003913    $0.000230     1362.9      318.5        0.0%
+roadmap                                    4     4    $0.001885    $0.000471     1329.5      610.5        0.0%
+
+COST BY MODEL (USD)
+model                                  calls known        total     avg/call     avg in    avg out fail cost %
+openai/gpt-6.1-sol                        52    52    $0.396258    $0.007620     1245.1      460.1        0.0%
+anthropic/claude-opus-5.5                 14    14    $0.349284    $0.024949     1872.9      872.9        0.0%
+openai/gpt-6-luna                        270   270    $0.246695    $0.000914     4897.6     1113.5        1.4%
+
+COST PER SIP BUILD: interpretation + roadmap + curriculum + mapping (n=18)
+  Mean $0.041903; median $0.038990; p90 $0.076462; min $0.001253; max $0.090632.
+
+COST PER GENERATED LESSON: planning + writing + review + revisions (n=74)
+  Mean $0.003204; median $0.002830; p90 $0.005026.
+All logged attempts grouped by ID, including failures/retries; writing includes repeated revision calls.
+p90 uses nearest rank. Units without IDs or any known cost cannot enter distributions.
+Unlinked build/lesson calls: 2; known cost $0.000899.
+
+RETRIES / ESCALATION: configured model openai/gpt-6.1-sol
+  Failed calls (retry overhead proxy): 3 calls; known cost $0.003429; 0 unknown costs.
+  All calls on escalation model: 52 calls; known cost $0.396258; 0 unknown costs.
+  Of these, current default-stage uses: 52 calls; known cost $0.396258; 0 unknown costs.
+  Of these, non-default-stage candidates: 0 calls; known cost $0.000000; 0 unknown costs.
+  Overlap: failed AND escalation-model: 0 calls; known cost $0.000000; 0 unknown costs.
+  Failed OR escalation model (counted once): $0.399687.
+Model matches do not prove escalation: current mapping uses this model normally; historic defaults may differ.
+Successful retry/revision overhead cannot be isolated exactly from this log; it remains included in unit costs.
+
+FULL SIP PROJECTION (all mapped lessons eventually generated)
+Completed units feed projections when status exists; unknown status retained for old schemas.
+Missing lite flags treated as legacy standard data; lite requires an explicit true flag.
+Sips with unknown lite flag: 0.
+  Standard: 18 builds, 74 generated lessons, 0 mapped Sips.
+    Build $0.041903; lesson $0.003204; avg lessons/Sip: no data; full Sip: no data.
+  Lite (free): 0 builds, 0 generated lessons, 0 mapped Sips.
+    Build no data; lesson no data; avg lessons/Sip: no data; full Sip: no data.
+
+MONTHLY PLAN PROJECTIONS / ROUGH PRICES (USD)
+Monthly cost C = sips_per_month * cohort mean build + N * cohort mean lesson.
+N=20 light, 60 regular, 120 heavy. Lessons generated lazily; slots are capacity, not a cost multiplier.
+N can include existing-library lessons; scenarios are not capped to lessons in new Sips.
+70% gross margin measured on customer price P: (P - store fee - LLM cost) / P = 70%.
+Rough minimum price: no store C/0.30; 15% store C/(1-0.70-0.15) = C/0.15.
+Includes LLM costs only, excluding hosting, taxes, support, payment fees and other expenses.
+plan        slots Sips/mo  lite    N      cost/mo   P no store  P 15% store
+free            1       1  True   20      no data      no data      no data
+free            1       1  True   60      no data      no data      no data
+free            1       1  True  120      no data      no data      no data
+basic           3       4 False   20    $0.231689    $0.772296    $1.544593
+basic           3       4 False   60    $0.359847    $1.199489    $2.398979
+basic           3       4 False  120    $0.552084    $1.840279    $3.680558
+plus           10      15 False   20    $0.692616    $2.308721    $4.617443
+plus           10      15 False   60    $0.820774    $2.735914    $5.471829
+plus           10      15 False  120    $1.013011    $3.376704    $6.753408
+max          1000    1000 False   20   $41.966579  $139.888597  $279.777195
+max          1000    1000 False   60   $42.094737  $140.315790  $280.631581
+max          1000    1000 False  120   $42.286974  $140.956580  $281.913159
+Lite/free projection: no sufficient lite data; no paid-cohort substitution.
+max is the configured internal/team plan; figures assume all 1,000 monthly generations are used.
+Historical model mix and small local samples; no repricing against today's model rates.
+
+DATA / LIMITATIONS
+  - Merged by ID: 0 duplicate calls removed; entity IDs counted once.

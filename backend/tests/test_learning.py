@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select, update
 
 from app import push
+from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Lesson, LessonFeedback, Module, Sip, User
 from app.progress import streak, streak_detail
@@ -127,3 +128,29 @@ async def test_module_quiz_after_module_and_best_stars(auth_client):
         assert (await s.get(Module, module_id)).quiz_stars == 3
     stats = (await auth_client.get("/auth/me/stats")).json()
     assert stats["lessons_today"] >= 2
+
+
+async def _make_free(c):
+    uid = (await c.get("/auth/me")).json()["id"]
+    async with SessionLocal() as s:
+        await s.execute(update(User).where(User.id == uid).values(plan="free"))
+        await s.commit()
+
+
+async def test_free_plan_locks_quiz_and_caps_notes(auth_client, monkeypatch):
+    sip_id, lessons = await _ready_sip(auth_client)
+    module = (await auth_client.get(f"/sips/{sip_id}")).json()["modules"][0]
+    for l in module["lessons"]:
+        await auth_client.post(f"/lessons/{l['id']}/complete", json={"answers": []})
+    await _make_free(auth_client)
+    plan = (await auth_client.get("/auth/me/plan")).json()
+    assert plan["features"] == {"audio": False, "quiz": False, "notes": 10, "help_per_day": 5}
+    r = await auth_client.get(f"/modules/{module['id']}/quiz")
+    assert r.status_code == 403 and r.json()["detail"]["feature"] == "quiz"
+    monkeypatch.setitem(get_settings().plan_features, "free", {"audio": False, "quiz": False, "notes": 1, "help_per_day": 5})
+    lid = lessons[0]["id"]
+    assert (await auth_client.post(f"/lessons/{lid}/notes", json={"block": 0, "quote": "a"})).status_code == 201
+    # Editing a kept passage is fine, a new one is over the limit.
+    assert (await auth_client.post(f"/lessons/{lid}/notes", json={"block": 0, "quote": "a", "text": "b"})).status_code == 201
+    r = await auth_client.post(f"/lessons/{lid}/notes", json={"block": 1, "quote": "c"})
+    assert r.status_code == 403 and r.json()["detail"]["code"] == "notes_limit"

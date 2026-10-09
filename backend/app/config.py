@@ -100,6 +100,14 @@ class Settings(BaseSettings):
         "plus": {"slots": 10, "sips_per_month": 15, "lite": False},
         "max": {"slots": 1000, "sips_per_month": 1000, "lite": False},  # internal / team
     }
+    # What each plan unlocks besides its quotas. notes: passages kept at once (0 = no limit);
+    # help_per_day is capped by max_help_per_day too.
+    plan_features: dict[str, dict[str, int | bool]] = {
+        "free": {"audio": False, "quiz": False, "notes": 10, "help_per_day": 5},
+        "basic": {"audio": True, "quiz": True, "notes": 0, "help_per_day": 30},
+        "plus": {"audio": True, "quiz": True, "notes": 0, "help_per_day": 60},
+        "max": {"audio": True, "quiz": True, "notes": 0, "help_per_day": 60},
+    }
     default_plan: str = "free"
     trial_plan: str = "basic"
     trial_days: int = 7

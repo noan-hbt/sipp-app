@@ -73,7 +73,10 @@ async def reserve_call(
             LLMCall.created_at >= now - timedelta(hours=24),
             or_(LLMCall.ok.is_(True), LLMCall.reserved_until > now),
         ))
-        if (used or 0) >= s.max_help_per_day:
+        from app.plans import features  # plans imports billing, which needs quota
+
+        user = await session.get(User, user_id)
+        if (used or 0) >= min(s.max_help_per_day, int(features(user)["help_per_day"])):
             raise _limit("help_limit", "help used a lot today, retry tomorrow")
     call = LLMCall(
         stage=stage, model=model, user_id=user_id, sip_id=sip_id, lesson_id=lesson_id,

@@ -37,6 +37,22 @@ def effective_plan(user: User) -> str:
     return user.plan
 
 
+FREE_FEATURES = {"audio": False, "quiz": False, "notes": 10, "help_per_day": 5}
+
+
+def features(user: User) -> dict:
+    """What the user's current plan unlocks (an unknown plan gets the free set)."""
+    return {**FREE_FEATURES, **get_settings().plan_features.get(effective_plan(user), {})}
+
+
+def require_feature(user: User, name: str) -> None:
+    if not features(user)[name]:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            {"code": "plan_feature", "message": f"{name} is not included in this plan", "feature": name},
+        )
+
+
 def _month() -> str:
     return utcnow().strftime("%Y-%m")
 
@@ -86,6 +102,7 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
         "sips_per_month": limits["sips_per_month"],
         "sips_this_month": this_month or 0,
         "lite": bool(limits["lite"]),
+        "features": features(user),
     }
 
 

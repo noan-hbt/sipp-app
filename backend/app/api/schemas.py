@@ -31,6 +31,13 @@ class SubscriptionOut(BaseModel):
     cancel_at_period_end: bool
 
 
+class FeaturesOut(BaseModel):
+    audio: bool
+    quiz: bool
+    notes: int = Field(description="Passages kept at once, 0 = no limit.")
+    help_per_day: int
+
+
 class PlanOut(BaseModel):
     billing_enabled: bool
     subscription: SubscriptionOut | None
@@ -44,6 +51,7 @@ class PlanOut(BaseModel):
     sips_per_month: int
     sips_this_month: int
     lite: bool
+    features: FeaturesOut | None = None
 
 
 class PlanInfo(BaseModel):

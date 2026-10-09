@@ -4,7 +4,7 @@ import random
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import AnswersIn
@@ -12,6 +12,7 @@ from app.api.sips import _own_lesson, _own_sip
 from app.auth import current_user
 from app.db import get_session
 from app.models import Lesson, LessonFeedback, Module, Note, Sip, User
+from app.plans import features, require_feature
 from app.progress import score_for, stars_for
 
 router = APIRouter(tags=["learning"])
@@ -121,6 +122,12 @@ async def add_note(
         select(Note).where(Note.user_id == user.id, Note.lesson_id == lesson.id, Note.block == body.block)
     )
     if note is None:
+        limit = int(features(user)["notes"])
+        kept = await session.scalar(select(func.count()).select_from(Note).where(Note.user_id == user.id))
+        if limit and (kept or 0) >= limit:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN, {"code": "notes_limit", "message": "notebook is full for this plan", "limit": limit}
+            )
         note = Note(user_id=user.id, lesson_id=lesson.id, block=body.block, quote=body.quote)
         session.add(note)
     note.quote, note.text = body.quote, body.text
@@ -153,6 +160,7 @@ async def _own_module(session: AsyncSession, user: User, module_id: str) -> tupl
 @router.get("/modules/{module_id}/quiz", response_model=QuizOut)
 async def module_quiz(module_id: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
     """A few questions picked across the module's lessons, shuffled: no generation, no wait."""
+    require_feature(user, "quiz")
     module, lessons = await _own_module(session, user, module_id)
     pool = [
         QuizItem(lesson_id=l.id, block_index=i, block=b)
@@ -176,6 +184,7 @@ async def submit_quiz(
     module_id: str, body: QuizIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
     """Graded on the server from the original blocks. Best result counts, extra stars only once."""
+    require_feature(user, "quiz")
     module, lessons = await _own_module(session, user, module_id)
     by_id = {l.id: l for l in lessons}
     blocks = []
