@@ -80,7 +80,7 @@ function Example({ b }: { b: B.ExampleBlock }) {
       <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>
         <RichText text={b.title} />
       </span>
-      <p className="lx-p" style={{ fontSize: 16, color: '#22496B' }}>
+      <p className="lx-p" style={{ fontSize: 16, color: 'var(--sky-ink)' }}>
         <RichText text={b.content} />
       </p>
     </article>
@@ -198,7 +198,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
                 <RichText text={it.name} />
               </span>
             ))}
-            <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 30, height: 30, borderRadius: 15, background: 'var(--ink)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 30, height: 30, borderRadius: 15, background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center' }}>
               VS
             </span>
           </div>
@@ -621,7 +621,7 @@ function Application({ b }: { b: B.ApplicationBlock }) {
         <RichText text={b.prompt} />
       </p>
       {b.guidance && (
-        <p className="lx-small" style={{ color: '#2E5A43' }}>
+        <p className="lx-small" style={{ color: 'var(--mint-ink)' }}>
           <RichText text={b.guidance} />
         </p>
       )}
@@ -658,7 +658,7 @@ function Recap({ b }: { b: B.RecapBlock }) {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 500, damping: 16, delay: 0.3 + b.points.length * 0.09 + i * 0.06 }}
               className="chip"
-              style={{ background: 'rgba(255,255,255,.75)', color: 'var(--butter-ink)' }}
+              style={{ background: 'color-mix(in srgb, var(--surface) 75%, transparent)', color: 'var(--butter-ink)' }}
             >
               {c}
             </motion.span>

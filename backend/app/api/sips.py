@@ -172,6 +172,7 @@ async def get_sip(
             ],
             bonus_stars=MODULE_BONUS,
             bonus_earned=m.id in finished,
+            quiz_stars=m.quiz_stars,
         )
         for m in modules
     ]

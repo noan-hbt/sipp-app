@@ -24,6 +24,7 @@ import { track } from './lib/telemetry'
 const Lesson = lazy(() => import('./screens/Lesson').then((m) => ({ default: m.Lesson })))
 const LessonDone = lazy(() => import('./screens/LessonDone').then((m) => ({ default: m.LessonDone })))
 const Review = lazy(() => import('./screens/Review').then((m) => ({ default: m.Review })))
+const ModuleQuiz = lazy(() => import('./screens/ModuleQuiz').then((m) => ({ default: m.ModuleQuiz })))
 const Demo = lazy(() => import('./screens/Demo').then((m) => ({ default: m.Demo })))
 const BlockGallery = lazy(() => import('./screens/BlockGallery').then((m) => ({ default: m.BlockGallery })))
 
@@ -98,6 +99,7 @@ export default function App() {
               <Route path="/programs/:programId" element={<ProgramView />} />
               <Route path="/lessons/:lessonId" element={<Lesson />} />
               <Route path="/lessons/:lessonId/done" element={<LessonDone />} />
+              <Route path="/modules/:moduleId/quiz" element={<ModuleQuiz />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </>
           )}

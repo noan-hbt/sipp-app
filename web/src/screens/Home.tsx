@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
@@ -7,7 +8,7 @@ import { Screen } from '../components/Screen'
 import { itemVariants as item, listVariants as list } from '../components/SipCard'
 import { illustration, SipIcon, sipPalette } from '../components/SipIcon'
 import { Button, Icon } from '../components/ui'
-import { Api, type SipSummary } from '../lib/api'
+import { Api, type SipSummary, type Stats } from '../lib/api'
 import { play } from '../lib/sound'
 
 function greeting() {
@@ -80,8 +81,12 @@ export function Home() {
 
       <div className="scroll" style={{ padding: '14px 16px 130px' }}>
         {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton accueil.' : 'Impossible d’actualiser ton accueil. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
-        {stats.data && <Week week={stats.data.week} />}
-        {stats.data?.completed_today && (
+        {stats.data && <Week week={stats.data.week} frozen={stats.data.freeze_used} />}
+        {stats.data && <Recap stats={stats.data} />}
+        {stats.data && !stats.data.completed_today && <FrozeYesterday stats={stats.data} />}
+        {stats.data && goalOf(stats.data) > 1 && (stats.data.lessons_today ?? 0) > 0 && (stats.data.lessons_today ?? 0) < goalOf(stats.data) ? (
+          <GoalBar done={stats.data.lessons_today ?? 0} goal={goalOf(stats.data)} />
+        ) : stats.data?.completed_today && (
           <motion.p
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -89,7 +94,9 @@ export function Home() {
             style={{ marginTop: 12, padding: '10px 14px', borderRadius: 16, background: 'var(--mint)', color: 'var(--mint-ink)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
           >
             {Icon.check(16, 'var(--mint-ink)')}
-            {stats.data.streak_days > 1
+            {goalOf(stats.data) > 1
+              ? `Objectif du jour atteint · ${stats.data.lessons_today} leçons`
+              : stats.data.streak_days > 1
               ? `Leçon du jour faite · ${stats.data.streak_days} jours d’affilée`
               : 'Leçon du jour faite, ta série est lancée. À demain !'}
           </motion.p>
@@ -145,14 +152,99 @@ export function Home() {
   )
 }
 
-/** Monday → Sunday: filled when a lesson was done that day, ring on today. */
-function Week({ week }: { week?: boolean[] }) {
+const goalOf = (s: Stats) => s.daily_goal ?? 1
+
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/** This week's Monday, local time. */
+function monday() {
+  const d = new Date()
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return d
+}
+
+/** Several lessons a day: how far along today's goal is. */
+function GoalBar({ done, goal }: { done: number; goal: number }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} role="status" style={{ marginTop: 12, padding: '10px 14px', borderRadius: 16, background: 'var(--primary-soft)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--primary-ink)' }}>
+        Objectif du jour · {done} leçon{done > 1 ? 's' : ''} sur {goal}
+      </span>
+      <span style={{ display: 'grid', gridTemplateColumns: `repeat(${goal}, minmax(0, 1fr))`, gap: 4 }}>
+        {Array.from({ length: goal }, (_, i) => (
+          <span key={i} style={{ height: 6, borderRadius: 3, background: i < done ? 'var(--primary)' : 'var(--surface)' }} />
+        ))}
+      </span>
+    </motion.div>
+  )
+}
+
+/** Yesterday was missed but the weekly freeze kept the streak alive: say it, today. */
+function FrozeYesterday({ stats }: { stats: Stats }) {
+  const y = new Date()
+  y.setDate(y.getDate() - 1)
+  if (!stats.freeze_used?.includes(iso(y)) || !stats.streak_days) return null
+  return (
+    <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} role="status" style={{ marginTop: 12, padding: '10px 14px', borderRadius: 16, background: 'var(--sky)', color: 'var(--sky-ink)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.35 }}>
+      {Icon.snow(16)}
+      Hier, ta série a été protégée. Une leçon aujourd’hui pour la garder.
+    </motion.p>
+  )
+}
+
+const RECAP_KEY = 'sipp.recap-seen'
+
+/** Monday to Wednesday: how last week went, until dismissed. */
+function Recap({ stats }: { stats: Stats }) {
+  const week = iso(monday())
+  const [seen, setSeen] = useState(() => {
+    try { return localStorage.getItem(RECAP_KEY) === week } catch { return false }
+  })
+  const w = stats.last_week
+  const day = (new Date().getDay() + 6) % 7
+  if (seen || !w || w.lessons === 0 || day > 2) return null
+  const close = () => {
+    setSeen(true)
+    try { localStorage.setItem(RECAP_KEY, week) } catch { /* private mode */ }
+  }
+  const cells: [number, string][] = [
+    [w.lessons, w.lessons > 1 ? 'leçons' : 'leçon'],
+    [w.minutes, 'minutes'],
+    [w.notions, w.notions > 1 ? 'notions' : 'notion'],
+    [w.active_days, w.active_days > 1 ? 'jours actifs' : 'jour actif'],
+  ]
+  return (
+    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 12, padding: 14, borderRadius: 22, background: 'var(--lavender)', display: 'flex', flexDirection: 'column', gap: 10 }} aria-label="Ta semaine dernière">
+      <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="display" style={{ fontSize: 17, color: 'var(--lavender-ink)' }}>Ta semaine dernière</span>
+        <button onClick={close} aria-label="Masquer" style={{ border: 'none', background: 'none', color: 'var(--lavender-ink)', display: 'grid', padding: 4 }}>{Icon.cross(16)}</button>
+      </span>
+      <span style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
+        {cells.map(([n, label]) => (
+          <span key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--surface)', borderRadius: 14, padding: '8px 2px' }}>
+            <span className="display" style={{ fontSize: 20 }}>{n}</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+          </span>
+        ))}
+      </span>
+      <span style={{ fontSize: 14, color: 'var(--lavender-ink)', lineHeight: 1.4 }}>
+        {w.active_days >= 5 ? 'Une semaine solide. On garde ce rythme ?' : w.active_days >= 3 ? 'Beau rythme. Un jour de plus cette semaine ?' : 'Chaque leçon compte. On vise un jour de plus cette semaine ?'}
+      </span>
+    </motion.section>
+  )
+}
+
+/** Monday → Sunday: filled when a lesson was done that day, a snowflake when the freeze saved it, ring on today. */
+function Week({ week, frozen }: { week?: boolean[]; frozen?: string[] }) {
   const todayIdx = (new Date().getDay() + 6) % 7
+  const start = new Date(`${iso(monday())}T12:00:00`).getTime()
+  const frozenIdx = new Set((frozen ?? []).map((f) => Math.round((new Date(`${f}T12:00:00`).getTime() - start) / 86400000)))
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '0 4px' }}>
       {'LMMJVSD'.split('').map((l, i) => {
         const done = week?.[i] ?? false
         const isToday = i === todayIdx
+        const saved = !done && frozenIdx.has(i)
         return (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <motion.span
@@ -165,13 +257,14 @@ function Week({ week }: { week?: boolean[] }) {
                 borderRadius: 18,
                 display: 'grid',
                 placeItems: 'center',
-                background: done ? 'var(--primary)' : 'var(--surface)',
-                boxShadow: done ? 'none' : isToday ? 'inset 0 0 0 2.5px var(--primary)' : 'inset 0 0 0 2px var(--line)',
+                background: done ? 'var(--primary)' : saved ? 'var(--sky)' : 'var(--surface)',
+                boxShadow: done || saved ? 'none' : isToday ? 'inset 0 0 0 2.5px var(--primary)' : 'inset 0 0 0 2px var(--line)',
               }}
+              aria-label={saved ? 'Série protégée' : undefined}
             >
-              {done && Icon.check(14, '#fff')}
+              {done ? Icon.check(14, '#fff') : saved ? Icon.snow(15) : null}
             </motion.span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: isToday ? 'var(--ink)' : '#B3A99F' }}>{l}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: isToday ? 'var(--ink)' : 'var(--faint)' }}>{l}</span>
           </div>
         )
       })}

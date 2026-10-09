@@ -132,7 +132,7 @@ export function Notebook() {
                 setSip(id)
               }}
               aria-pressed={sip === id}
-              style={{ height: 34, padding: '0 13px', borderRadius: 17, border: 'none', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 600, background: sip === id ? 'var(--ink)' : 'var(--surface)', color: sip === id ? '#fff' : 'var(--ink-soft)' }}
+              style={{ height: 34, padding: '0 13px', borderRadius: 17, border: 'none', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 600, background: sip === id ? 'var(--ink)' : 'var(--surface)', color: sip === id ? 'var(--on-ink)' : 'var(--ink-soft)' }}
             >
               {title}
             </button>

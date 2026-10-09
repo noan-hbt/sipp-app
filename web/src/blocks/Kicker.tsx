@@ -40,7 +40,7 @@ export const KICKER_ICONS = {
  *  `onTint` when the block itself is filled with the tone, so the tile turns white. */
 export function Kicker({ icon, tone, onTint, children }: { icon: keyof typeof KICKER_ICONS; tone: Tone; onTint?: boolean; children: ReactNode }) {
   const [tint, ink] = TONES[tone]
-  const bg = onTint ? 'rgba(255,255,255,.8)' : tint
+  const bg = onTint ? 'color-mix(in srgb, var(--surface) 80%, transparent)' : tint
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 8, color: ink, fontSize: 13, fontWeight: 600 }}>
       <span style={{ width: 26, height: 26, borderRadius: 9, background: bg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>{KICKER_ICONS[icon]}</span>

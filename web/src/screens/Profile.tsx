@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { HabitSettings } from '../components/HabitSettings'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
@@ -129,18 +130,18 @@ export function Profile() {
             {subscription ? (
               <>
                 <div style={{ position: 'relative' }}>
-                  <span className="pill-tag" style={{ display: 'inline-block', background: 'var(--ink)', color: '#fff', fontSize: 12, letterSpacing: '.04em' }}>
+                  <span className="pill-tag" style={{ display: 'inline-block', background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 12, letterSpacing: '.04em' }}>
                     {subscription.on_trial ? 'ESSAI' : 'OFFRE'} {planNames[subscription.plan].toUpperCase()}
                   </span>
                   <h2 className="title-m" style={{ marginTop: 8 }}>{subscription.on_trial ? 'Ton essai est en cours' : planNames[subscription.plan]}</h2>
                   {subscription.on_trial && subscription.plan_expires_at && (
-                    <p style={{ fontSize: 14, marginTop: 2, color: '#2E2660' }}>
+                    <p style={{ fontSize: 14, marginTop: 2, color: 'var(--lavender-deep)' }}>
                       Essai gratuit · jusqu’au {new Date(subscription.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                     </p>
                   )}
                 </div>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: '#2E2660', display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--lavender-deep)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Bibliothèque</span>
                     <span>{subscription.slots_used} / {subscription.slots} places</span>
                   </p>
@@ -156,15 +157,15 @@ export function Profile() {
                     <motion.div initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--ink)' }} />
                   </div>
                 </div>
-                <p style={{ position: 'relative', fontSize: 14, color: '#2E2660' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
-                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: '#2E2660' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
+                <p style={{ position: 'relative', fontSize: 14, color: 'var(--lavender-deep)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
+                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: 'var(--lavender-deep)' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
                 {subscription.subscription && (() => {
                   const sub = subscription.subscription
                   const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '')
                   const kind = sub.interval === 'year' ? 'annuel' : 'mensuel'
                   return (
                     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <p role={sub.status === 'past_due' ? 'alert' : undefined} style={{ fontSize: 14, fontWeight: 500, color: sub.status === 'past_due' ? 'var(--rose-ink)' : '#2E2660' }}>
+                      <p role={sub.status === 'past_due' ? 'alert' : undefined} style={{ fontSize: 14, fontWeight: 500, color: sub.status === 'past_due' ? 'var(--rose-ink)' : 'var(--lavender-deep)' }}>
                         {sub.status === 'past_due'
                           ? `Ton dernier paiement a échoué. Mets à jour ton moyen de paiement avant le ${day(subscription.plan_expires_at)} pour garder ton offre.`
                           : sub.cancel_at_period_end
@@ -202,6 +203,7 @@ export function Profile() {
 
           <motion.section variants={item} aria-labelledby="profile-settings" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h2 id="profile-settings" className="title-m" style={{ margin: '6px 6px 0' }}>Réglages</h2>
+            <HabitSettings />
             <div className="card" style={{ borderRadius: 24, overflow: 'hidden' }}>
               <button
                 type="button"

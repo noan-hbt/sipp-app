@@ -79,7 +79,7 @@ export function SipCard({ sip, onOpen }: { sip: SipSummary; onOpen: () => void }
             <Mascot mood="think" size={46} />
           </span>
         ) : failed ? (
-          <span style={{ width: 60, height: 60, borderRadius: 18, background: '#fff', display: 'grid', placeItems: 'center' }}>
+          <span style={{ width: 60, height: 60, borderRadius: 18, background: 'var(--surface)', display: 'grid', placeItems: 'center' }}>
             <Mascot mood="oops" size={46} />
           </span>
         ) : undefined

@@ -14,6 +14,7 @@ import { chapterState, nextChapter } from './ProgramView'
 import { HScroll } from '../components/HScroll'
 
 const Notebook = lazy(() => import('./Notebook').then((m) => ({ default: m.Notebook })))
+const Notes = lazy(() => import('./Notes').then((m) => ({ default: m.Notes })))
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
@@ -37,7 +38,7 @@ const progDone = (p: Program) => p.chapters.length > 0 && p.chapters.every((c) =
 export function Library() {
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'notions' ? 'notions' : 'sips'
+  const tab = params.get('tab') === 'notions' ? 'notions' : params.get('tab') === 'notes' ? 'notes' : 'sips'
   const [filter, setFilter] = useState<Filter>('all')
   const sips = useQuery({
     queryKey: ['sips'],
@@ -73,11 +74,12 @@ export function Library() {
           Bibliothèque
         </h1>
       </header>
-      <div role="tablist" aria-label="Bibliothèque" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', padding: 4, borderRadius: 18, background: 'var(--bg-deep)' }}>
+      <div role="tablist" aria-label="Bibliothèque" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 18, background: 'var(--bg-deep)' }}>
         {(
           [
             ['sips', 'Mes Sips'],
             ['notions', 'Notions'],
+            ['notes', 'Notes'],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -96,7 +98,11 @@ export function Library() {
         ))}
       </div>
 
-      {tab === 'notions' ? (
+      {tab === 'notes' ? (
+        <Suspense fallback={null}>
+          <Notes />
+        </Suspense>
+      ) : tab === 'notions' ? (
         <Suspense fallback={null}>
           <Notebook />
         </Suspense>
@@ -118,7 +124,7 @@ export function Library() {
                       initial={{ scaleX: 0 }}
                       animate={{ scaleX: 1 }}
                       transition={{ delay: 0.05 * i }}
-                      style={{ height: 10, borderRadius: 5, background: i < kept ? 'var(--lavender-strong)' : '#fff' }}
+                      style={{ height: 10, borderRadius: 5, background: i < kept ? 'var(--lavender-strong)' : 'var(--surface)' }}
                     />
                   ))}
                 </div>
@@ -144,7 +150,7 @@ export function Library() {
                   fontSize: 14,
                   fontWeight: 600,
                   background: filter === k ? 'var(--ink)' : 'var(--surface)',
-                  color: filter === k ? '#fff' : 'var(--ink)',
+                  color: filter === k ? 'var(--on-ink)' : 'var(--ink)',
                 }}
               >
                 {label}

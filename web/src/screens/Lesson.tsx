@@ -10,7 +10,8 @@ import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton, ProgressBar } from '../components/ui'
 import { Api, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } from '../lib/api'
-import { isGraded, isInteractive, type Block } from '../lib/blocks'
+import { blockText, isGraded, isInteractive, isKeepable, type Block } from '../lib/blocks'
+import { speak, speechSupported, stopSpeaking } from '../lib/speech'
 import { useLessonResume } from '../lib/resume'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
@@ -33,6 +34,19 @@ export function Lesson() {
     refetchInterval: (q) => (q.state.data && q.state.data.status !== 'ready' && q.state.data.status !== 'failed' ? 2000 : false),
   })
   const data = lesson.data
+  const notes = useQuery({ queryKey: ['notes'], queryFn: Api.notes })
+  const kept = new Map((notes.data ?? []).filter((n) => n.lesson_id === lessonId).map((n) => [n.block, n.id]))
+  const keep = useMutation({
+    mutationFn: async ({ block, quote }: { block: number; quote: string }) => {
+      const id = kept.get(block)
+      if (id) await Api.deleteNote(id)
+      else {
+        await Api.keepNote(lessonId, { block, quote })
+        track('note_kept', { type: data?.blocks?.[block]?.type })
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['notes'] }),
+  })
   const ready = data?.status === 'ready'
   const resumed = !!data?.completed_at
   useEffect(() => {
@@ -91,6 +105,8 @@ export function Lesson() {
       finishing={complete.isPending}
       finishError={complete.isError ? apiErrorMessage(complete.error, 'Ta leçon n’a pas été enregistrée. Réessaie.') : undefined}
       onHelp={(block, kind, question) => (track('help_asked', { kind }), Api.help(lessonId, { block, kind, question }).then((r) => r.answer))}
+      kept={new Set(kept.keys())}
+      onKeep={(block, quote) => keep.mutate({ block, quote })}
     />
   )
 }
@@ -139,6 +155,9 @@ export function LessonPlayer({
   finishing,
   finishError,
   onHelp,
+  finishLabel = 'Terminer la leçon',
+  kept,
+  onKeep,
 }: {
   title: string
   blocks: Block[]
@@ -151,6 +170,10 @@ export function LessonPlayer({
   finishError?: string
   /** Explains the given block again; the help button is hidden without it (demo). */
   onHelp?: (block: number, kind: HelpKind, question?: string) => Promise<string>
+  finishLabel?: string
+  /** Blocks kept as notes; the keep button is hidden without onKeep. */
+  kept?: Set<number>
+  onKeep?: (block: number, quote: string) => void
 }) {
   const [revealed, setRevealed] = useState(() => Math.min(Math.max(1, (resume?.step ?? 0) + 1), Math.max(1, blocks.length)))
   const [answers, setAnswers] = useState<Record<number, Answer>>(() => fromList(resume))
@@ -177,6 +200,14 @@ export function LessonPlayer({
       /* private mode */
     }
   }
+  // Read aloud: each block as it appears, until turned off.
+  const [listening, setListening] = useState(false)
+  useEffect(() => {
+    if (!listening || !blocks[revealed - 1]) return
+    speak(blockText(blocks[revealed - 1]))
+    return () => stopSpeaking()
+  }, [listening, revealed]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => stopSpeaking(), [])
   // Between the answer and the feedback sheet: the block shows its result, no bottom bar.
   const [grading, setGrading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -259,6 +290,25 @@ export function LessonPlayer({
         <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--faint)', minWidth: 34, textAlign: 'right' }}>
           {revealed}/{blocks.length}
         </span>
+        {speechSupported() && (
+          <motion.button
+            aria-label={listening ? 'Arrêter la lecture' : 'Écouter la leçon'}
+            aria-pressed={listening}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              play('tap')
+              if (!listening) track('lesson_listened')
+              setListening(!listening)
+            }}
+            className="icon-btn"
+            style={{ background: listening ? 'var(--primary)' : 'var(--peach-soft)', color: listening ? '#fff' : 'var(--primary)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 14v-2a9 9 0 0118 0v2" />
+              <path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2z" />
+            </svg>
+          </motion.button>
+        )}
         {onHelp && (
           <motion.button
             aria-label="Je n’ai pas compris"
@@ -286,7 +336,7 @@ export function LessonPlayer({
               exit={{ opacity: 0, y: -6 }}
               transition={{ delay: 0.8 }}
               onClick={dismissHint}
-              style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, zIndex: 5, maxWidth: 220, padding: '10px 12px', borderRadius: '16px 4px 16px 16px', border: 'none', background: 'var(--ink)', color: '#fff', fontSize: 13, fontWeight: 600, lineHeight: 1.35, textAlign: 'left', boxShadow: '0 8px 24px rgba(0,0,0,.18)' }}
+              style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, zIndex: 5, maxWidth: 220, padding: '10px 12px', borderRadius: '16px 4px 16px 16px', border: 'none', background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 13, fontWeight: 600, lineHeight: 1.35, textAlign: 'left', boxShadow: '0 8px 24px rgba(0,0,0,.18)' }}
             >
               {'Un passage pas clair ? Touche « ? » : je réexplique autrement.'}
             </motion.button>
@@ -315,6 +365,9 @@ export function LessonPlayer({
               transition={{ type: 'spring', stiffness: 220, damping: 24 }}
             >
               <BlockView block={b} answer={answers[i]} onAnswer={(a) => onAnswer(i, a)} />
+              {onKeep && isKeepable(b) && (
+                <KeepButton kept={!!kept?.has(i)} onClick={() => onKeep(i, blockText(b))} />
+              )}
             </motion.div>
           ))}
         </div>
@@ -330,7 +383,7 @@ export function LessonPlayer({
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
             {finishError ? <ErrorNotice message={finishError} retry={next} busy={finishing} /> : <Button onClick={next} disabled={finishing} sound={null}>
-              {finishing ? <Mascot mood="think" size={36} /> : isLast ? 'Terminer la leçon' : 'Continuer'}
+              {finishing ? <Mascot mood="think" size={36} /> : isLast ? finishLabel : 'Continuer'}
             </Button>}
           </motion.div>
         )}
@@ -360,7 +413,7 @@ export function LessonPlayer({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 58, height: 58, borderRadius: 29, background: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              <span style={{ width: 58, height: 58, borderRadius: 29, background: 'var(--surface)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                 <Mascot mood={tone === 'good' ? 'bravo' : tone === 'bad' ? 'oops' : 'think'} size={46} />
               </span>
               <motion.span
@@ -378,17 +431,38 @@ export function LessonPlayer({
                 <RichText text={fb.expected} />
               </p>
             )}
-            <p style={{ fontSize: 15, lineHeight: 1.55, color: tone === 'good' ? '#2E5A43' : tone === 'bad' ? '#6B2A1A' : '#22496B' }}>
+            <p style={{ fontSize: 15, lineHeight: 1.55, color: tone === 'good' ? 'var(--mint-ink)' : tone === 'bad' ? 'var(--rose-ink)' : 'var(--sky-ink)' }}>
               <RichText text={fb.explanation} />
             </p>
             <Button variant={tone === 'good' ? 'mint' : tone === 'bad' ? 'peach' : 'dark'} onClick={next} disabled={finishing} style={{ marginTop: 4 }}>
-              {isLast ? 'Terminer la leçon' : tone === 'bad' ? 'Compris' : 'Continuer'}
+              {isLast ? finishLabel : tone === 'bad' ? 'Compris' : 'Continuer'}
             </Button>
           </motion.section>
         )}
       </AnimatePresence>
       {onHelp && <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} ask={(kind, question) => onHelp(revealed - 1, kind, question)} />}
     </Screen>
+  )
+}
+
+/** Keeps a passage in the notebook (or lets it go). */
+function KeepButton({ kept, onClick }: { kept: boolean; onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.92 }}
+      aria-pressed={kept}
+      onClick={() => {
+        play('tap')
+        onClick()
+      }}
+      style={{ marginTop: 8, marginLeft: 'auto', width: 'fit-content', display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 14, padding: '6px 10px', fontSize: 13, fontWeight: 600, background: kept ? 'var(--butter)' : 'transparent', color: kept ? 'var(--butter-ink)' : 'var(--faint)' }}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill={kept ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 3h12v18l-6-4-6 4z" />
+      </svg>
+      {kept ? 'Gardé dans mon carnet' : 'Garder'}
+    </motion.button>
   )
 }
 

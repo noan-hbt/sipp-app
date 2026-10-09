@@ -5,7 +5,7 @@ import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
 import { SipIcon } from '../components/SipIcon'
 import { Icon, IconButton } from '../components/ui'
-import { Api, type SipSummary } from '../lib/api'
+import { Api, type SipSummary, type WeekStats } from '../lib/api'
 
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
@@ -43,6 +43,16 @@ export function Progress() {
           <Tile value={s?.concepts} label={s?.concepts === 1 ? 'notion' : 'notions'} onClick={() => nav('/library?tab=notions')} />
         </div>
 
+        {s?.this_week && <ThisWeek w={s.this_week} last={s.last_week ?? null} />}
+        {s && s.lessons_completed > 0 && (
+          <p style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 18, background: 'var(--sky)', color: 'var(--sky-ink)', fontSize: 14, lineHeight: 1.35, margin: 0 }}>
+            <span style={{ flexShrink: 0, display: 'grid' }}>{Icon.snow(18)}</span>
+            {s.freeze_available
+              ? 'Protection de série prête : si tu rates un jour cette semaine, ta série tient.'
+              : 'Protection de série utilisée. Elle revient sept jours après.'}
+          </p>
+        )}
+
         {s?.month && <Month month={s.month} days={s.month_days ?? []} today={s.today ?? 1} />}
         {s && s.lessons_completed === 0 && (
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.45, padding: '0 4px' }}>
@@ -60,6 +70,36 @@ export function Progress() {
         ))}
       </div>
     </Screen>
+  )
+}
+
+/** This week so far, next to last week. */
+function ThisWeek({ w, last }: { w: WeekStats; last: WeekStats | null }) {
+  const diff = last ? w.lessons - last.lessons : 0
+  const rows: [string, number, number | undefined][] = [
+    ['Leçons', w.lessons, last?.lessons],
+    ['Minutes', w.minutes, last?.minutes],
+    ['Notions', w.notions, last?.notions],
+  ]
+  return (
+    <section className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 17, fontWeight: 600 }}>Cette semaine</span>
+        {last && last.lessons > 0 && (
+          <span style={{ fontSize: 13, fontWeight: 600, color: diff >= 0 ? 'var(--mint-ink)' : 'var(--muted)' }}>
+            {diff > 0 ? `+${diff} vs semaine dernière` : diff === 0 ? 'Comme la semaine dernière' : `${-diff} de moins que la semaine dernière`}
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {rows.map(([label, n, before]) => (
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span className="display" style={{ fontSize: 24 }}>{n}</span>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{label}{before !== undefined && before > 0 ? ` · ${before} avant` : ''}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 

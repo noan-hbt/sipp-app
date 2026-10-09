@@ -89,3 +89,36 @@ export function isInteractive(b: Block) {
 export function isGraded(b: Block) {
   return isInteractive(b) && !(b.type === 'question' && b.kind === 'open')
 }
+
+/** LLM markup stripped: **bold**, `code`, $math$ keep their words only. */
+export const plain = (s?: string | null) =>
+  (s ?? '').replace(/\\$/g, '$').replace(/\*\*|`|\$/g, '').replace(/\s+/g, ' ').trim()
+
+const join = (...parts: (string | null | undefined | false)[]) =>
+  parts.map((p) => plain(p || '')).filter(Boolean).map((p) => (/[.!?:…]$/.test(p) ? p : `${p}.`)).join(' ')
+
+/** What a block says, as plain sentences: read aloud, or kept as a note. Answers are never included. */
+export function blockText(b: Block): string {
+  switch (b.type) {
+    case 'text': return join(b.content)
+    case 'concept': return join(b.name, b.definition, b.explanation)
+    case 'example': return join(b.title, b.content)
+    case 'scenario': return join(b.setting, b.narrative, b.prompt)
+    case 'analogy': return join(`${b.source} et ${b.target}`, b.explanation, ...b.mappings.map((m) => `${m.source} : ${m.target}`), b.limits)
+    case 'comparison': return join(b.title, ...b.items.map((it) => `${it.name} : ${it.values.join(', ')}`), b.takeaway)
+    case 'sequence': return join(b.title, ...b.steps.map((s, i) => `${i + 1}. ${s.title} : ${s.description}`))
+    case 'cause_effect': return join(b.title, ...b.chain.map((c) => (c.explanation ? `${c.label} : ${c.explanation}` : c.label)))
+    case 'code': return join(b.caption, b.explanation)
+    case 'math': return join(b.explanation, ...(b.variables ?? []).map((v) => `${v.symbol} : ${v.meaning}`))
+    case 'misconception': return join('Vrai ou faux', b.statement)
+    case 'question': return join(b.prompt, ...(b.options ?? []).map((o) => o.text))
+    case 'fill_blanks': return join(b.text.replace(/\{\d+\}/g, '…'))
+    case 'match': return join(b.prompt)
+    case 'estimate': return join(b.prompt)
+    case 'application': return join(b.prompt, b.guidance)
+    case 'recap': return join('À retenir', ...b.points)
+  }
+}
+
+/** Content worth keeping as a note: what teaches, not what tests. */
+export const isKeepable = (b: Block) => !isInteractive(b) && b.type !== 'application'

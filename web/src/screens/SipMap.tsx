@@ -370,7 +370,7 @@ export function SipMap() {
                     textTransform: "uppercase",
                     color: m.lessons.some((l) => stateOf(l) !== "locked")
                       ? "var(--faint)"
-                      : "#C4BAB0",
+                      : "color-mix(in srgb, var(--faint) 55%, transparent)",
                   }}
                 >
                   Module {m.position} · {m.title} ·{" "}
@@ -398,6 +398,12 @@ export function SipMap() {
                     />
                   );
                 })}
+                {m.lessons.length > 0 && m.lessons.every((l) => l.completed) && (
+                  <QuizRow
+                    stars={m.quiz_stars ?? null}
+                    onOpen={() => nav(`/modules/${m.id}/quiz`, { state: { sipId: sipId } })}
+                  />
+                )}
               </motion.section>
             ))}
             <div
@@ -739,5 +745,56 @@ function LessonRow({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/** Once every lesson of a module is done: its quiz, and the best result so far. */
+function QuizRow({ stars, onOpen }: { stars: number | null; onOpen: () => void }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={onOpen}
+      style={{
+        marginTop: 8,
+        border: "none",
+        borderRadius: 20,
+        padding: "12px 14px",
+        background: "var(--lavender)",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        textAlign: "left",
+      }}
+    >
+      <span
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 13,
+          background: "var(--lavender-strong)",
+          color: "#fff",
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+          fontWeight: 700,
+          fontSize: 18,
+        }}
+      >
+        ?
+      </span>
+      <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 15, fontWeight: 600 }}>Quiz du module</span>
+        <span style={{ fontSize: 13, color: "var(--lavender-ink)" }}>
+          {stars === null ? "5 questions · jusqu’à 3 étoiles" : stars >= 3 ? "Maîtrisé · refaire pour réviser" : "Retente pour 3 étoiles"}
+        </span>
+      </span>
+      {stars !== null && (
+        <span style={{ display: "flex", gap: 2 }} aria-label={`${stars} étoiles sur 3`}>
+          {[1, 2, 3].map((n) => (
+            <Star key={n} size={16} filled={stars >= n} />
+          ))}
+        </span>
+      )}
+    </motion.button>
   );
 }

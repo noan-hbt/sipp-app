@@ -11,7 +11,7 @@ export function Welcome() {
   return (
     <Screen kind="fade">
       <div className="scroll" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ position: 'relative', minHeight: 380, flex: 1, borderRadius: '0 0 44px 44px', background: '#FFD7BD', display: 'grid', placeItems: 'center', padding: 'calc(var(--safe-top) + 30px) 0 20px', overflow: 'hidden' }}>
+        <div style={{ position: 'relative', minHeight: 380, flex: 1, borderRadius: '0 0 44px 44px', background: 'var(--peach-mid)', display: 'grid', placeItems: 'center', padding: 'calc(var(--safe-top) + 30px) 0 20px', overflow: 'hidden' }}>
           <Confetti />
           <motion.img
             src={illustration('scene-welcome')}

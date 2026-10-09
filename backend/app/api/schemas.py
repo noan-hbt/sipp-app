@@ -162,6 +162,7 @@ class ModuleOut(BaseModel):
     lessons: list[LessonBrief]
     bonus_stars: int = Field(default=3, description="Stars earned by finishing every lesson of the module.")
     bonus_earned: bool = False
+    quiz_stars: int | None = Field(default=None, description="Best end-of-module quiz result, once taken.")
 
 
 class SipDetail(SipSummary):

@@ -1,12 +1,17 @@
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Screen } from '../components/Screen'
 import { RichText } from '../components/RichText'
 import { illustration } from '../components/SipIcon'
 import { Button, Icon, Star } from '../components/ui'
-import type { CompleteOut } from '../lib/api'
+import { ReportSheet } from '../components/ReportSheet'
+import { Api, type CompleteOut, type Feeling } from '../lib/api'
+import { LESSON_MINUTES } from '../lib/format'
+import { shareSip } from '../lib/share'
 import { play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 type DoneState = CompleteOut & {
   correct: number
@@ -108,10 +113,86 @@ export function Takeaways({
   )
 }
 
+const FEELINGS: [Feeling, string][] = [['easy', 'Trop facile'], ['ok', 'Parfait'], ['hard', 'Trop dur']]
+
+/** How the lesson felt: too easy / too hard tunes the next lessons of the Sip. */
+function FeelingCard({ lessonId, delay }: { lessonId: string; delay: number }) {
+  const [picked, setPicked] = useState<Feeling | null>(null)
+  const send = useMutation({
+    mutationFn: (feeling: Feeling) => Api.feedback(lessonId, { feeling }),
+    onSuccess: (_, feeling) => track('lesson_feeling', { feeling }),
+  })
+  return (
+    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className="card" style={{ borderRadius: 22, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <span style={{ fontSize: 14, fontWeight: 600 }}>Cette leçon, c’était…</span>
+      <div role="radiogroup" aria-label="Ton ressenti" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {FEELINGS.map(([k, label]) => {
+          const on = picked === k
+          return (
+            <motion.button
+              key={k}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              whileTap={{ scale: 0.95 }}
+              disabled={!!picked}
+              onClick={() => {
+                setPicked(k)
+                send.mutate(k)
+              }}
+              style={{ border: 'none', borderRadius: 16, padding: '10px 4px', fontSize: 15, fontWeight: 600, background: on ? 'var(--primary)' : 'var(--bg-deep)', color: on ? '#fff' : 'var(--ink-soft)', opacity: picked && !on ? 0.55 : 1 }}
+            >
+              {label}
+            </motion.button>
+          )
+        })}
+      </div>
+      {picked && (
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="status" style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.4 }}>
+          {send.isError
+            ? 'Ton avis n’a pas pu être envoyé.'
+            : picked === 'easy'
+              ? 'Noté : je corse un peu les prochaines leçons.'
+              : picked === 'hard'
+                ? 'Noté : j’y vais plus doucement pour la suite.'
+                : 'Merci ! On garde ce rythme.'}
+        </motion.span>
+      )}
+    </motion.section>
+  )
+}
+
+/** The last lesson of a Sip: an image to share. */
+function ShareButton({ sipId, title }: { sipId: string; title: string }) {
+  const sip = useQuery({ queryKey: ['sip', sipId], queryFn: ({ signal }) => Api.sip(sipId, signal) })
+  const [state, setState] = useState<'idle' | 'busy' | 'downloaded'>('idle')
+  const lessons = sip.data?.modules.flatMap((m) => m.lessons) ?? []
+  const stars = lessons.reduce((n, l) => n + (l.stars ?? 0), 0)
+  return (
+    <Button
+      variant="soft"
+      disabled={!sip.data || state === 'busy'}
+      onClick={async () => {
+        setState('busy')
+        try {
+          const how = await shareSip({ title: sip.data?.title ?? title, lessons: lessons.length, minutes: lessons.length * LESSON_MINUTES, stars })
+          if (how !== 'cancelled') track('sip_shared', { how })
+          setState(how === 'downloaded' ? 'downloaded' : 'idle')
+        } catch {
+          setState('idle')
+        }
+      }}
+    >
+      {state === 'downloaded' ? 'Image enregistrée' : state === 'busy' ? 'Préparation…' : 'Partager ma réussite'}
+    </Button>
+  )
+}
+
 export function LessonDone() {
   const { lessonId } = useParams()
   const nav = useNavigate()
   const s = (useLocation().state ?? null) as DoneState | null
+  const [report, setReport] = useState(false)
 
   useEffect(() => {
     if (!s) return
@@ -198,6 +279,23 @@ export function LessonDone() {
             </motion.div>
           )}
 
+          {!!s.module_done && s.module_id && (
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.15 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } })}
+              style={{ border: 'none', borderRadius: 22, padding: '14px 16px', background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+            >
+              <span style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--lavender-strong)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, fontWeight: 700, fontSize: 20 }}>?</span>
+              <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 600 }}>Quiz du module</span>
+                <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>
+              </span>
+            </motion.button>
+          )}
+
           {s.objective && <Takeaways objective={s.objective} points={s.points ?? []} action={s.action ?? null} mastered={mastered(s.correct, s.total)} delay={1} />}
 
           {s.concepts.length > 0 && (
@@ -220,6 +318,8 @@ export function LessonDone() {
             </motion.section>
           )}
 
+          {lessonId && <FeelingCard lessonId={lessonId} delay={1.2} />}
+
           <motion.div
             initial={{ y: 30, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -229,6 +329,7 @@ export function LessonDone() {
             <Button variant="dark" sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
               {s.next_lesson_id ? 'Leçon suivante' : 'Voir mon parcours'}
             </Button>
+            {s.progress.total > 0 && s.progress.completed >= s.progress.total && <ShareButton sipId={s.sipId} title={s.title} />}
             {!mastered(s.correct, s.total) && (
               <Button variant="soft" onClick={() => nav(`/lessons/${lessonId}`, { replace: true })}>
                 Refaire la leçon
@@ -237,7 +338,11 @@ export function LessonDone() {
             <Button variant="ghost" style={{ height: 44, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
               J’arrête là pour aujourd’hui
             </Button>
+            <button type="button" onClick={() => setReport(true)} style={{ alignSelf: 'center', border: 'none', background: 'none', padding: 8, fontSize: 14, fontWeight: 500, color: 'var(--muted)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+              Signaler un problème dans cette leçon
+            </button>
           </motion.div>
+          {lessonId && <ReportSheet lessonId={lessonId} open={report} onClose={() => setReport(false)} />}
         </motion.div>
       </div>
     </Screen>

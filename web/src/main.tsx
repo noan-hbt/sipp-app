@@ -7,8 +7,10 @@ import App from './App'
 import { CrashScreen } from './components/CrashScreen'
 import { getSessionId, onSessionChange } from './lib/api'
 import { initTelemetry } from './lib/telemetry'
+import { applyTheme } from './lib/theme'
 import './styles/global.css'
 
+applyTheme()
 initTelemetry()
 
 const queryClient = new QueryClient({

@@ -92,7 +92,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
                 border: 'none',
                 borderBottom: v ? 'none' : '3px solid var(--faint)',
                 background: ok === true ? 'var(--mint)' : ok === false ? 'var(--rose)' : v ? 'var(--peach-soft)' : 'var(--track)',
-                color: ok === true ? '#1F5136' : ok === false ? '#6E2236' : 'var(--ink)',
+                color: ok === true ? 'var(--mint-ink)' : ok === false ? 'var(--rose-ink)' : 'var(--ink)',
                 boxShadow: 'none',
                 textDecoration: ok === false ? 'line-through' : 'none',
               }}
@@ -158,7 +158,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
 // --- Match pairs -----------------------------------------------------------------
 
 const PAIR_COLORS = [
-  ['var(--mint)', '#1F5136'],
+  ['var(--mint)', 'var(--mint-ink)'],
   ['var(--sky)', 'var(--sky-ink)'],
   ['var(--lavender)', 'var(--lavender-ink)'],
   ['var(--butter)', 'var(--butter-ink)'],

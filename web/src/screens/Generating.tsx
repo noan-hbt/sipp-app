@@ -215,9 +215,9 @@ function Brew({ from, to, failed, done }: { from: number; to: number; failed: bo
       <div style={{ width: size, height: size, borderRadius: '50%', position: 'relative', overflow: 'hidden', display: 'grid', placeItems: 'center', background: 'var(--surface)' }}>
         <motion.div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, top: 0, height: size * 2, y }}>
           <svg width={size * 2} height="16" viewBox="0 0 336 16" style={{ display: 'block', animation: 'wave 2.4s linear infinite' }}>
-            <path d="M0 8 Q 21 0 42 8 T 84 8 T 126 8 T 168 8 T 210 8 T 252 8 T 294 8 T 336 8 V16 H0 Z" fill={failed ? '#FFC9BC' : '#FFD7BD'} />
+            <path d="M0 8 Q 21 0 42 8 T 84 8 T 126 8 T 168 8 T 210 8 T 252 8 T 294 8 T 336 8 V16 H0 Z" fill={failed ? 'var(--rose-mid)' : 'var(--peach-mid)'} />
           </svg>
-          <div style={{ height: size * 2, marginTop: -1, background: failed ? '#FFC9BC' : '#FFD7BD' }} />
+          <div style={{ height: size * 2, marginTop: -1, background: failed ? 'var(--rose-mid)' : 'var(--peach-mid)' }} />
         </motion.div>
         <div style={{ position: 'relative' }}>
           <Mascot mood={failed ? 'oops' : done ? 'bravo' : 'think'} size={104} />

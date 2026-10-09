@@ -49,6 +49,7 @@ export interface ModuleOut {
   /** Stars earned once every lesson of the module is finished. */
   bonus_stars?: number
   bonus_earned?: boolean
+  quiz_stars?: number | null
 }
 export interface Profile {
   topic: string
@@ -120,6 +121,9 @@ export interface CompleteOut {
   streak_days: number
   /** Bonus stars earned right now: this lesson finished its module. */
   module_bonus?: number
+  module_id?: string | null
+  /** Every lesson of the module is finished: its quiz is open. */
+  module_done?: boolean
 }
 export interface Stats {
   streak_days: number
@@ -131,7 +135,37 @@ export interface Stats {
   month_days?: number[]
   today?: number
   concepts?: number
+  lessons_today?: number
+  daily_goal?: number
+  freeze_available?: boolean
+  /** Missed days a streak freeze bridged (YYYY-MM-DD). */
+  freeze_used?: string[]
+  this_week?: WeekStats | null
+  last_week?: WeekStats | null
 }
+export interface WeekStats { lessons: number; minutes: number; notions: number; active_days: number }
+export interface Settings {
+  daily_goal: number
+  reminder_hour: number | null
+  timezone: string | null
+  push_enabled: boolean
+  push_public_key: string | null
+}
+export interface Note {
+  id: string
+  lesson_id: string
+  lesson_title: string
+  sip_id: string
+  sip_title: string
+  block: number
+  quote: string
+  text: string | null
+}
+export interface QuizItem { lesson_id: string; block_index: number; block: Block }
+export interface Quiz { module_id: string; title: string; items: QuizItem[]; best_stars: number | null }
+export interface QuizResult { correct: number; total: number; stars: number; best_stars: number; gained: number }
+export type Feeling = 'easy' | 'ok' | 'hard'
+export type Problem = 'wrong' | 'unclear' | 'broken' | 'other'
 export interface Chapter {
   position: number
   title: string
@@ -463,6 +497,21 @@ export const Api = {
   lesson: (id: string, signal?: AbortSignal) => api<LessonOut>(`/lessons/${id}`, { signal }),
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),
+  settings: () => api<Settings>('/auth/me/settings'),
+  saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string }) =>
+    api<Settings>('/auth/me/settings', { method: 'PUT', json: body }),
+  savePush: (sub: PushSubscriptionJSON) => api<Settings>('/auth/me/push', { method: 'PUT', json: sub }),
+  deletePush: () => api<Settings>('/auth/me/push', { method: 'DELETE' }),
+  testPush: () => api<void>('/auth/me/push/test', { method: 'POST' }),
+  feedback: (lessonId: string, body: { feeling?: Feeling; problem?: Problem; comment?: string; block?: number }) =>
+    api<void>(`/lessons/${lessonId}/feedback`, { method: 'POST', json: body }),
+  notes: ({ signal }: { signal?: AbortSignal } = {}) => api<Note[]>('/me/notes', { signal }),
+  keepNote: (lessonId: string, body: { block: number; quote: string; text?: string | null }) =>
+    api<Note>(`/lessons/${lessonId}/notes`, { method: 'POST', json: body }),
+  deleteNote: (id: string) => api<void>(`/me/notes/${id}`, { method: 'DELETE' }),
+  quiz: (moduleId: string) => api<Quiz>(`/modules/${moduleId}/quiz`),
+  submitQuiz: (moduleId: string, body: { items: { lesson_id: string; block_index: number }[]; answers: unknown[] }) =>
+    api<QuizResult>(`/modules/${moduleId}/quiz`, { method: 'POST', json: body }),
   saveResume: (id: string, body: { step: number; answers: unknown[] }) =>
     api<void>(`/lessons/${id}/resume`, { method: 'PUT', json: body }),
 }
