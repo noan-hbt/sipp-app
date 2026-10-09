@@ -35,6 +35,8 @@ def test_streak_freeze_bridges_one_missed_day_a_week():
 async def test_settings_goal_reminder_and_timezone(auth_client):
     s = (await auth_client.get("/auth/me/settings")).json()
     assert s["daily_goal"] == 1 and s["reminder_hour"] is None and not s["push_enabled"]
+    await auth_client.get("/auth/me/stats?tz=America/New_York")
+    assert (await auth_client.get("/auth/me/settings")).json()["timezone"] == "America/New_York"
     s = (await auth_client.put("/auth/me/settings", json={"daily_goal": 3, "reminder_hour": 19, "timezone": "Europe/Paris"})).json()
     assert (s["daily_goal"], s["reminder_hour"], s["timezone"]) == (3, 19, "Europe/Paris")
     assert (await auth_client.put("/auth/me/settings", json={"timezone": "Mars/Base"})).status_code == 422

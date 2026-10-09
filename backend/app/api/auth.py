@@ -100,14 +100,19 @@ async def me_stats(
     tz: str = "UTC", user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
     """Streak, stars and this month's active days. `tz` is the device's IANA timezone (e.g. Europe/Paris)."""
+    moved = False
     if tz != "UTC" and tz != user.timezone:
         try:
             ZoneInfo(tz)
             user.timezone = tz  # reminders fire at the learner's local hour
+            moved = True
         except (ZoneInfoNotFoundError, ValueError):
             pass
     await sync_cards(session, user)
-    return await stats(session, user, tz)
+    out = await stats(session, user, tz)
+    if moved:
+        await session.commit()
+    return out
 
 
 def _settings_out(user: User) -> SettingsOut:
