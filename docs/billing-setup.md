@@ -2,19 +2,23 @@
 
 Paddle est le vendeur officiel (merchant of record) : il encaisse, facture, gère la TVA et le portail client. Sipp reflète l'abonnement dans `user.plan`. Tant que toutes les variables ci-dessous ne sont pas renseignées, les offres payantes restent en « Bientôt ».
 
-## 1. Compte sandbox
+## 1. Compte sandbox et catalogue
 
-1. Créer un compte sur https://sandbox-vendors.paddle.com.
-2. **Catalog > Products** : créer « Sipp Essentiel » et « Sipp Plus », puis 4 prix récurrents en EUR, **taxe incluse** :
-   - Essentiel : 5,99 €/mois et 59,90 €/an
-   - Plus : 12,99 €/mois et 129,90 €/an
-   - Pas d'essai côté Paddle : l'essai de 7 jours est géré par Sipp, sans carte.
-3. **Checkout > Checkout settings** : renseigner le *default payment link* avec l'URL du web (ex. `https://<web>/offers`). Sans lui, Paddle refuse de créer des transactions.
-4. **Developer tools > Authentication** : créer une clé API (serveur) et un *client-side token* (public).
-5. **Developer tools > Notifications** : nouvelle destination
-   - URL : `https://<api>/billing/webhook/paddle`
-   - Événements : `subscription.created`, `subscription.updated`, `subscription.activated`, `subscription.trialing`, `subscription.past_due`, `subscription.paused`, `subscription.resumed`, `subscription.canceled`, `transaction.completed`, `transaction.paid`, `transaction.payment_failed`, `transaction.past_due`, `adjustment.created`, `adjustment.updated`
-   - Copier la *secret key* de la destination.
+Créer d'abord le compte sur https://sandbox-vendors.paddle.com. Dans **Developer tools > Authentication**, créer une clé API serveur avec les droits `product.read/write`, `price.read/write` et `notification_setting.read/write`; ajouter `client_token.read/write` pour générer/réutiliser le token web. Aucune clé ne se trouve dans le dépôt.
+
+Depuis la racine du dépôt, lancer le script en PowerShell (la clé reste dans l'environnement du terminal) :
+
+```powershell
+$env:PADDLE_API_KEY = "pdl_sdbx_..."
+$env:PADDLE_ENV = "sandbox"
+python backend/scripts/paddle_setup.py --api-url https://<api-publique>
+```
+
+Le script réutilise les produits par nom/métadonnée `custom_data`, et les prix par nom, métadonnée ou signature exacte. Il configure `Sipp Essentiel` et `Sipp Plus` (`tax_category=saas`), puis les prix récurrents TTC (`tax_mode=internal`) : Essentiel 5,99 €/mois et 59,90 €/an; Plus 12,99 €/mois et 129,90 €/an. Aucun essai Paddle : l'essai Sipp de 7 jours reste sans carte. Il crée/réutilise la destination webhook et le token Paddle.js si les droits API le permettent.
+
+Pour prévisualiser les créations et mises à jour, ajouter `--dry-run`; ce mode n'effectue que des GET et ne crée aucun objet. À la fin, le script affiche les variables à coller et les commandes Railway pour `sipp-app` et `sipp-worker`. La clé API et le secret webhook apparaissent dans la sortie console, jamais dans un fichier. Si le droit `client_token.*` manque, créer le token dans **Developer tools > Authentication**. Pour inclure sa valeur dans les commandes affichées, saisir aussi `$env:PADDLE_CLIENT_TOKEN = "test_..."` dans le terminal avant de relancer le script; sinon, ajouter ce token manuellement dans Railway.
+
+Restent manuels dans le dashboard : création/validation du compte, **Checkout > Checkout settings > Default payment link** vers le web (ex. `https://<web>/offers`), et approbation du domaine en production. Sandbox approuve automatiquement les domaines. Pour le live, valider le compte et publier CGU, politique de confidentialité et politique de remboursement avant approbation du domaine.
 
 ## 2. Variables Railway (sipp-app et sipp-worker)
 
@@ -24,9 +28,9 @@ Paddle est le vendeur officiel (merchant of record) : il encaisse, facture, gèr
 | `PADDLE_API_KEY` | clé API serveur (secrète) |
 | `PADDLE_WEBHOOK_SECRET` | secret de la destination webhook (secret) |
 | `PADDLE_CLIENT_TOKEN` | token client (public) |
-| `PADDLE_PRICE_BASIC_MONTH` / `_BASIC_YEAR` | `pri_...` |
-| `PADDLE_PRICE_PLUS_MONTH` / `_PLUS_YEAR` | `pri_...` |
-| `PUBLIC_APP_URL` | URL du web, pour le retour après paiement |
+| `PADDLE_PRICE_BASIC_MONTH` / `_BASIC_YEAR` | créés/réutilisés par le script (`pri_...`) |
+| `PADDLE_PRICE_PLUS_MONTH` / `_PLUS_YEAR` | créés/réutilisés par le script (`pri_...`) |
+| `PUBLIC_APP_URL` | à définir manuellement : URL du web pour le retour après paiement |
 
 Les montants affichés viennent de `plan_prices` dans `backend/app/config.py` (centimes TTC). Si un prix change dans Paddle, mettre à jour ce réglage aussi.
 
@@ -43,8 +47,8 @@ La migration `0010_billing` passe automatiquement au démarrage de l'API.
 ## 4. Passage en production
 
 1. Compte Paddle live validé (vérification d'identité et du site). Paddle exige des CGU, une politique de confidentialité et une politique de remboursement en ligne, et l'approbation du domaine web.
-2. Recréer produits, prix, clés et destination webhook en live.
-3. Remplacer les variables Railway et passer `PADDLE_ENV=production`.
+2. Créer une clé API live, définir `PADDLE_ENV=production`, puis relancer le script avec les mêmes paramètres et l'URL API live. Sandbox et live ont des catalogues, clés, tokens et destinations distincts.
+3. Coller les nouvelles valeurs dans Railway et approuver le domaine web dans Paddle avant d'activer les paiements.
 
 ## Comportements à connaître
 
