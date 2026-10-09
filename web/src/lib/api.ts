@@ -151,7 +151,15 @@ export interface Program {
   chapters: Chapter[]
   created_at: string
 }
+export interface Subscription {
+  status: 'active' | 'trialing' | 'past_due'
+  interval: 'month' | 'year'
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+}
 export interface Plan {
+  billing_enabled: boolean
+  subscription: Subscription | null
   plan: 'free' | 'basic' | 'plus' | 'max'
   on_trial: boolean
   plan_expires_at: string | null
@@ -163,6 +171,15 @@ export interface Plan {
   sips_this_month: number
   lite: boolean
 }
+export interface PlanInfo {
+  name: Plan['plan']
+  slots: number
+  sips_per_month: number
+  lite: boolean
+  hours_per_month: number
+  prices: Partial<Record<'month' | 'year', number>>
+}
+export interface Checkout { transaction_id: string; client_token: string; environment: string; success_url: string }
 export interface ApiErrorDetail { code?: string; message?: string }
 
 export class ApiError extends Error {
@@ -186,6 +203,11 @@ export function apiErrorMessage(error: unknown, fallback = 'Impossible de joindr
     daily_budget_reached: 'Tu as atteint ta limite du jour. Réessaie demain.',
     too_many_active_builds: 'Un Sip est déjà en préparation. Réessaie dans un instant.',
     program_adjusting: 'J’ajuste encore la suite de ton programme. Réessaie dans un instant.',
+    already_subscribed: 'Tu as déjà un abonnement. Gère-le depuis ton profil.',
+    billing_unavailable: 'Les abonnements ne sont pas encore ouverts.',
+    billing_provider_error: 'Le paiement est indisponible pour le moment. Réessaie dans un instant.',
+    billing_cancel_failed: 'Ton abonnement n’a pas pu être résilié, donc ton compte est conservé. Réessaie dans un instant.',
+    no_subscription: 'Aucun abonnement à gérer.',
   }
   return error instanceof ApiError ? messages[error.code ?? ''] ?? fallback : fallback
 }
@@ -417,7 +439,10 @@ export const Api = {
   me: ({ signal }: { signal?: AbortSignal } = {}) => api<{ id: string; email: string; created_at: string }>('/auth/me', { signal }),
   plan: ({ signal }: { signal?: AbortSignal } = {}) => api<Plan>('/auth/me/plan', { signal }),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
-  plans: () => api<{ name: Plan['plan']; slots: number; sips_per_month: number; lite: boolean; hours_per_month: number }[]>('/auth/plans'),
+  plans: () => api<PlanInfo[]>('/auth/plans'),
+  checkout: (plan: 'basic' | 'plus', interval: 'month' | 'year') =>
+    api<Checkout>('/billing/checkout', { method: 'POST', json: { plan, interval, consent: true } }),
+  billingPortal: () => api<{ url: string; cancel_url: string | null }>('/billing/portal', { method: 'POST' }),
   exportData: () => api<unknown>('/auth/me/export'),
   sips: ({ signal }: { signal?: AbortSignal } = {}) => api<SipSummary[]>('/sips', { signal }),
   sip: (id: string, signal?: AbortSignal) => api<SipDetail>(`/sips/${id}`, { signal }),

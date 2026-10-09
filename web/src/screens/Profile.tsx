@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
-import { Api, ApiError, setTokens, type Plan } from '../lib/api'
+import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
 import { setSoundEnabled, soundEnabled } from '../lib/sound'
 
 const list = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
@@ -39,6 +39,12 @@ export function Profile() {
   const trial = useMutation({
     mutationFn: Api.startTrial,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] }),
+  })
+  const portal = useMutation({
+    mutationFn: async (to: 'manage' | 'cancel') => {
+      const urls = await Api.billingPortal()
+      window.location.assign(to === 'cancel' ? urls.cancel_url ?? urls.url : urls.url)
+    },
   })
   const exportData = useMutation({
     mutationFn: async () => {
@@ -148,6 +154,33 @@ export function Profile() {
                 </div>
                 <p style={{ position: 'relative', fontSize: 14, color: '#2E2660' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
                 {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: '#2E2660' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
+                {subscription.subscription && (() => {
+                  const sub = subscription.subscription
+                  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '')
+                  const kind = sub.interval === 'year' ? 'annuel' : 'mensuel'
+                  return (
+                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <p role={sub.status === 'past_due' ? 'alert' : undefined} style={{ fontSize: 14, fontWeight: 500, color: sub.status === 'past_due' ? 'var(--rose-ink)' : '#2E2660' }}>
+                        {sub.status === 'past_due'
+                          ? `Ton dernier paiement a échoué. Mets à jour ton moyen de paiement avant le ${day(subscription.plan_expires_at)} pour garder ton offre.`
+                          : sub.cancel_at_period_end
+                            ? `Abonnement résilié · actif jusqu’au ${day(sub.current_period_end)}`
+                            : `Abonnement ${kind} · renouvelé le ${day(sub.current_period_end)}`}
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Button variant="soft" onClick={() => portal.mutate('manage')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, boxShadow: 'none' }}>
+                          {sub.status === 'past_due' ? 'Mettre à jour le paiement' : 'Gérer'}
+                        </Button>
+                        {!sub.cancel_at_period_end && (
+                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48 }}>
+                            Résilier
+                          </Button>
+                        )}
+                      </div>
+                      {portal.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>{apiErrorMessage(portal.error)}</p>}
+                    </div>
+                  )
+                })()}
                 {subscription.trial_available ? (
                   <Button variant="soft" onClick={() => trial.mutate()} disabled={trial.isPending || busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52, boxShadow: 'none' }}>
                     {trial.isPending ? 'Activation de ton essai…' : `Essayer Essentiel gratuitement · ${subscription.trial_days} jours`}
@@ -223,7 +256,7 @@ export function Profile() {
                 }}
                 style={{ borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}
               >
-                <p className="muted" style={{ fontSize: 14 }}>Ton compte et tes données seront supprimés définitivement. Saisis ton mot de passe pour confirmer.</p>
+                <p className="muted" style={{ fontSize: 14 }}>Ton compte et tes données seront supprimés définitivement{subscription?.subscription ? ', et ton abonnement résilié tout de suite' : ''}. Saisis ton mot de passe pour confirmer.</p>
                 <div className="field">
                   <label htmlFor="profile-password" style={{ color: 'var(--muted)' }}>Ton mot de passe</label>
                   <input
@@ -243,7 +276,9 @@ export function Profile() {
                 </div>
                 {deleteAccount.isError && (
                   <p id="profile-delete-error" role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, fontWeight: 600 }}>
-                    {deleteAccount.error instanceof ApiError && deleteAccount.error.status === 403 ? 'Mot de passe incorrect' : 'Ton compte n’a pas pu être supprimé. Réessaie dans un instant.'}
+                    {deleteAccount.error instanceof ApiError && deleteAccount.error.status === 403
+                      ? 'Mot de passe incorrect'
+                      : apiErrorMessage(deleteAccount.error, 'Ton compte n’a pas pu être supprimé. Réessaie dans un instant.')}
                   </p>
                 )}
                 <Button type="submit" disabled={busy || !password} style={{ background: 'var(--rose-ink)', color: '#fff', fontSize: 16 }}>

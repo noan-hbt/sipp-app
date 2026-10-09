@@ -14,6 +14,7 @@ import { LessonDone } from './screens/LessonDone'
 import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
 import { Offers } from './screens/Offers'
+import { BillingReturn } from './screens/BillingReturn'
 import { Profile } from './screens/Profile'
 import { ProgramView } from './screens/ProgramView'
 import { Progress } from './screens/Progress'
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="/review" element={<Review />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/offers" element={<Offers />} />
+              <Route path="/billing/return" element={<BillingReturn />} />
               <Route path="/sips/:sipId/building" element={<Generating />} />
               <Route path="/sips/:sipId" element={<SipMap />} />
               <Route path="/programs/:programId" element={<ProgramView />} />
