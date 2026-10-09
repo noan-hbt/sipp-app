@@ -496,8 +496,6 @@ button:focus-visible, a:focus-visible {
   animation: liquid 2.6s linear infinite;
 }
 @keyframes liquid { to { background-position: 84px 0; } }
-@keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); } 50% { transform: translateY(-6px) rotate(var(--tilt, 0deg)); } }
-.float { animation: float 4.5s ease-in-out infinite; }
 .pill-tag { align-self: flex-start; padding: 5px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 
 /* Lesson reading: light body text, ink only where it matters */

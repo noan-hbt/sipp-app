@@ -137,7 +137,7 @@ export function Profile() {
               transition={{ type: 'spring', stiffness: 120, damping: 16, delay: 0.2 }}
               style={{ position: 'absolute', right: -40, top: -40, width: 132, height: 132, borderRadius: 66, background: 'var(--primary)' }}
             />
-            <img className="float" src={illustration('scene-premium')} alt="" width={84} height={84} style={{ position: 'absolute', right: 0, top: 0 }} />
+            <img src={illustration('scene-premium')} alt="" width={84} height={84} style={{ position: 'absolute', right: 0, top: 0 }} />
             {subscription ? (
               <>
                 <div style={{ position: 'relative', paddingRight: 92 }}>

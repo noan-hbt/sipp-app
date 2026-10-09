@@ -167,7 +167,7 @@ export function Generating() {
             animate={done ? { scale: [1, 1.12, 1], rotate: 0, opacity: 1 } : { scale: 1, rotate: 0, opacity: 1 }}
             transition={done ? { duration: 0.6 } : { type: 'spring', stiffness: 200, damping: 13, delay: 0.1 }}
           >
-            {bad ? <Mascot mood="oops" size={130} /> : <img className="float" src={illustration(done ? 'scene-celebrate' : 'scene-brewing')} alt="" width={150} height={150} style={{ display: 'block' }} />}
+            {bad ? <Mascot mood="oops" size={130} /> : <img src={illustration(done ? 'scene-celebrate' : 'scene-brewing')} alt="" width={150} height={150} style={{ display: 'block' }} />}
           </motion.div>
         </div>
 

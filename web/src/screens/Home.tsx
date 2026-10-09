@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion, useReducedMotion } from 'motion/react'
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
@@ -281,7 +281,7 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
         transition={{ type: 'spring', stiffness: 200, damping: 13, delay: 0.35 }}
         style={{ position: 'absolute', right: 0, bottom: 10 }}
       >
-        <img className="float" src={topicArt(sip.title ?? sip.input_text)} alt="" width={148} height={148} draggable={false} style={{ display: 'block', '--tilt': '4deg' } as CSSProperties} />
+        <img src={topicArt(sip.title ?? sip.input_text)} alt="" width={148} height={148} draggable={false} style={{ display: 'block' }} />
       </motion.span>
       <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
         {sip.progress.completed ? 'À suivre' : 'On commence'} · {LESSON_MINUTES} min
@@ -321,7 +321,7 @@ function StreakTile({ stats, onGo }: { stats: Stats; onGo: () => void }) {
         Série
         <motion.span
           animate={lit ? { scale: [1, 1.2, 1], rotate: [0, -8, 8, 0] } : { opacity: 0.5 }}
-          transition={{ duration: 1.4, repeat: lit ? Infinity : 0, repeatDelay: 1.6 }}
+          transition={{ duration: 0.9, delay: 0.6 }}
           style={{ display: 'grid', filter: lit ? 'none' : 'grayscale(1)' }}
         >
           {Icon.flame}
@@ -436,7 +436,7 @@ function NewTile({ done, onGo }: { done: boolean; onGo: () => void }) {
       onClick={onGo}
       style={{ gridColumn: '1 / -1', position: 'relative', overflow: 'hidden', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, minHeight: 150, background: 'var(--primary)', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}
     >
-      <img className="float" src={illustration('scene-welcome')} alt="" width={130} height={130} style={{ position: 'absolute', right: -4, bottom: -8 }} />
+      <img src={illustration('scene-welcome')} alt="" width={130} height={130} style={{ position: 'absolute', right: -4, bottom: -8 }} />
       <span className="display" style={{ position: 'relative', fontSize: 25, lineHeight: 1.04, maxWidth: '60%' }}>
         {done ? 'Tout est bouclé !' : 'Ton prochain sujet ?'}
       </span>
@@ -461,7 +461,7 @@ function Empty({ onStart }: { onStart: () => void }) {
         transition={{ type: 'spring', stiffness: 200, damping: 12 }}
         style={{ width: 230, height: 230, borderRadius: 115, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center' }}
       >
-        <img className="float" src={illustration('scene-welcome')} alt="" width={200} height={200} />
+        <img src={illustration('scene-welcome')} alt="" width={200} height={200} />
       </motion.div>
       <h2 className="title-l">Qu’est-ce qu’on apprend ?</h2>
       <p className="muted" style={{ fontSize: 16, maxWidth: 290, lineHeight: 1.45 }}>

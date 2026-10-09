@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { SipSummary } from '../lib/api'
 import { play } from '../lib/sound'
 import { Mascot } from './Mascot'
@@ -54,8 +54,8 @@ export function Tile({
       >
         <span
           aria-hidden="true"
-          className="float"
-          style={{ position: 'absolute', top: -12, right: -6, width: 98, height: 98, display: 'grid', placeItems: 'center', animationDelay: `${-index * 1.3}s`, '--tilt': index % 2 ? '-5deg' : '5deg' } as CSSProperties}
+         
+          style={{ position: 'absolute', top: -12, right: -6, width: 98, height: 98, display: 'grid', placeItems: 'center' }}
         >
           {art}
         </span>

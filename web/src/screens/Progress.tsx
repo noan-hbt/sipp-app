@@ -92,7 +92,7 @@ function StreakHero({ s }: { s: Stats }) {
         transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.3 }}
         style={{ position: 'absolute', right: 4, top: 4 }}
       >
-        <img className="float" src={illustration('scene-freeze')} alt="" width={112} height={112} style={{ display: 'block' }} />
+        <img src={illustration('scene-freeze')} alt="" width={112} height={112} style={{ display: 'block' }} />
       </motion.span>
       <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
         {s.completed_today ? 'Série en cours' : n ? 'Série à garder aujourd’hui' : 'Ta série'}
