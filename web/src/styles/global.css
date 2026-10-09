@@ -97,6 +97,10 @@ button:focus-visible, a:focus-visible {
 .field input:focus-visible, .field textarea:focus-visible, .help-question input:focus-visible {
   outline: none !important;
 }
+/* The wish box is the field: it lights up as a whole, the textarea inside stays bare. */
+.wish-box { box-shadow: inset 0 0 0 2px var(--line-strong); transition: box-shadow .2s; }
+.wish-box:focus-within { box-shadow: inset 0 0 0 2.5px var(--primary), 0 0 0 5px var(--primary-soft); }
+.wish-box textarea:focus-visible { outline: none !important; }
 
 .sheet-modal {
   position: fixed;

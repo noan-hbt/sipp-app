@@ -44,7 +44,11 @@ export function Progress() {
         </div>
 
         {s?.month && <Month month={s.month} days={s.month_days ?? []} today={s.today ?? 1} />}
-        {sips.data?.length === 0 && <p className="muted" style={{ fontSize: 15 }}>Tes premiers progrès apparaîtront ici.</p>}
+        {s && s.lessons_completed === 0 && (
+          <p className="muted" style={{ fontSize: 15, lineHeight: 1.45, padding: '0 4px' }}>
+            Chaque jour où tu termines une leçon s’allume ici. Ta première leçon lance ta série.
+          </p>
+        )}
 
         {current.length > 0 && <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '6px 4px 0' }}>Sips en cours</h2>}
         {current.map((x, i) => (
@@ -117,8 +121,9 @@ function Month({ month, days, today }: { month: string; days: number[]; today: n
                 borderRadius: 12,
                 fontSize: 14,
                 fontWeight: on ? 600 : 500,
-                background: on ? 'var(--primary)' : d < today ? 'var(--bg-deep)' : 'transparent',
-                color: on ? '#fff' : d < today ? 'var(--faint)' : '#B3A99F',
+                // Only active days are filled: grey "missed" boxes would read as failures.
+                background: on ? 'var(--primary)' : 'transparent',
+                color: on ? '#fff' : d <= today ? 'var(--ink-soft)' : 'var(--faint)',
                 boxShadow: d === today ? '0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--primary)' : 'none',
               }}
             >

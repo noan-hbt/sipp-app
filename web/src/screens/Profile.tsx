@@ -135,7 +135,7 @@ export function Profile() {
                   <h2 className="title-m" style={{ marginTop: 8 }}>{subscription.on_trial ? 'Ton essai est en cours' : planNames[subscription.plan]}</h2>
                   {subscription.on_trial && subscription.plan_expires_at && (
                     <p style={{ fontSize: 14, marginTop: 2, color: '#2E2660' }}>
-                      Essai gratuit · jusqu'au {new Date(subscription.plan_expires_at).toLocaleDateString('fr-FR')}
+                      Essai gratuit · jusqu’au {new Date(subscription.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                     </p>
                   )}
                 </div>

@@ -38,8 +38,11 @@ export function Home() {
 
   const all = sips.data ?? []
   const resume = all.find((s) => s.status === 'ready' && s.progress.completed < s.progress.total)
+  // Nothing to resume yet but a Sip on its way: that is the news, not "all done".
+  const building = resume ? undefined : all.find((s) => s.status === 'queued' || s.status === 'generating')
+  const finishedAll = all.some((s) => s.status === 'ready' && s.progress.completed > 0)
   // The topics grid: in progress or being built first, then finished ones.
-  const rest = all.filter((s) => s !== resume)
+  const rest = all.filter((s) => s !== resume && s !== building)
   const topics = [...rest.filter((s) => !isDone(s)), ...rest.filter(isDone)].slice(0, 4)
   const open = (s: SipSummary) => nav(s.status === 'ready' ? `/sips/${s.id}` : `/sips/${s.id}/building`)
 
@@ -82,7 +85,13 @@ export function Home() {
           <Empty onStart={() => nav('/new')} />
         ) : (
           <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
-            {resume ? <Hero sip={resume} onGo={() => nav(`/sips/${resume.id}`)} /> : <NewCard onGo={() => nav('/new')} />}
+            {resume ? (
+              <Hero sip={resume} onGo={() => nav(`/sips/${resume.id}`)} />
+            ) : building ? (
+              <BuildingCard sip={building} onGo={() => nav(`/sips/${building.id}/building`)} />
+            ) : (
+              <NewCard done={finishedAll} onGo={() => nav('/new')} />
+            )}
             {due > 0 && <ReviewCard due={due} onGo={() => nav('/review')} />}
 
             {topics.length > 0 && (
@@ -208,7 +217,27 @@ function ReviewCard({ due, onGo }: { due: number; onGo: () => void }) {
   )
 }
 
-function NewCard({ onGo }: { onGo: () => void }) {
+function BuildingCard({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
+  return (
+    <motion.button
+      variants={item}
+      whileTap={{ scale: 0.97 }}
+      onClick={onGo}
+      style={{ border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 14 }}
+    >
+      <Mascot mood="think" size={72} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <span className="display" style={{ fontSize: 20 }}>
+          Ton Sip se prépare…
+        </span>
+        <span style={{ fontSize: 15, color: 'var(--lavender-ink)', overflowWrap: 'anywhere' }}>{sip.title ?? sip.input_text}</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>Une minute environ. Touche pour suivre.</span>
+      </div>
+    </motion.button>
+  )
+}
+
+function NewCard({ done, onGo }: { done: boolean; onGo: () => void }) {
   return (
     <motion.button
       variants={item}
@@ -219,9 +248,9 @@ function NewCard({ onGo }: { onGo: () => void }) {
       <Mascot size={72} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span className="display" style={{ fontSize: 20 }}>
-          Tout est bouclé !
+          {done ? 'Tout est bouclé !' : 'Ton prochain sujet ?'}
         </span>
-        <span style={{ fontSize: 15, color: 'var(--primary-ink)' }}>Qu’est-ce qu’on apprend ensuite ?</span>
+        <span style={{ fontSize: 15, color: 'var(--primary-ink)' }}>{done ? 'Qu’est-ce qu’on apprend ensuite ?' : 'Dis-moi ce qui te fait envie.'}</span>
       </div>
     </motion.button>
   )

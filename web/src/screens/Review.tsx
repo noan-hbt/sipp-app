@@ -23,6 +23,7 @@ export function Review() {
   const qc = useQueryClient()
   // The session's cards are fixed once loaded, even as answers move them out of "due".
   const session = useQuery({ queryKey: ['review-session'], queryFn: Api.review, staleTime: Infinity, gcTime: 0 })
+  const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
   const [i, setI] = useState(0)
   const [shown, setShown] = useState(false)
   const [knew, setKnew] = useState(0)
@@ -74,22 +75,25 @@ export function Review() {
 
   if (finished) {
     const empty = cards.length === 0
+    const noNotions = empty && stats.data?.concepts === 0
     return (
       <Screen kind="fade">
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0 32px', textAlign: 'center' }}>
           <motion.div initial={{ scale: 0, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 14 }}>
             <Mascot mood={empty ? 'hello' : 'bravo'} size={110} />
           </motion.div>
-          <h1 className="title-xl">{empty ? 'Rien à réviser' : 'Révision finie !'}</h1>
+          <h1 className="title-xl">{empty ? (noNotions ? 'Pas encore de notions' : 'Rien à réviser') : 'Révision finie !'}</h1>
           <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
             {empty
-              ? 'Tes notions sont encore fraîches. Je te les ressortirai au bon moment.'
+              ? noNotions
+                ? 'Termine ta première leçon : je garderai ses notions clés et te les ferai réviser au bon moment.'
+                : 'Tes notions sont encore fraîches. Je te les ressortirai au bon moment.'
               : `${knew} sur ${cards.length} déjà bien en tête. Les autres reviendront demain.`}
           </p>
         </div>
         <div className="bottom-bar">
           <Button onClick={close} sound="pop">
-            Continuer
+            {empty ? 'Retour' : 'Terminer'}
           </Button>
         </div>
       </Screen>

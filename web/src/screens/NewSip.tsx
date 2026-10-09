@@ -155,8 +155,8 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           initial={{ opacity: 0, y: 14 }}
           animate={create.isError ? { x: [0, -8, 8, -4, 0], opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="card"
-          style={{ borderRadius: 24, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, boxShadow: 'inset 0 0 0 2px var(--line-strong)' }}
+          className="card wish-box"
+          style={{ borderRadius: 24, padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           <div style={{ position: 'relative' }}>
             <span style={{ fontSize: 19, fontWeight: 500, color: 'var(--faint)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">

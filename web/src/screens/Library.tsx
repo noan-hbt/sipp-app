@@ -104,8 +104,8 @@ export function Library() {
           {p && loaded && (
             <div style={{ borderRadius: 22, background: 'var(--lavender)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)' }}>
-                <span>{unlimited ? `${kept} Sips gardés` : `${kept} place${kept > 1 ? 's' : ''} sur ${p.slots}`}</span>
-                <span style={{ fontWeight: 500 }}>{p.sips_per_month >= 1000 ? 'Créations illimitées' : `${genLeft} création${genLeft > 1 ? 's' : ''} ce mois`}</span>
+                <span>{unlimited ? `${kept} Sips gardés` : `${kept} place${kept > 1 ? 's' : ''} prise${kept > 1 ? 's' : ''} sur ${p.slots}`}</span>
+                <span style={{ fontWeight: 500 }}>{p.sips_per_month >= 1000 ? 'Créations illimitées' : `${genLeft} création${genLeft > 1 ? 's' : ''} restante${genLeft > 1 ? 's' : ''} ce mois`}</span>
               </div>
               {!unlimited && (
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(p.slots, 15)}, minmax(0, 1fr))`, gap: 5 }}>
