@@ -56,7 +56,8 @@ async def test_export(auth_client):
 async def test_public_plans(client):
     plans = (await client.get("/auth/plans")).json()
     assert [p["name"] for p in plans] == ["free", "basic", "plus"]
-    assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True}
+    assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True, "hours_per_month": 0.3}
+    assert plans[1]["hours_per_month"] == 6.0
 
 
 async def test_concurrent_creations_reserve_last_slot(auth_client):

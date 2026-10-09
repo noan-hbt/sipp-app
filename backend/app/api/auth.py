@@ -103,8 +103,15 @@ async def me_plan(user: User = Depends(current_user), session: AsyncSession = De
 async def list_plans():
     """The public plans and their limits (the internal team plan is left out)."""
     s = get_settings()
+    def hours(p: dict) -> float:
+        lessons = sum(s.lite_lesson_budget) / 2 if p["lite"] else s.typical_lessons_per_sip
+        return round(int(p["sips_per_month"]) * lessons * s.lesson_minutes / 60, 1)
+
     return [
-        PlanInfo(name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]), lite=bool(p["lite"]))
+        PlanInfo(
+            name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]),
+            lite=bool(p["lite"]), hours_per_month=hours(p),
+        )
         for name, p in s.plans.items()
         if name != "max"
     ]

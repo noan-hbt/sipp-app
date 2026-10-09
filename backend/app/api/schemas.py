@@ -42,6 +42,7 @@ class PlanInfo(BaseModel):
     slots: int
     sips_per_month: int
     lite: bool
+    hours_per_month: float
 
 
 class TokenOut(BaseModel):

@@ -26,7 +26,7 @@ async def test_interpret_then_create_with_edited_profile(auth_client):
     assert r.status_code == 200
     out = r.json()
     assert out["profile"]["title"] == "Comprendre les taux" and out["profile"]["out_of_scope"] == []
-    assert (out["lessons_min"], out["lessons_max"], out["program"]) == (10, 25, False)
+    assert (out["lessons_min"], out["lessons_max"], out["program"]) == (15, 30, False)
     async with SessionLocal() as s:
         call = (await s.execute(select(LLMCall))).scalar_one()
         assert call.stage == "interpretation" and call.user_id and call.sip_id is None

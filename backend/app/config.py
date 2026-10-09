@@ -49,10 +49,12 @@ class Settings(BaseSettings):
     max_revisions: int = 1
     # Total lessons budget per profile scope (min, max)
     lesson_budget: dict[str, tuple[int, int]] = {
-        "focused": (3, 10),
-        "standard": (10, 25),
-        "comprehensive": (25, 60),
+        "focused": (8, 15),
+        "standard": (15, 30),
+        "comprehensive": (30, 60),
     }
+    # Typical lessons in a full Sip, only to show learning hours on the offers.
+    typical_lessons_per_sip: int = 18
 
     # Per-user spending guards (rolling 24h)
     max_cost_per_day_usd: float = 1.0

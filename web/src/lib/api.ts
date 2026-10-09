@@ -417,7 +417,7 @@ export const Api = {
   me: ({ signal }: { signal?: AbortSignal } = {}) => api<{ id: string; email: string; created_at: string }>('/auth/me', { signal }),
   plan: ({ signal }: { signal?: AbortSignal } = {}) => api<Plan>('/auth/me/plan', { signal }),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
-  plans: () => api<{ name: Plan['plan']; slots: number; sips_per_month: number; lite: boolean }[]>('/auth/plans'),
+  plans: () => api<{ name: Plan['plan']; slots: number; sips_per_month: number; lite: boolean; hours_per_month: number }[]>('/auth/plans'),
   exportData: () => api<unknown>('/auth/me/export'),
   sips: ({ signal }: { signal?: AbortSignal } = {}) => api<SipSummary[]>('/sips', { signal }),
   sip: (id: string, signal?: AbortSignal) => api<SipDetail>(`/sips/${id}`, { signal }),

@@ -10,7 +10,10 @@ import { play } from '../lib/sound'
 
 const NAMES: Record<Plan['plan'], string> = { free: 'Gratuit', basic: 'Essentiel', plus: 'Plus', max: 'Équipe' }
 
-const perks = (p: { slots: number; sips_per_month: number; lite: boolean }) => [
+const hours = (h: number) => (h < 1 ? `~${Math.round(h * 60)} min` : `~${Math.round(h)} h`)
+
+const perks = (p: { slots: number; sips_per_month: number; lite: boolean; hours_per_month: number }) => [
+  `${hours(p.hours_per_month)} de cours par mois`,
   p.slots === 1 ? '1 Sip à la fois' : `${p.slots} Sips en même temps`,
   p.sips_per_month === 1 ? '1 nouveau Sip par mois' : `${p.sips_per_month} nouveaux Sips par mois`,
   p.lite ? 'Parcours courts' : 'Parcours complets, sur mesure',

@@ -145,7 +145,7 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         est = programs.chapter_of(await session.get(Program, sip.program_id), sip.chapter)[
             "estimated_lessons"
         ]
-        budget_min, budget_max = max(3, est - 3), min(est + 4, s.lesson_budget["standard"][1])
+        budget_min, budget_max = max(8, est - 3), min(max(est, 8) + 4, s.lesson_budget["standard"][1])
     if sip.lite:
         budget_min, budget_max = s.lite_lesson_budget
         max_modules = s.lite_max_modules

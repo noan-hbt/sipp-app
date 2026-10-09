@@ -104,7 +104,8 @@ async def test_final_review_controls_publication(auth_client, monkeypatch, final
         assert not await worker.process_one(fake)
 
 
-async def test_mapping_uses_remaining_global_budget(auth_client):
+async def test_mapping_uses_remaining_global_budget(auth_client, monkeypatch):
+    monkeypatch.setitem(get_settings().lesson_budget, "focused", (3, 10))
     curriculum = {**CURRICULUM, "modules": [{**CURRICULUM["modules"][0], "title": f"M{i}", "estimated_lessons": 1} for i in range(10)]}
 
     class MappingClient(FakeClient):

@@ -23,7 +23,7 @@ Rules:
   standard = understand a topic well with its main mechanisms and uses;
   comprehensive = master a whole field. Most requests are focused or standard. Never
   pick comprehensive unless the learner clearly asks for a broad, long path.
-- `breadth`: "program" when reaching the goal needs clearly more than ~25 five-minute
+- `breadth`: "program" when reaching the goal needs clearly more than ~30 five-minute
   lessons because it spans several distinct domains (e.g. "create and run a small
   business", "become a web developer", "learn to invest from scratch"). Otherwise
   "single". A broad TOPIC asked as general culture ("understand the universe") stays
@@ -45,7 +45,7 @@ Rules:
 - `core` chapters are what the goal really requires; put them first. `advanced`
   chapters go further (optional deepening, edge cases, scaling); put them last.
 - Each chapter has ONE clear outcome, distinct from the others: no overlap.
-- `estimated_lessons`: 6-20 per chapter, sized to the outcome, not to the topic.
+- `estimated_lessons`: 10-25 per chapter, sized to the outcome, not to the topic.
 - Typically 4-10 chapters. Never pad: fewer, meaningful chapters beat many thin ones.
 - Start from the learner's level: skip what they already master.
 - Write titles, outcomes and summary in the learner's language ({language})."""
@@ -59,7 +59,7 @@ Rules:
 - 2-5 chapters, ordered, each with ONE clear outcome that builds on what was learned.
   Never repeat what the finished path already taught.
 - `core` = the natural next steps toward mastery; `advanced` = optional deepening.
-- `estimated_lessons`: 6-20 per chapter.
+- `estimated_lessons`: 10-25 per chapter.
 - The program `title` names the whole journey (finished path included).
 - Write in the learner's language ({language})."""
 
@@ -78,7 +78,7 @@ Look at what was taught and how the learner did:
   the remaining chapters unchanged.
 Rules:
 - Never re-plan finished or already generated chapters; return only the remaining ones.
-- Keep the learner's goal and the order core first, advanced last. 6-20 lessons each.
+- Keep the learner's goal and the order core first, advanced last. 10-25 lessons each.
 - Keep the total program at most 15 chapters.
 - `note` (only when changed): one short, warm sentence addressed to the learner.
 - Write in the learner's language ({language})."""
@@ -96,9 +96,10 @@ Rules:
 - Each module has a clear role in the progression; order modules so each builds on the
   previous ones.
 - Size the path to the goal, not to the topic. Total lesson budget for this learner:
-  {budget_min} to {budget_max} lessons (sum of `estimated_lessons`). Aim for the LOW end
-  unless the goals truly require more. Teach what serves the goals; drop side topics,
-  history and case studies unless the learner asked for them.
+  {budget_min} to {budget_max} lessons (sum of `estimated_lessons`). Use the budget:
+  aim at least for its middle, so the learner gets a real, substantial path. Spend the
+  extra lessons on depth that serves the goals (worked examples, practice, applications,
+  common mistakes), never on side topics, history or filler.
 - Module count follows from that (typically 2-6). Hard limit: {max_modules} modules,
   a guardrail, never a target.
 - `estimated_lessons` per module: how many ~{lesson_minutes}-minute lessons it needs.
