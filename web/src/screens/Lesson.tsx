@@ -203,6 +203,22 @@ export function LessonPlayer({
     return () => clearTimeout(t)
   }, [revealed])
 
+  // The feedback sheet must not hide the answer it comments: lift the block above it.
+  const sheetRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!sheetOpen) return
+    const t = setTimeout(() => {
+      const box = scrollRef.current
+      const el = blockRefs.current[revealed - 1]
+      const sheet = sheetRef.current
+      if (!box || !el || !sheet) return
+      const visible = box.clientHeight - sheet.offsetHeight - 12
+      const target = el.offsetTop + el.offsetHeight - visible
+      if (target > box.scrollTop) box.scrollTo({ top: target, behavior: 'smooth' })
+    }, 120)
+    return () => clearTimeout(t)
+  }, [sheetOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function next() {
     if (finishing) return
     setSheetOpen(false)
@@ -282,7 +298,7 @@ export function LessonPlayer({
       <div
         ref={scrollRef}
         className="scroll"
-        style={{ padding: '6px 20px 170px', position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
+        style={{ padding: `6px 20px ${sheetOpen ? 340 : 170}px`, position: 'relative', maskImage: 'linear-gradient(transparent, #000 22px)', WebkitMaskImage: 'linear-gradient(transparent, #000 22px)' }}
       >
         <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="title-l" style={{ marginBottom: 22 }}>
           <RichText text={title} />
@@ -323,6 +339,7 @@ export function LessonPlayer({
       <AnimatePresence>
         {sheetOpen && fb && (
           <motion.section
+            ref={sheetRef}
             aria-live="polite"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
