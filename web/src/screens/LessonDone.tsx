@@ -291,7 +291,7 @@ export function LessonDone() {
               onClick={() => (features.quiz ? nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } }) : setUpsell('quiz'))}
               style={{ border: 'none', borderRadius: 22, padding: '14px 16px', background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
             >
-              <span style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--lavender-strong)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, fontWeight: 700, fontSize: 20 }}>?</span>
+              <img src={illustration('scene-quiz')} alt="" width={56} height={56} style={{ flexShrink: 0, margin: '-6px 0' }} />
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 600 }}>Quiz du module</span>
                 <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>

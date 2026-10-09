@@ -186,7 +186,7 @@ function FrozeYesterday({ stats }: { stats: Stats }) {
   if (!stats.freeze_used?.includes(iso(y)) || !stats.streak_days) return null
   return (
     <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} role="status" style={{ marginTop: 12, padding: '10px 14px', borderRadius: 16, background: 'var(--sky)', color: 'var(--sky-ink)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.35 }}>
-      {Icon.snow(16)}
+      <img src={illustration('scene-freeze')} alt="" width={36} height={36} style={{ margin: '-6px 0', flexShrink: 0 }} />
       Hier, ta série a été protégée. Une leçon aujourd’hui pour la garder.
     </motion.p>
   )
@@ -216,7 +216,10 @@ function Recap({ stats }: { stats: Stats }) {
   return (
     <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 12, padding: 14, borderRadius: 22, background: 'var(--lavender)', display: 'flex', flexDirection: 'column', gap: 10 }} aria-label="Ta semaine dernière">
       <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="display" style={{ fontSize: 17, color: 'var(--lavender-ink)' }}>Ta semaine dernière</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src={illustration('scene-recap')} alt="" width={40} height={40} style={{ margin: '-6px 0' }} />
+          <span className="display" style={{ fontSize: 17, color: 'var(--lavender-ink)' }}>Ta semaine dernière</span>
+        </span>
         <button onClick={close} aria-label="Masquer" style={{ border: 'none', background: 'none', color: 'var(--lavender-ink)', display: 'grid', padding: 4 }}>{Icon.cross(16)}</button>
       </span>
       <span style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>

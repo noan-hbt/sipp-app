@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { illustration } from '../components/SipIcon'
 import { Button, Icon, IconButton, Star } from '../components/ui'
 import { Api, apiErrorMessage, ApiError, type QuizResult } from '../lib/api'
 import { play } from '../lib/sound'
@@ -108,7 +109,7 @@ function Result({ r, onBack, onAgain }: { r: QuizResult; onBack: () => void; onA
   return (
     <Screen kind="fade">
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 'calc(var(--safe-top) + 24px) 24px calc(var(--safe-bottom) + 24px)', textAlign: 'center' }}>
-        <Mascot mood={r.stars >= 2 ? 'bravo' : 'think'} size={110} />
+        <motion.img src={illustration('scene-quiz')} alt="" width={170} height={170} initial={{ scale: 0.5, rotate: -8 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 13 }} />
         <div aria-label={`${r.stars} étoiles sur 3`} style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52 }}>
           {[1, 2, 3].map((n) => (
             <span key={n} style={{ marginBottom: n === 2 ? 10 : 0 }}>

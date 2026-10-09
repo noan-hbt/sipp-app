@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Mascot } from "../components/Mascot";
 import { ErrorNotice } from "../components/ErrorNotice";
 import { Screen } from "../components/Screen";
-import { SipIcon, sipPalette } from "../components/SipIcon";
+import { illustration, SipIcon, sipPalette } from "../components/SipIcon";
 import {
   itemVariants as item,
   listVariants as list,
@@ -771,22 +771,7 @@ function QuizRow({ stars, locked, onOpen }: { stars: number | null; locked: bool
         textAlign: "left",
       }}
     >
-      <span
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 13,
-          background: "var(--lavender-strong)",
-          color: "#fff",
-          display: "grid",
-          placeItems: "center",
-          flexShrink: 0,
-          fontWeight: 700,
-          fontSize: 18,
-        }}
-      >
-        ?
-      </span>
+      <img src={illustration("scene-quiz")} alt="" width={48} height={48} style={{ flexShrink: 0, margin: "-4px 0" }} />
       <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{ fontSize: 15, fontWeight: 600 }}>Quiz du module</span>
         <span style={{ fontSize: 13, color: "var(--lavender-ink)" }}>

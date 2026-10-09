@@ -25,7 +25,7 @@ export function Notes() {
     return (
       <div className="scroll" style={{ padding: '40px 32px 130px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
         {error}
-        <img src={illustration('scene-empty')} alt="" width={160} height={160} />
+        <img src={illustration('scene-notes')} alt="" width={160} height={160} />
         <span className="display" style={{ fontSize: 21 }}>Aucune note pour l’instant</span>
         <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
           Pendant une leçon, appuie longuement sur un passage qui te plaît : il viendra se ranger ici.

@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { useNavigate } from 'react-router-dom'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
-import { SipIcon } from '../components/SipIcon'
+import { illustration, SipIcon } from '../components/SipIcon'
 import { Icon, IconButton } from '../components/ui'
 import { Api, type SipSummary, type WeekStats } from '../lib/api'
 
@@ -46,7 +46,7 @@ export function Progress() {
         {s?.this_week && <ThisWeek w={s.this_week} last={s.last_week ?? null} />}
         {s && s.lessons_completed > 0 && (
           <p style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 18, background: 'var(--sky)', color: 'var(--sky-ink)', fontSize: 14, lineHeight: 1.35, margin: 0 }}>
-            <span style={{ flexShrink: 0, display: 'grid' }}>{Icon.snow(18)}</span>
+            <img src={illustration('scene-freeze')} alt="" width={44} height={44} style={{ flexShrink: 0, margin: '-6px 0' }} />
             {s.freeze_available
               ? 'Protection de série prête : si tu rates un jour cette semaine, ta série tient.'
               : 'Protection de série utilisée. Elle revient sept jours après.'}
