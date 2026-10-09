@@ -13,6 +13,7 @@ import { Api, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } fro
 import { isGraded, isInteractive, type Block } from '../lib/blocks'
 import { useLessonResume } from '../lib/resume'
 import { play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
 const ALMOST = ['Presque !', 'Pas tout à fait…', 'Bien tenté !']
@@ -30,6 +31,11 @@ export function Lesson() {
     refetchInterval: (q) => (q.state.data && q.state.data.status !== 'ready' && q.state.data.status !== 'failed' ? 2000 : false),
   })
   const data = lesson.data
+  const ready = data?.status === 'ready'
+  const resumed = !!data?.completed_at
+  useEffect(() => {
+    if (ready) track('lesson_opened', { redo: resumed })
+  }, [ready, lessonId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const complete = useMutation({
     networkMode: 'always',
@@ -43,6 +49,7 @@ export function Lesson() {
       return { r, correct, total }
     },
     onSuccess: ({ r, correct, total }) => {
+      track('lesson_completed', { stars: r.stars, correct, total, blocks: data!.blocks?.length ?? 0 })
       resume.queue.clear()
       void qc.invalidateQueries({ queryKey: ['sip', data!.sip_id] })
       void qc.invalidateQueries({ queryKey: ['sips'] })
@@ -80,7 +87,7 @@ export function Lesson() {
       }}
       finishing={complete.isPending}
       finishError={complete.isError ? apiErrorMessage(complete.error, 'Ta leçon n’a pas été enregistrée. Réessaie.') : undefined}
-      onHelp={(block, kind, question) => Api.help(lessonId, { block, kind, question }).then((r) => r.answer)}
+      onHelp={(block, kind, question) => (track('help_asked', { kind }), Api.help(lessonId, { block, kind, question }).then((r) => r.answer))}
     />
   )
 }

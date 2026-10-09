@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     env: str = "dev"
+    # Error tracking; off when empty.
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = Field(default=0.1, ge=0, le=1)
     # Comma-separated origins allowed to call the API from a browser (the PWA)
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     database_url: str = "sqlite+aiosqlite:///./sipp.db"

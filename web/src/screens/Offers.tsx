@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
@@ -9,6 +9,7 @@ import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type Plan, type PlanInfo } from '../lib/api'
 import { openCheckout } from '../lib/paddle'
 import { play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 const NAMES: Record<Plan['plan'], string> = { free: 'Gratuit', basic: 'Essentiel', plus: 'Plus', max: 'Équipe' }
 type Interval = 'month' | 'year'
@@ -38,6 +39,7 @@ export function Offers() {
   const trial = useMutation({
     mutationFn: Api.startTrial,
     onSuccess: (p) => {
+      track('trial_started', { from: 'offers' })
       play('complete')
       qc.setQueryData(['plan'], p)
     },
@@ -45,6 +47,7 @@ export function Offers() {
   const subscribe = useMutation({
     mutationFn: async () => {
       const c = await Api.checkout(chosen, interval)
+      track('checkout_opened', { plan: chosen, interval })
       await openCheckout({
         transactionId: c.transaction_id,
         clientToken: c.client_token,
@@ -58,6 +61,7 @@ export function Offers() {
     mutationFn: Api.billingPortal,
     onSuccess: ({ url }) => window.location.assign(url),
   })
+  useEffect(() => track('offers_viewed'), [])
   const current = mine.data?.plan
   const canTry = mine.data?.trial_available ?? false
   const selling = (mine.data?.billing_enabled ?? false) && !mine.data?.subscription && current !== 'max'

@@ -9,6 +9,7 @@ import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError, type Interpretation, type Profile } from '../lib/api'
 import { play } from '../lib/sound'
 import { NEW_SIP_ERRORS } from './NewSip'
+import { track } from '../lib/telemetry'
 
 const LEVELS = [
   { label: 'Débutant', value: 'beginner', matches: ['none', 'beginner'] },
@@ -32,6 +33,7 @@ export function Understood() {
   const create = useMutation({
     mutationFn: () => Api.createSip(state!.input, profile!),
     onSuccess: (sip) => {
+      track('sip_requested', { source: 'new', lite: sip.lite, program: interpretation.program })
       play('whoosh')
       void qc.invalidateQueries({ queryKey: ['sips'] })
       void qc.invalidateQueries({ queryKey: ['plan'] })

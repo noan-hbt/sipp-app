@@ -4,8 +4,12 @@ import { StrictMode, useSyncExternalStore } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { CrashScreen } from './components/CrashScreen'
 import { getSessionId, onSessionChange } from './lib/api'
+import { initTelemetry } from './lib/telemetry'
 import './styles/global.css'
+
+initTelemetry()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 10_000, retry: 1, refetchOnWindowFocus: true, networkMode: 'offlineFirst', queryKeyHashFn: (key) => hashKey([getSessionId(), ...key]) } },
@@ -25,7 +29,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <MotionConfig reducedMotion="user">
         <BrowserRouter>
-          <SessionApp />
+          <CrashScreen>
+            <SessionApp />
+          </CrashScreen>
         </BrowserRouter>
       </MotionConfig>
     </QueryClientProvider>

@@ -7,6 +7,7 @@ from datetime import timedelta
 from time import monotonic
 
 import jwt
+import sentry_sdk
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import Depends, HTTPException, Request, status
@@ -165,4 +166,5 @@ async def current_user(
     user = await session.get(User, payload.get("sub"))
     if user is None:
         raise unauthorized
+    sentry_sdk.set_user({"id": user.id})  # id only, never the email
     return user

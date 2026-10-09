@@ -10,6 +10,7 @@ import { SipIcon } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage } from '../lib/api'
 import { haptic, play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 function ago(iso: string) {
   const days = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000))
@@ -30,6 +31,7 @@ export function Review() {
     networkMode: 'always',
     mutationFn: ({ id, k }: { id: string; k: boolean }) => Api.reviewCard(id, k),
     onSuccess: (_, { k }) => {
+      track('card_reviewed', { knew: k })
       play(k ? 'correct' : 'tap')
       haptic(k ? 12 : 6)
       if (k) setKnew((n) => n + 1)

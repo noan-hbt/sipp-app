@@ -9,6 +9,7 @@ import { Confetti } from './ProgramView'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 const IDEAS = [
   { label: 'Créer sa boîte', hint: 'Un vrai programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise' },
@@ -84,6 +85,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
   const trial = useMutation({
     mutationFn: Api.startTrial,
     onSuccess: (p) => {
+      track('trial_started', { from: 'new_sip' })
       play('complete')
       qc.setQueryData(['plan'], p)
       create.reset()

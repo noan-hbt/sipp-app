@@ -6,6 +6,7 @@ import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' }) {
   const nav = useNavigate()
@@ -24,6 +25,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
       const t = mode === 'login' ? await Api.login(email.trim(), password) : await Api.register(email.trim(), password)
       play('complete')
       setTokens(t)
+      track(mode === 'login' ? 'logged_in' : 'signed_up')
     } catch (err) {
       play('wrong')
       const status = err instanceof ApiError ? err.status : 0

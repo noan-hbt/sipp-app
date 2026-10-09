@@ -7,6 +7,7 @@ import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
 import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
 import { setSoundEnabled, soundEnabled } from '../lib/sound'
+import { track } from '../lib/telemetry'
 
 const list = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
 const item = {
@@ -38,7 +39,10 @@ export function Profile() {
 
   const trial = useMutation({
     mutationFn: Api.startTrial,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan'] }),
+    onSuccess: () => {
+      track('trial_started', { from: 'profile' })
+      return queryClient.invalidateQueries({ queryKey: ['plan'] })
+    },
   })
   const portal = useMutation({
     mutationFn: async (to: 'manage' | 'cancel') => {

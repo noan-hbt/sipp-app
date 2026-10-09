@@ -23,6 +23,7 @@ import { Review } from './screens/Review'
 import { SipMap } from './screens/SipMap'
 import { Understood } from './screens/Understood'
 import { Welcome } from './screens/Welcome'
+import { track } from './lib/telemetry'
 
 function useLoggedIn() {
   return useSyncExternalStore(onTokens, () => getTokens() !== null)
@@ -44,6 +45,7 @@ function usePendingWish(loggedIn: boolean) {
     if (!wish) return
     Api.createSip(wish)
       .then((sip) => {
+        track('sip_requested', { source: 'onboarding', lite: sip.lite })
         play('whoosh')
         void qc.invalidateQueries({ queryKey: ['sips'] })
         nav(`/sips/${sip.id}/building`)

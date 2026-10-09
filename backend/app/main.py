@@ -9,11 +9,13 @@ from app.api import assist, auth, billing, concepts, programs, sips
 from app.auth import validate_jwt_secret
 from app.config import get_settings
 from app.db import SessionLocal
+from app.observability import init_sentry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 settings = get_settings()
 validate_jwt_secret()
+init_sentry("api")
 
 
 class AnswerBodyLimit:

@@ -11,6 +11,7 @@ from app.jobs import queue
 from app.llm.client import OpenRouterClient
 from app.llm.record import make_llm
 from app.models import Job, Lesson, Program, Sip
+from app.observability import init_sentry
 from app.paddle import PaddleClient
 from app.pipeline import engine, programs
 
@@ -106,6 +107,7 @@ async def process_one(client=None) -> bool:
 async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     s = get_settings()
+    init_sentry("worker")
     client = OpenRouterClient()
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
