@@ -56,6 +56,7 @@ async def test_export(auth_client):
 async def test_public_plans(client):
     plans = (await client.get("/auth/plans")).json()
     assert [p["name"] for p in plans] == ["free", "basic", "plus"]
+    assert plans[0].pop("features") == {"audio": False, "quiz": False, "notes": 10, "help_per_day": 5}
     assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True, "hours_per_month": 0.3, "prices": {}}
     assert plans[1]["hours_per_month"] == 6.0
 

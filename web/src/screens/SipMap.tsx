@@ -10,6 +10,7 @@ import {
   itemVariants as item,
   listVariants as list,
 } from "../components/SipCard";
+import { UpsellSheet, useFeatures, type Feature } from "../components/UpsellSheet";
 import { Button, Icon, IconButton, Star } from "../components/ui";
 import { Api, ApiError, apiErrorMessage, type LessonBrief } from "../lib/api";
 import { duration, LESSON_MINUTES } from "../lib/format";
@@ -22,6 +23,8 @@ type LessonState = "done" | "now" | "locked";
 /** A Sip: the climbing map by default, or a list of lessons grouped by module (the current one is the big caramel card). */
 export function SipMap() {
   const { sipId = "" } = useParams();
+  const features = useFeatures();
+  const [upsell, setUpsell] = useState<Feature | null>(null);
   const nav = useNavigate();
   const loc = useLocation() as {
     state?: { completed?: string; fresh?: boolean };
@@ -401,7 +404,8 @@ export function SipMap() {
                 {m.lessons.length > 0 && m.lessons.every((l) => l.completed) && (
                   <QuizRow
                     stars={m.quiz_stars ?? null}
-                    onOpen={() => nav(`/modules/${m.id}/quiz`, { state: { sipId: sipId } })}
+                    locked={!features.quiz}
+                    onOpen={() => (features.quiz ? nav(`/modules/${m.id}/quiz`, { state: { sipId: sipId } }) : setUpsell("quiz"))}
                   />
                 )}
               </motion.section>
@@ -497,6 +501,7 @@ export function SipMap() {
           </motion.div>
         )}
       </AnimatePresence>
+      <UpsellSheet feature={upsell} onClose={() => setUpsell(null)} />
     </Screen>
   );
 }
@@ -749,7 +754,7 @@ function LessonRow({
 }
 
 /** Once every lesson of a module is done: its quiz, and the best result so far. */
-function QuizRow({ stars, onOpen }: { stars: number | null; onOpen: () => void }) {
+function QuizRow({ stars, locked, onOpen }: { stars: number | null; locked: boolean; onOpen: () => void }) {
   return (
     <motion.button
       whileTap={{ scale: 0.97 }}
@@ -788,6 +793,7 @@ function QuizRow({ stars, onOpen }: { stars: number | null; onOpen: () => void }
           {stars === null ? "5 questions · jusqu’à 3 étoiles" : stars >= 3 ? "Maîtrisé · refaire pour réviser" : "Retente pour 3 étoiles"}
         </span>
       </span>
+      {locked && <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 13, background: "var(--sun)", display: "grid", placeItems: "center", flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg></span>}
       {stars !== null && (
         <span style={{ display: "flex", gap: 2 }} aria-label={`${stars} étoiles sur 3`}>
           {[1, 2, 3].map((n) => (

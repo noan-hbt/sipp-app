@@ -24,6 +24,10 @@ const perks = (p: PlanInfo) => [
   p.slots === 1 ? '1 Sip à la fois' : `${p.slots} Sips en même temps`,
   p.sips_per_month === 1 ? '1 nouveau Sip par mois' : `${p.sips_per_month} nouveaux Sips par mois`,
   p.lite ? 'Parcours courts' : 'Parcours complets, sur mesure',
+  ...(p.features?.audio ? ['Leçons lues à voix haute'] : []),
+  ...(p.features?.quiz ? ['Quiz de fin de module'] : []),
+  ...(p.features ? [p.features.notes ? `${p.features.notes} passages dans ton carnet` : 'Carnet de notes illimité'] : []),
+  ...(p.features ? [`${p.features.help_per_day} réexplications par jour`] : []),
 ]
 
 /** The plans side by side: subscribe through Paddle, or try the paid plan once for free. */

@@ -204,6 +204,7 @@ export interface Plan {
   sips_per_month: number
   sips_this_month: number
   lite: boolean
+  features?: { audio: boolean; quiz: boolean; notes: number; help_per_day: number }
 }
 export interface PlanInfo {
   name: Plan['plan']
@@ -212,6 +213,7 @@ export interface PlanInfo {
   lite: boolean
   hours_per_month: number
   prices: Partial<Record<'month' | 'year', number>>
+  features?: { audio: boolean; quiz: boolean; notes: number; help_per_day: number }
 }
 export interface Checkout { transaction_id: string; client_token: string; environment: string; success_url: string }
 export interface ApiErrorDetail { code?: string; message?: string }
@@ -242,6 +244,9 @@ export function apiErrorMessage(error: unknown, fallback = 'Impossible de joindr
     billing_provider_error: 'Le paiement est indisponible pour le moment. Réessaie dans un instant.',
     billing_cancel_failed: 'Ton abonnement n’a pas pu être résilié, donc ton compte est conservé. Réessaie dans un instant.',
     no_subscription: 'Aucun abonnement à gérer.',
+    help_limit: 'Tu as utilisé tes explications du jour. Réessaie demain.',
+    notes_limit: 'Ton carnet est plein pour ton offre.',
+    plan_feature: 'Cette fonctionnalité est incluse dès l’offre Essentiel.',
   }
   return error instanceof ApiError ? messages[error.code ?? ''] ?? fallback : fallback
 }

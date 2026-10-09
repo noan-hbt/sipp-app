@@ -62,6 +62,7 @@ class PlanInfo(BaseModel):
     hours_per_month: float
     # Cents, tax included, per interval ("month", "year"); empty for the free plan.
     prices: dict[str, int]
+    features: FeaturesOut | None = None
 
 
 class CheckoutIn(BaseModel):

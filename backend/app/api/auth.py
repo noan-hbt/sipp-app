@@ -36,7 +36,7 @@ from app.config import get_settings
 from app.db import get_session
 from app.models import ConceptCard, Lesson, Module, Note, Sip, User
 from app.paddle import PaddleClient, PaddleError, get_paddle
-from app.plans import plan_status, start_trial
+from app.plans import FREE_FEATURES, plan_status, start_trial
 from app.progress import stats
 from app.quota import usage
 
@@ -193,6 +193,7 @@ async def list_plans():
         PlanInfo(
             name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]),
             lite=bool(p["lite"]), hours_per_month=hours(p), prices=s.plan_prices.get(name, {}),
+            features={**FREE_FEATURES, **s.plan_features.get(name, {})},
         )
         for name, p in s.plans.items()
         if name != "max"

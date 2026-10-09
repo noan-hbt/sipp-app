@@ -47,6 +47,7 @@ export function ModuleQuiz() {
   }
   if (!quiz.data) {
     const notReady = quiz.error instanceof ApiError && quiz.error.status === 409
+    const locked = quiz.error instanceof ApiError && quiz.error.code === 'plan_feature'
     return (
       <Screen kind="modal">
         <header className="topbar">
@@ -55,7 +56,12 @@ export function ModuleQuiz() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
           <Mascot mood={quiz.isError ? 'oops' : 'think'} size={96} />
           {quiz.isError ? (
-            notReady ? (
+            locked ? (
+              <>
+                <p className="muted" style={{ fontSize: 16 }}>Le quiz de fin de module est inclus dès l’offre Essentiel.</p>
+                <Button onClick={() => nav('/offers')}>Voir les offres</Button>
+              </>
+            ) : notReady ? (
               <p className="muted" style={{ fontSize: 16 }}>Termine toutes les leçons du module pour ouvrir son quiz.</p>
             ) : (
               <ErrorNotice message={apiErrorMessage(quiz.error, 'Le quiz n’a pas pu se charger. Réessaie.')} retry={() => void quiz.refetch()} busy={quiz.isFetching} />

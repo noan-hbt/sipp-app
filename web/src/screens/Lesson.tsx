@@ -9,7 +9,8 @@ import { Mascot } from '../components/Mascot'
 import { RichText } from '../components/RichText'
 import { Screen } from '../components/Screen'
 import { Button, Icon, IconButton, ProgressBar } from '../components/ui'
-import { Api, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } from '../lib/api'
+import { UpsellSheet, useFeatures, type Feature } from '../components/UpsellSheet'
+import { Api, ApiError, apiErrorMessage, getSessionId, type HelpKind, type LessonOut } from '../lib/api'
 import { blockText, isGraded, isInteractive, isKeepable, type Block } from '../lib/blocks'
 import { speak, speechSupported, stopSpeaking } from '../lib/speech'
 import { useLessonResume } from '../lib/resume'
@@ -48,6 +49,8 @@ export function Lesson() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['notes'] }),
   })
+  const features = useFeatures()
+  const [upsell, setUpsell] = useState<Feature | null>(null)
   const ready = data?.status === 'ready'
   const resumed = !!data?.completed_at
   useEffect(() => {
@@ -107,7 +110,14 @@ export function Lesson() {
       finishError={complete.isError ? apiErrorMessage(complete.error, 'Ta leçon n’a pas été enregistrée. Réessaie.') : undefined}
       onHelp={(block, kind, question) => (track('help_asked', { kind }), Api.help(lessonId, { block, kind, question }).then((r) => r.answer))}
       kept={new Set(kept.keys())}
-      onKeep={(block, quote) => keep.mutate({ block, quote })}
+      onKeep={(block, quote) =>
+        keep.mutateAsync({ block, quote }).catch((e) => {
+          if (e instanceof ApiError && e.code === 'notes_limit') setUpsell('notes')
+          throw e
+        })
+      }
+      onLockedAudio={features.audio ? undefined : () => setUpsell('audio')}
+      extra={<UpsellSheet feature={upsell} onClose={() => setUpsell(null)} />}
     />
   )
 }
@@ -159,6 +169,8 @@ export function LessonPlayer({
   finishLabel = 'Terminer la leçon',
   kept,
   onKeep,
+  onLockedAudio,
+  extra,
 }: {
   title: string
   blocks: Block[]
@@ -174,7 +186,11 @@ export function LessonPlayer({
   finishLabel?: string
   /** Blocks kept as notes; the keep button is hidden without onKeep. */
   kept?: Set<number>
-  onKeep?: (block: number, quote: string) => void
+  onKeep?: (block: number, quote: string) => Promise<void>
+  /** Read aloud is not in the plan: the button shows a lock and calls this instead. */
+  onLockedAudio?: () => void
+  /** Rendered at the end of the screen (sheets). */
+  extra?: ReactNode
 }) {
   const [revealed, setRevealed] = useState(() => Math.min(Math.max(1, (resume?.step ?? 0) + 1), Math.max(1, blocks.length)))
   const [answers, setAnswers] = useState<Record<number, Answer>>(() => fromList(resume))
@@ -321,12 +337,21 @@ export function LessonPlayer({
             whileTap={{ scale: 0.9 }}
             onClick={() => {
               play('tap')
+              if (onLockedAudio) return onLockedAudio()
               if (!listening) track('lesson_listened')
               setListening(!listening)
             }}
             className="icon-btn"
-            style={{ background: listening ? 'var(--primary)' : 'var(--peach-soft)', color: listening ? '#fff' : 'var(--primary)' }}
+            style={{ position: 'relative', background: listening ? 'var(--primary)' : 'var(--peach-soft)', color: listening ? '#fff' : 'var(--primary)' }}
           >
+            {onLockedAudio && (
+              <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 18, height: 18, borderRadius: 9, background: 'var(--sun)', display: 'grid', placeItems: 'center', boxShadow: '0 0 0 2px var(--bg)' }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V8a4 4 0 018 0v3" />
+                </svg>
+              </span>
+            )}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M3 14v-2a9 9 0 0118 0v2" />
               <path d="M21 15a2 2 0 01-2 2h-1v-6h1a2 2 0 012 2zM3 15a2 2 0 002 2h1v-6H5a2 2 0 00-2 2z" />
@@ -393,9 +418,11 @@ export function LessonPlayer({
                   kept={!!kept?.has(i)}
                   onToggle={() => {
                     const was = !!kept?.has(i)
-                    onKeep(i, blockText(b))
-                    setToast(was ? 'Retiré de ton carnet' : 'Gardé dans ton carnet')
                     dismissKeepHint()
+                    onKeep(i, blockText(b)).then(
+                      () => setToast(was ? 'Retiré de ton carnet' : 'Gardé dans ton carnet'),
+                      () => {},
+                    )
                   }}
                 >
                   <BlockView block={b} answer={answers[i]} onAnswer={(a) => onAnswer(i, a)} />
@@ -491,6 +518,7 @@ export function LessonPlayer({
           </motion.div>
         )}
       </AnimatePresence>
+      {extra}
       {onHelp && <HelpSheet open={helpOpen} onClose={() => setHelpOpen(false)} ask={(kind, question) => onHelp(revealed - 1, kind, question)} />}
     </Screen>
   )

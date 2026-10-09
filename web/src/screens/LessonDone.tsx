@@ -7,6 +7,7 @@ import { RichText } from '../components/RichText'
 import { illustration } from '../components/SipIcon'
 import { Button, Icon, Star } from '../components/ui'
 import { ReportSheet } from '../components/ReportSheet'
+import { UpsellSheet, useFeatures, type Feature } from '../components/UpsellSheet'
 import { Api, type CompleteOut, type Feeling } from '../lib/api'
 import { LESSON_MINUTES } from '../lib/format'
 import { shareSip } from '../lib/share'
@@ -193,6 +194,8 @@ export function LessonDone() {
   const nav = useNavigate()
   const s = (useLocation().state ?? null) as DoneState | null
   const [report, setReport] = useState(false)
+  const [upsell, setUpsell] = useState<Feature | null>(null)
+  const features = useFeatures()
 
   useEffect(() => {
     if (!s) return
@@ -285,7 +288,7 @@ export function LessonDone() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.15 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } })}
+              onClick={() => (features.quiz ? nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } }) : setUpsell('quiz'))}
               style={{ border: 'none', borderRadius: 22, padding: '14px 16px', background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
             >
               <span style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--lavender-strong)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, fontWeight: 700, fontSize: 20 }}>?</span>
@@ -293,6 +296,7 @@ export function LessonDone() {
                 <span style={{ fontSize: 16, fontWeight: 600 }}>Quiz du module</span>
                 <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>
               </span>
+              {!features.quiz && <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 13, background: 'var(--sun)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg></span>}
             </motion.button>
           )}
 
@@ -342,6 +346,7 @@ export function LessonDone() {
               Signaler un problème dans cette leçon
             </button>
           </motion.div>
+          <UpsellSheet feature={upsell} onClose={() => setUpsell(null)} />
           {lessonId && <ReportSheet lessonId={lessonId} open={report} onClose={() => setReport(false)} />}
         </motion.div>
       </div>
