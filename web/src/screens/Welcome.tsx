@@ -1,5 +1,4 @@
 import { motion, useReducedMotion } from 'motion/react'
-import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RevealLines } from '../components/motion'
 import { Screen } from '../components/Screen'
