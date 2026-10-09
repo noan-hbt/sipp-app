@@ -21,6 +21,14 @@ import { SipPathMap } from "./SipPathMap";
 type LessonState = "done" | "now" | "locked";
 
 /** A Sip: the climbing map by default, or a list of lessons grouped by module (the current one is the big caramel card). */
+const MODULE_TONES = [
+  ["var(--lavender)", "var(--lavender-ink)"],
+  ["var(--mint)", "var(--mint-ink)"],
+  ["var(--sky)", "var(--sky-ink)"],
+  ["var(--butter)", "var(--butter-ink)"],
+  ["var(--peach-soft)", "var(--peach-ink)"],
+] as const;
+
 export function SipMap() {
   const { sipId = "" } = useParams();
   const features = useFeatures();
@@ -362,24 +370,28 @@ export function SipMap() {
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  marginTop: 14,
+                  marginTop: 22,
                 }}
               >
-                <span
-                  style={{
-                    padding: "0 12px 6px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: ".04em",
-                    textTransform: "uppercase",
-                    color: m.lessons.some((l) => stateOf(l) !== "locked")
-                      ? "var(--faint)"
-                      : "color-mix(in srgb, var(--faint) 55%, transparent)",
-                  }}
-                >
-                  Module {m.position} · {m.title} ·{" "}
-                  {m.lessons.length * LESSON_MINUTES} min
-                </span>
+                {(() => {
+                  const [bg, ink] = MODULE_TONES[(m.position - 1) % MODULE_TONES.length];
+                  const open = m.lessons.some((l) => stateOf(l) !== "locked");
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "6px 10px 10px", opacity: open ? 1 : 0.6 }}>
+                      <span className="display" style={{ width: 44, height: 44, borderRadius: 22, background: bg, color: ink, display: "grid", placeItems: "center", fontSize: 18, flexShrink: 0 }}>
+                        {m.position}
+                      </span>
+                      <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                        <span className="kicker" style={{ color: ink }}>
+                          Module {m.position} · {m.lessons.length * LESSON_MINUTES} min
+                        </span>
+                        <span className="display" style={{ fontSize: 18, lineHeight: 1.15 }}>
+                          {m.title}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })()}
                 {m.lessons.map((l) => {
                   const st = stateOf(l);
                   return st === "now" ? (

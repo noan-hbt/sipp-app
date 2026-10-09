@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { SipIcon } from '../components/SipIcon'
+import { RevealLines } from '../components/motion'
+import { sipPalette, topicArt } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError, type Interpretation, type Profile } from '../lib/api'
 import { play } from '../lib/sound'
@@ -48,6 +49,7 @@ export function Understood() {
   const { interpretation, input } = state
   const update = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
   const goal = profile.goals[0] ?? ''
+  const pal = sipPalette(`${profile.topic} ${input}`)
   const known = profile.prior_knowledge ?? []
   const left = profile.out_of_scope ?? []
   const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
@@ -61,24 +63,31 @@ export function Understood() {
       </header>
 
       <div className="scroll" style={{ padding: '4px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ width: 58, height: 58, borderRadius: 29, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-            <Mascot size={44} />
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 14, color: 'var(--muted)' }}>Avant de préparer ton parcours</span>
-            <h1 className="title-l" style={{ fontSize: 25 }}>
-              Voilà ce que j’ai compris
-            </h1>
-          </div>
-        </motion.div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span className="kicker" style={{ color: 'var(--muted)' }}>Avant de préparer ton parcours</span>
+          <h1 className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={[{ text: 'Voilà ce que' }, { text: 'j’ai compris.', color: 'var(--primary)' }]} />
+          </h1>
+        </div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="card" style={{ borderRadius: 24, padding: 16, display: 'flex', gap: 14, alignItems: 'center' }}>
-          <SipIcon text={`${profile.topic} ${input}`} size={64} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--peach-ink)' }}>Ton sujet</span>
-            <span style={{ fontSize: 18, fontWeight: 600, lineHeight: 1.25 }}>{profile.title}</span>
-          </div>
+        <motion.div
+          initial={{ opacity: 0, y: 16, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+          style={{ position: 'relative', marginTop: 10, borderRadius: 28, padding: '18px 18px 16px', minHeight: 120, background: pal.bg, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4 }}
+        >
+          <motion.img
+            src={topicArt(`${profile.topic} ${input}`)}
+            alt=""
+            width={112}
+            height={112}
+            initial={{ scale: 0.4, rotate: -15 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 12, delay: 0.25 }}
+            style={{ position: 'absolute', top: -22, right: -4 }}
+          />
+          <span className="kicker" style={{ color: pal.ink }}>Ton sujet</span>
+          <span className="display" style={{ fontSize: 24, lineHeight: 1.08, paddingRight: 100 }}>{profile.title}</span>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card" style={{ borderRadius: 24, padding: '4px 16px', display: 'flex', flexDirection: 'column' }}>
@@ -149,7 +158,7 @@ export function Understood() {
           )}
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ borderRadius: 20, background: 'var(--butter)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ borderRadius: 24, background: 'var(--butter)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--butter-ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="13" r="8" />
             <path d="M12 9v4l2.5 2M9 2h6" />

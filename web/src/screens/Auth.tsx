@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
-import { Button, Icon, IconButton } from '../components/ui'
+import { RevealLines } from '../components/motion'
+import { Button, Icon } from '../components/ui'
 import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
@@ -47,30 +48,56 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
 
   return (
     <Screen>
-      <header className="topbar">
-        <IconButton label="Retour" onClick={() => nav('/', { replace: true })}>
-          {Icon.back}
-        </IconButton>
-      </header>
-      <div className="scroll" style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
-        >
-          <div style={{ width: 104, height: 104, borderRadius: 32, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
-            <Mascot mood={error ? 'oops' : 'hello'} size={80} />
-          </div>
-          <h1 className="display" style={{ fontSize: 30, lineHeight: 1.08, marginTop: 8 }}>
-            {mode === 'register' ? 'Garde ton Sip au chaud' : 'Content de te revoir !'}
+      <div className="scroll" style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 24 }}>
+        <div style={{ position: 'relative', flexShrink: 0, height: 'calc(var(--safe-top) + 230px)', borderRadius: '0 0 40px 40px', background: '#d9622b', overflow: 'hidden' }}>
+          <motion.span
+            initial={{ scale: 0.3 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 120, damping: 16 }}
+            style={{ position: 'absolute', left: '50%', bottom: -70, width: 260, height: 260, marginLeft: -130, borderRadius: 130, background: '#e5763f' }}
+          />
+          {[
+            { bg: '#ece8ff', left: '8%', bottom: 34, rot: -12 },
+            { bg: '#d9f3e4', right: '8%', bottom: 46, rot: 10 },
+            { bg: '#fff0c2', right: '22%', bottom: 150, rot: -6, small: true },
+          ].map((c, i) => (
+            <motion.span
+              key={i}
+              aria-hidden="true"
+              initial={{ opacity: 0, scale: 0.4, rotate: 0 }}
+              animate={{ opacity: 1, scale: 1, rotate: c.rot }}
+              transition={{ type: 'spring', stiffness: 220, damping: 14, delay: 0.1 + i * 0.08 }}
+              style={{ position: 'absolute', left: c.left, right: c.right, bottom: c.bottom, width: c.small ? 46 : 78, height: c.small ? 46 : 90, borderRadius: c.small ? 14 : 22, background: c.bg }}
+            />
+          ))}
+          <motion.span
+            initial={{ scale: 0.4, y: 40, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 13, delay: 0.2 }}
+            style={{ position: 'absolute', left: '50%', bottom: 18, width: 150, height: 150, marginLeft: -75, borderRadius: 75, background: '#fff', display: 'grid', placeItems: 'center' }}
+          >
+            <Mascot mood={error ? 'oops' : 'hello'} size={112} />
+          </motion.span>
+          <motion.button
+            aria-label="Retour"
+            whileTap={{ scale: 0.9 }}
+            onClick={() => nav('/', { replace: true })}
+            style={{ position: 'absolute', left: 16, top: 'calc(var(--safe-top) + 14px)', width: 44, height: 44, borderRadius: 22, border: 'none', background: 'rgba(255,255,255,.22)', color: '#fff', display: 'grid', placeItems: 'center' }}
+          >
+            {Icon.back}
+          </motion.button>
+        </div>
+
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h1 key={mode} className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={mode === 'register' ? [{ text: 'Garde ton Sip' }, { text: 'au chaud.', color: 'var(--primary)' }] : [{ text: 'Content de' }, { text: 'te revoir !', color: 'var(--primary)' }]} />
           </h1>
-          <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
+          <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
             {mode === 'register' ? 'Crée ton compte pour retrouver ta leçon et continuer ton parcours.' : 'Connecte-toi pour reprendre là où tu en étais.'}
           </p>
-        </motion.div>
+        </div>
 
-        <div style={{ display: 'flex', borderRadius: 26, padding: 4, position: 'relative', background: 'var(--bg-deep)' }}>
+        <div style={{ margin: '0 16px', display: 'flex', borderRadius: 26, padding: 4, position: 'relative', background: 'var(--bg-deep)' }}>
           {(['register', 'login'] as const).map((m) => (
             <button
               key={m}
@@ -86,15 +113,16 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
                 border: 'none',
                 background: 'transparent',
                 fontSize: 15,
-                fontWeight: 600,
                 position: 'relative',
-                color: mode === m ? 'var(--ink)' : 'var(--muted)',
+                fontWeight: 700,
+                color: mode === m ? 'var(--on-ink)' : 'var(--muted)',
+                transition: 'color .2s',
               }}
             >
               {mode === m && (
                 <motion.span
                   layoutId="auth-pill"
-                  style={{ position: 'absolute', inset: 0, borderRadius: 22, background: 'var(--surface)' }}
+                  style={{ position: 'absolute', inset: 0, borderRadius: 22, background: 'var(--ink)' }}
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
@@ -103,7 +131,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           ))}
         </div>
 
-        <motion.form animate={shake} onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <motion.form animate={shake} onSubmit={submit} style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="field">
             <label htmlFor="email">Email</label>
             <input id="email" type="email" autoComplete="email" inputMode="email" placeholder="toi@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
