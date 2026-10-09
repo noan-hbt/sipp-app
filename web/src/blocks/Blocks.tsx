@@ -359,7 +359,7 @@ function Code({ b }: { b: B.CodeBlock }) {
       <Kicker icon="code" tone="lavender">
         {b.caption ? <RichText text={b.caption} /> : 'Code'}
       </Kicker>
-      <div style={{ borderRadius: 22, background: 'var(--ink)', overflow: 'hidden' }}>
+      <div style={{ borderRadius: 22, background: '#1d1a17', boxShadow: 'inset 0 0 0 1.5px var(--line-strong)', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 10px 4px 18px' }}>
           <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: '#9B948A' }}>{b.language}</span>
           <motion.button
@@ -642,7 +642,7 @@ function Recap({ b }: { b: B.RecapBlock }) {
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {b.points.map((p, i) => (
           <motion.li key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={stagger(i)} style={{ display: 'flex', gap: 10, fontSize: 16, lineHeight: 1.5 }}>
-            <span style={{ width: 22, height: 22, borderRadius: 11, background: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>{Icon.check(12, 'var(--butter-ink)')}</span>
+            <span style={{ width: 22, height: 22, borderRadius: 11, background: 'var(--surface)', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>{Icon.check(12, 'var(--butter-ink)')}</span>
             <span>
               <RichText text={p} />
             </span>

@@ -707,7 +707,7 @@ function LessonRow({
               fontSize: 16,
               fontWeight: 500,
               lineHeight: 1.3,
-              color: done ? "var(--ink)" : "#A39A90",
+              color: done ? "var(--ink)" : "var(--faint)",
             }}
           >
             {lesson.title}
@@ -742,7 +742,7 @@ function LessonRow({
               fontSize: 13,
               fontWeight: 500,
               background: "var(--ink)",
-              color: "#fff",
+              color: "var(--on-ink)",
             }}
           >
             Termine d’abord « {hint} »

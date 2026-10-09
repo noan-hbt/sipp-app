@@ -18,39 +18,39 @@ import { haptic, play } from "../lib/sound";
 
 // The map keeps the soft, raised look of the original Sipp map (its own palette and Nunito).
 const C = {
-  bg: "#f1ede7",
-  bgDeep: "#e7e1d8",
-  ink: "#2b2620",
-  muted: "#5e574e",
-  faint: "#766f65",
-  shadow: "#d9d2c7",
-  surface: "#f8f6f2",
-  track: "#e2dcd2",
-  dots: "#d3ccc1",
-  peach: "#f4a574",
-  peachLip: "#d27a45",
-  peachSoft: "#fbe1cc",
-  peachInk: "#b5582a",
-  mint: "#bfe3cc",
-  mintLip: "#6fae88",
-  mintInk: "#2f7a52",
-  leaf: "#7fc59b",
-  butter: "#f6e7b0",
-  butterLip: "#d9c27a",
-  butterInk: "#6e5410",
-  star: "#f2c14e",
+  bg: "var(--map-bg)",
+  bgDeep: "var(--map-bgDeep)",
+  ink: "var(--map-ink)",
+  muted: "var(--map-muted)",
+  faint: "var(--map-faint)",
+  shadow: "var(--map-shadow)",
+  surface: "var(--map-surface)",
+  track: "var(--map-track)",
+  dots: "var(--map-dots)",
+  peach: "var(--map-peach)",
+  peachLip: "var(--map-peachLip)",
+  peachSoft: "var(--map-peachSoft)",
+  peachInk: "var(--map-peachInk)",
+  mint: "var(--map-mint)",
+  mintLip: "var(--map-mintLip)",
+  mintInk: "var(--map-mintInk)",
+  leaf: "var(--map-leaf)",
+  butter: "var(--map-butter)",
+  butterLip: "var(--map-butterLip)",
+  butterInk: "var(--map-butterInk)",
+  star: "var(--map-star)",
 };
-const RAISED = `6px 8px 16px ${C.shadow}, -6px -6px 14px #fff`;
-const RAISED_SM = `4px 4px 10px ${C.shadow}, -4px -4px 10px #fff`;
+const RAISED = `6px 8px 16px ${C.shadow}, -6px -6px 14px var(--map-hi)`;
+const RAISED_SM = `4px 4px 10px ${C.shadow}, -4px -4px 10px var(--map-hi)`;
 const FONT = "'Nunito', ui-rounded, system-ui, sans-serif";
 
 const MODULE_COLORS = [
-  ["#dcd3f4", "#4a3790"],
-  ["#bfe3cc", "#245e40"],
-  ["#cfe2f3", "#24527d"],
-  ["#f6e7b0", "#6e5410"],
-  ["#f5cfd6", "#8c2e45"],
-  ["#fbe1cc", "#8f431c"],
+  ["var(--map-mod0)", "var(--map-mod0-ink)"],
+  ["var(--map-mod1)", "var(--map-mod1-ink)"],
+  ["var(--map-mod2)", "var(--map-mod2-ink)"],
+  ["var(--map-mod3)", "var(--map-mod3-ink)"],
+  ["var(--map-mod4)", "var(--map-mod4-ink)"],
+  ["var(--map-mod5)", "var(--map-mod5-ink)"],
 ];
 
 const GAP = 104;
@@ -386,7 +386,7 @@ export function SipPathMap({
           display: "flex",
           flexDirection: "column",
           gap: 12,
-          background: `linear-gradient(${C.bg} 78%, rgba(241,237,231,0))`,
+          background: `linear-gradient(${C.bg} 78%, transparent)`,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -496,7 +496,7 @@ export function SipPathMap({
                 gap: 4,
                 fontSize: 13,
                 fontWeight: 800,
-                color: "#8f431c",
+                color: "var(--map-mod5-ink)",
                 whiteSpace: "nowrap",
               }}
             >
@@ -586,7 +586,7 @@ function RoundButton({
 /** Small leaves, dots and sparkles in the margins, the same for a given map height. */
 function Decor({ width, height }: { width: number; height: number }) {
   const items: ReactNode[] = [];
-  const tints = ["#f2c14e", "#f4a574", "#a897e0", "#cfe2f3"];
+  const tints = ["var(--map-star)", "var(--map-peach)", "var(--lavender-strong)", "var(--sky-strong)"];
   for (let y = height - 140, i = 0; y > 200; y -= 150, i++) {
     const left = i % 2 === 0;
     const x = left ? 30 : width - 32;
@@ -721,7 +721,7 @@ function EndMilestone({ node, width }: { node: EndNode; width: number }) {
           height="26"
           viewBox="0 0 24 24"
           fill="none"
-          stroke={reached ? C.butterInk : "#a39a90"}
+          stroke={reached ? C.butterInk : C.faint}
           strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -1007,7 +1007,7 @@ function MapNode({
         style={{
           ...common,
           background: C.peach,
-          boxShadow: `0 7px 0 ${C.peachLip}, 8px 14px 22px #d3cbbf, -6px -6px 14px #fff`,
+          boxShadow: `0 7px 0 ${C.peachLip}, 8px 14px 22px #d3cbbf, -6px -6px 14px var(--map-hi)`,
         }}
       >
         {Icon.play}

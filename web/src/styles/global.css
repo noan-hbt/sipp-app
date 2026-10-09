@@ -54,6 +54,42 @@
   --rose-mid: #ffc9bc;
   --lavender-deep: #2e2660;
   color-scheme: light;
+  /* Sip map (its own softer palette) */
+  --map-bg: #f1ede7;
+  --map-bgDeep: #e7e1d8;
+  --map-ink: #2b2620;
+  --map-muted: #5e574e;
+  --map-faint: #766f65;
+  --map-shadow: #d9d2c7;
+  --map-surface: #f8f6f2;
+  --map-track: #e2dcd2;
+  --map-dots: #d3ccc1;
+  --map-peach: #f4a574;
+  --map-peachLip: #d27a45;
+  --map-peachSoft: #fbe1cc;
+  --map-peachInk: #b5582a;
+  --map-mint: #bfe3cc;
+  --map-mintLip: #6fae88;
+  --map-mintInk: #2f7a52;
+  --map-leaf: #7fc59b;
+  --map-butter: #f6e7b0;
+  --map-butterLip: #d9c27a;
+  --map-butterInk: #6e5410;
+  --map-star: #f2c14e;
+  --map-mod0: #dcd3f4;
+  --map-mod0-ink: #4a3790;
+  --map-mod1: #bfe3cc;
+  --map-mod1-ink: #245e40;
+  --map-mod2: #cfe2f3;
+  --map-mod2-ink: #24527d;
+  --map-mod3: #f6e7b0;
+  --map-mod3-ink: #6e5410;
+  --map-mod4: #f5cfd6;
+  --map-mod4-ink: #8c2e45;
+  --map-mod5: #fbe1cc;
+  --map-mod5-ink: #8f431c;
+  --map-hi: #ffffff;
+  --map-shadow2: #d3cbbf;
 
   /* relief is gone: flat surfaces, a hairline where needed */
   --raised: none;
@@ -111,6 +147,41 @@
   --rose-soft: #37221b;
   --rose-mid: #5a2a22;
   color-scheme: dark;
+  --map-bg: #17130f;
+  --map-bgDeep: #221c17;
+  --map-ink: #f5ede4;
+  --map-muted: #c2b8ad;
+  --map-faint: #a39a90;
+  --map-shadow: #0b0907;
+  --map-surface: #262019;
+  --map-track: #3b322a;
+  --map-dots: #4a4037;
+  --map-peach: #e5753f;
+  --map-peachLip: #b8471a;
+  --map-peachSoft: #43291a;
+  --map-peachInk: #ffc7a6;
+  --map-mint: #1f4a33;
+  --map-mintLip: #3fae74;
+  --map-mintInk: #94dfb6;
+  --map-leaf: #3f8a5f;
+  --map-butter: #3d3316;
+  --map-butterLip: #8c7630;
+  --map-butterInk: #f2d98a;
+  --map-star: #f2c14e;
+  --map-mod0: #2d2748;
+  --map-mod0-ink: #cbc2ff;
+  --map-mod1: #1d3b2b;
+  --map-mod1-ink: #94dfb6;
+  --map-mod2: #1b2f40;
+  --map-mod2-ink: #a3d0f4;
+  --map-mod3: #3a3015;
+  --map-mod3-ink: #f2d98a;
+  --map-mod4: #41222b;
+  --map-mod4-ink: #ffb3c3;
+  --map-mod5: #43291a;
+  --map-mod5-ink: #ffc7a6;
+  --map-hi: transparent;
+  --map-shadow2: #0b0907;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -154,6 +225,41 @@
     --rose-soft: #37221b;
     --rose-mid: #5a2a22;
     color-scheme: dark;
+    --map-bg: #17130f;
+    --map-bgDeep: #221c17;
+    --map-ink: #f5ede4;
+    --map-muted: #c2b8ad;
+    --map-faint: #a39a90;
+    --map-shadow: #0b0907;
+    --map-surface: #262019;
+    --map-track: #3b322a;
+    --map-dots: #4a4037;
+    --map-peach: #e5753f;
+    --map-peachLip: #b8471a;
+    --map-peachSoft: #43291a;
+    --map-peachInk: #ffc7a6;
+    --map-mint: #1f4a33;
+    --map-mintLip: #3fae74;
+    --map-mintInk: #94dfb6;
+    --map-leaf: #3f8a5f;
+    --map-butter: #3d3316;
+    --map-butterLip: #8c7630;
+    --map-butterInk: #f2d98a;
+    --map-star: #f2c14e;
+    --map-mod0: #2d2748;
+    --map-mod0-ink: #cbc2ff;
+    --map-mod1: #1d3b2b;
+    --map-mod1-ink: #94dfb6;
+    --map-mod2: #1b2f40;
+    --map-mod2-ink: #a3d0f4;
+    --map-mod3: #3a3015;
+    --map-mod3-ink: #f2d98a;
+    --map-mod4: #41222b;
+    --map-mod4-ink: #ffb3c3;
+    --map-mod5: #43291a;
+    --map-mod5-ink: #ffc7a6;
+    --map-hi: transparent;
+    --map-shadow2: #0b0907;
   }
 }
 
