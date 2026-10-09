@@ -79,6 +79,19 @@ export function Home() {
       <div className="scroll" style={{ padding: '14px 16px 130px' }}>
         {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton accueil.' : 'Impossible d’actualiser ton accueil. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
         {stats.data && <Week week={stats.data.week} />}
+        {stats.data?.completed_today && (
+          <motion.p
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            role="status"
+            style={{ marginTop: 12, padding: '10px 14px', borderRadius: 16, background: 'var(--mint)', color: 'var(--mint-ink)', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            {Icon.check(16, 'var(--mint-ink)')}
+            {stats.data.streak_days > 1
+              ? `Leçon du jour faite · ${stats.data.streak_days} jours d’affilée`
+              : 'Leçon du jour faite, ta série est lancée. À demain !'}
+          </motion.p>
+        )}
         {sips.isLoading ? (
           <Skeleton />
         ) : !sips.data ? null : all.length === 0 ? (

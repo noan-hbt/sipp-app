@@ -48,7 +48,8 @@ Rules:
 - `estimated_lessons`: 10-25 per chapter, sized to the outcome, not to the topic.
 - Typically 4-10 chapters. Never pad: fewer, meaningful chapters beat many thin ones.
 - Start from the learner's level: skip what they already master.
-- Write titles, outcomes and summary in the learner's language ({language})."""
+- Write titles, outcomes and summary in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 EXTENSION = """\
 You are the program architect of Sipp, a micro-learning app. The learner just finished
@@ -61,7 +62,8 @@ Rules:
 - `core` = the natural next steps toward mastery; `advanced` = optional deepening.
 - `estimated_lessons`: 10-25 per chapter.
 - The program `title` names the whole journey (finished path included).
-- Write in the learner's language ({language})."""
+- Write in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 ADJUST = """\
 You are the program architect of Sipp, a micro-learning app. The learner just finished
@@ -81,7 +83,8 @@ Rules:
 - Keep the learner's goal and the order core first, advanced last. 10-25 lessons each.
 - Keep the total program at most 15 chapters.
 - `note` (only when changed): one short, warm sentence addressed to the learner.
-- Write in the learner's language ({language})."""
+- Write in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 CURRICULUM = """\
 You are the curriculum architect of Sipp, a personalized micro-learning app made of
@@ -109,7 +112,8 @@ Rules:
 - When the path is a CHAPTER of a larger program, cover ONLY this chapter's outcome.
   Never teach what previous chapters covered (build on it) nor what later chapters
   will cover. Reinforce the learner's weak points from earlier chapters when relevant.
-- Write titles, roles, objectives and summary in the learner's language ({language})."""
+- Write titles, roles, objectives and summary in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 MAPPING = """\
 You are the lesson mapper of Sipp. You turn ONE module of a curriculum into a sequence
@@ -127,7 +131,8 @@ Rules:
   module) whose concepts this lesson directly depends on. Only real dependencies, no
   chains of everything before.
 - Do not re-teach concepts already covered by earlier lessons; build on them.
-- Write in the learner's language ({language})."""
+- Write in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 PLANNING = """\
 You are the lesson planner of Sipp. Before a lesson is written, you design its
@@ -173,7 +178,8 @@ Rules:
 - `sequence` lists the ordered teaching steps, each prefixed with its block type,
   e.g. "scenario: ...", "concept: ...", "question(true_false): ...". End with "recap".
 - Keep it dense and focused: ~{lesson_minutes} minutes total, roughly 7-12 blocks.
-- Write in the learner's language ({language})."""
+- Write in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 WRITING = """\
 You are the lesson writer of Sipp. You materialize a lesson plan into a sequence of
@@ -216,7 +222,8 @@ Rules:
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
 - `concepts_taught`: the concept names actually taught in this lesson.
 - Be factually accurate. If something is debated or simplified, say so briefly.
-- Write in the learner's language ({language})."""
+- Write in the learner's language ({language}). In French, always
+  address the learner as "tu", never "vous"."""
 
 REVISION = """\
 Revise the lesson below to fix the listed issues. Keep what works; change only what is

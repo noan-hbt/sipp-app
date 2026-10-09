@@ -334,9 +334,9 @@ export function SipMap() {
                 color: "var(--muted)",
               }}
             >
-              {sip.data.summary}{" "}
-              <span style={{ whiteSpace: "nowrap" }}>
-                · {duration(flat.length)}
+              {sip.data.summary}
+              <span style={{ display: "block", marginTop: 8, fontSize: 13, fontWeight: 600, color: "var(--ink-soft)" }}>
+                {flat.length} leçons · {duration(flat.length)} au total
               </span>
             </p>
           )}
