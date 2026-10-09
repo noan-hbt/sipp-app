@@ -41,6 +41,12 @@ class User(TimestampMixin, Base):
     gen_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Paddle customer, reused across subscriptions so invoices stay on one customer.
     billing_customer_id: Mapped[str | None] = mapped_column(String(64), index=True)
+    # Habits: lessons a day, daily reminder (local hour, IANA timezone), web push endpoint.
+    daily_goal: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    reminder_hour: Mapped[int | None] = mapped_column(Integer)
+    timezone: Mapped[str | None] = mapped_column(String(64))
+    push_subscription: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    reminded_on: Mapped[str | None] = mapped_column(String(10))  # local date of the last reminder
 
 
 class RefreshToken(Base):
@@ -109,6 +115,8 @@ class Sip(TimestampMixin, Base):
     )
     chapter: Mapped[int | None] = mapped_column(Integer)
     adjustment_queued: Mapped[bool] = mapped_column(default=False, server_default=false())
+    # Learner feedback on difficulty: -2 (much easier) .. +2 (much harder), for lessons not written yet.
+    difficulty: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     modules: Mapped[list["Module"]] = relationship(
         back_populates="sip", cascade="all, delete-orphan", order_by="Module.position"
@@ -125,6 +133,8 @@ class Module(Base):
     title: Mapped[str] = mapped_column(String(300))
     role: Mapped[str] = mapped_column(Text)
     objectives: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # End-of-module quiz: best stars earned (1-3), None until taken.
+    quiz_stars: Mapped[int | None] = mapped_column(Integer)
 
     sip: Mapped[Sip] = relationship(back_populates="modules")
     lessons: Mapped[list["Lesson"]] = relationship(
@@ -291,4 +301,33 @@ class BillingEvent(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)  # evt_...
     type: Mapped[str] = mapped_column(String(60))
     occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class LessonFeedback(Base):
+    """How a lesson felt, and problems reported in it (generated content needs a way back)."""
+
+    __tablename__ = "lesson_feedback"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    lesson_id: Mapped[str | None] = mapped_column(ForeignKey("lessons.id", ondelete="SET NULL"), index=True)
+    feeling: Mapped[str | None] = mapped_column(String(10))  # easy | ok | hard
+    problem: Mapped[str | None] = mapped_column(String(30))  # wrong | unclear | broken | other
+    comment: Mapped[str | None] = mapped_column(Text)
+    block: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Note(Base):
+    """A passage the learner kept from a lesson, with an optional note of their own."""
+
+    __tablename__ = "notes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id", ondelete="CASCADE"), index=True)
+    block: Mapped[int] = mapped_column(Integer)
+    quote: Mapped[str] = mapped_column(Text)
+    text: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

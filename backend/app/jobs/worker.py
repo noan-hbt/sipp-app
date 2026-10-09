@@ -4,7 +4,7 @@ import asyncio
 import logging
 import signal
 
-from app import billing
+from app import billing, push
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
@@ -154,9 +154,26 @@ async def main() -> None:
             except TimeoutError:
                 pass
 
+    async def reminders() -> None:
+        """Daily reminders: checked every 5 minutes, each user gets at most one a day."""
+        while not stop.is_set():
+            if push.enabled():
+                try:
+                    async with SessionLocal() as session:
+                        n = await push.send_due_reminders(session)
+                    if n:
+                        log.info("push: %d reminders sent", n)
+                except Exception:  # noqa: BLE001
+                    log.exception("push reminders failed")
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=300)
+            except TimeoutError:
+                pass
+
     log.info("worker started (concurrency=%d)", s.worker_concurrency)
     tasks = [asyncio.create_task(slot()) for _ in range(s.worker_concurrency)]
     tasks.append(asyncio.create_task(billing_sync()))
+    tasks.append(asyncio.create_task(reminders()))
     await stop.wait()
     log.info("shutdown: releasing in-flight jobs")
     for t in tasks:

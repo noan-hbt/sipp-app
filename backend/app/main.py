@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from starlette.responses import JSONResponse
 
-from app.api import assist, auth, billing, concepts, programs, sips
+from app.api import assist, auth, billing, concepts, learning, programs, sips
 from app.auth import validate_jwt_secret
 from app.config import get_settings
 from app.db import SessionLocal
@@ -64,6 +64,7 @@ app.include_router(programs.router)
 app.include_router(concepts.router)
 app.include_router(assist.router)
 app.include_router(billing.router)
+app.include_router(learning.router)
 
 
 @app.get("/health", tags=["meta"])

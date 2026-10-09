@@ -47,6 +47,15 @@ def _dump(obj: Any) -> str:
 # --- Jobs entry points ---------------------------------------------------------
 
 
+
+# What the learner said about past lessons ("too easy" / "too hard"), for the ones not written yet.
+DIFFICULTY_NOTES = {
+    -2: "LEARNER FEEDBACK: past lessons felt much too hard. Go slower: one idea at a time, more concrete examples, simpler words, easier questions.",
+    -1: "LEARNER FEEDBACK: past lessons felt a bit hard. Slightly slower pace and an extra example before questions.",
+    1: "LEARNER FEEDBACK: past lessons felt a bit easy. Slightly denser, skip the obvious, slightly harder questions.",
+    2: "LEARNER FEEDBACK: past lessons felt much too easy. Go deeper and faster, assume the basics, use challenging questions.",
+}
+
 async def request_lesson(
     session: AsyncSession, lesson: Lesson, chain: bool = True, optional: bool = False
 ) -> bool:
@@ -377,6 +386,8 @@ async def generate_lesson(
     await session.commit()
 
     context, known = await build_lesson_context(session, lesson)
+    if sip.difficulty:
+        context = "\n\n".join([context, DIFFICULTY_NOTES[max(-2, min(2, sip.difficulty))]])
     fmt = {"lesson_minutes": s.lesson_minutes, "language": language}
 
     # 4. Planning

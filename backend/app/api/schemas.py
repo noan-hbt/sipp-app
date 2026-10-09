@@ -266,6 +266,15 @@ class CompleteOut(BaseModel):
     stars: int
     streak_days: int
     module_bonus: int = Field(default=0, description="Bonus stars earned now: this lesson finished its module.")
+    module_id: str | None = None
+    module_done: bool = Field(default=False, description="Every lesson of this lesson's module is finished: quiz open.")
+
+
+class WeekOut(BaseModel):
+    lessons: int
+    minutes: int
+    notions: int
+    active_days: int
 
 
 class StatsOut(BaseModel):
@@ -278,6 +287,32 @@ class StatsOut(BaseModel):
     month_days: list[int] = Field(default_factory=list, description="Days of the current month with a finished lesson.")
     today: int = Field(default=1, description="Day of the month today, in the device's timezone.")
     concepts: int = Field(default=0, description="Notions met in finished lessons.")
+    lessons_today: int = 0
+    daily_goal: int = 1
+    freeze_available: bool = True
+    freeze_used: list[str] = Field(default_factory=list, description="Missed days a streak freeze bridged.")
+    this_week: WeekOut | None = None
+    last_week: WeekOut | None = None
+
+
+class SettingsIn(BaseModel):
+    daily_goal: int | None = Field(default=None, ge=1, le=5)
+    # Local hour for the daily reminder, or -1 to turn it off.
+    reminder_hour: int | None = Field(default=None, ge=-1, le=23)
+    timezone: str | None = Field(default=None, max_length=64)
+
+
+class SettingsOut(BaseModel):
+    daily_goal: int
+    reminder_hour: int | None
+    timezone: str | None
+    push_enabled: bool
+    push_public_key: str | None
+
+
+class PushIn(BaseModel):
+    endpoint: str = Field(max_length=2000)
+    keys: dict[str, str]
 
 
 class ConceptOut(BaseModel):

@@ -1,4 +1,5 @@
 import logging
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete, select
@@ -10,7 +11,10 @@ from app.api.schemas import (
     DeleteAccountIn,
     PlanInfo,
     PlanOut,
+    PushIn,
     RefreshIn,
+    SettingsIn,
+    SettingsOut,
     StatsOut,
     TokenOut,
     UsageOut,
@@ -25,11 +29,12 @@ from app.auth import (
     rotate_refresh_token,
     verify_password_async,
 )
+from app import push
 from app.billing import live_subscription
 from app.concepts import sync_cards
 from app.config import get_settings
 from app.db import get_session
-from app.models import ConceptCard, Lesson, Module, Sip, User
+from app.models import ConceptCard, Lesson, Module, Note, Sip, User
 from app.paddle import PaddleClient, PaddleError, get_paddle
 from app.plans import plan_status, start_trial
 from app.progress import stats
@@ -95,8 +100,74 @@ async def me_stats(
     tz: str = "UTC", user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
     """Streak, stars and this month's active days. `tz` is the device's IANA timezone (e.g. Europe/Paris)."""
+    if tz != "UTC" and tz != user.timezone:
+        try:
+            ZoneInfo(tz)
+            user.timezone = tz  # reminders fire at the learner's local hour
+        except (ZoneInfoNotFoundError, ValueError):
+            pass
     await sync_cards(session, user)
     return await stats(session, user, tz)
+
+
+def _settings_out(user: User) -> SettingsOut:
+    s = get_settings()
+    return SettingsOut(
+        daily_goal=user.daily_goal,
+        reminder_hour=user.reminder_hour,
+        timezone=user.timezone,
+        push_enabled=user.push_subscription is not None,
+        push_public_key=s.vapid_public_key or None,
+    )
+
+
+@router.get("/me/settings", response_model=SettingsOut)
+async def get_settings_(user: User = Depends(current_user)):
+    """Daily goal and reminder."""
+    return _settings_out(user)
+
+
+@router.put("/me/settings", response_model=SettingsOut)
+async def put_settings(body: SettingsIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    if body.daily_goal is not None:
+        user.daily_goal = body.daily_goal
+    if body.reminder_hour is not None:
+        user.reminder_hour = None if body.reminder_hour < 0 else body.reminder_hour
+        user.reminded_on = None
+    if body.timezone:
+        try:
+            ZoneInfo(body.timezone)
+            user.timezone = body.timezone
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown timezone") from e
+    await session.commit()
+    return _settings_out(user)
+
+
+@router.put("/me/push", response_model=SettingsOut)
+async def put_push(body: PushIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    """Stores this device's web push subscription (one device per account)."""
+    if not body.endpoint.startswith("https://") or not {"p256dh", "auth"} <= set(body.keys):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid push subscription")
+    user.push_subscription = {"endpoint": body.endpoint, "keys": {k: body.keys[k] for k in ("p256dh", "auth")}}
+    await session.commit()
+    return _settings_out(user)
+
+
+@router.delete("/me/push", response_model=SettingsOut)
+async def delete_push(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    user.push_subscription = None
+    await session.commit()
+    return _settings_out(user)
+
+
+@router.post("/me/push/test", status_code=204)
+async def test_push(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    """Sends a sample reminder right away, so the learner sees what it looks like."""
+    if not push.enabled() or not user.push_subscription:
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "push_off", "message": "notifications are off"})
+    await push.send(user, {"title": "Sipp", "body": "C’est comme ça que je te rappellerai ta leçon.", "url": "/"})
+    await session.commit()
 
 
 @router.get("/me/plan", response_model=PlanOut)
@@ -139,6 +210,8 @@ async def me_export(user: User = Depends(current_user), session: AsyncSession = 
     modules = (await session.execute(select(Module).where(Module.sip_id.in_(ids)))).scalars().all() if ids else []
     lessons = (await session.execute(select(Lesson).where(Lesson.sip_id.in_(ids)))).scalars().all() if ids else []
     cards = (await session.execute(select(ConceptCard).where(ConceptCard.user_id == user.id))).scalars().all()
+    notes = (await session.execute(select(Note).where(Note.user_id == user.id).order_by(Note.created_at))).scalars().all()
+    titles = {l.id: l.title for l in lessons}
 
     def lesson_out(l: Lesson) -> dict:
         return {
@@ -183,6 +256,11 @@ async def me_export(user: User = Depends(current_user), session: AsyncSession = 
             }
             for c in sorted(cards, key=lambda c: c.name.lower())
         ],
+        "notes": [
+            {"lesson": titles.get(n.lesson_id), "quote": n.quote, "text": n.text, "created_at": n.created_at}
+            for n in notes
+        ],
+        "settings": {"daily_goal": user.daily_goal, "reminder_hour": user.reminder_hour, "timezone": user.timezone},
     }
 
 

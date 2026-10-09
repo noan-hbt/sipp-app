@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     env: str = "dev"
+    # Web push reminders (VAPID); off when empty. Public key in base64url (uncompressed point).
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:hello@sipp.app"
     # Error tracking; off when empty.
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = Field(default=0.1, ge=0, le=1)

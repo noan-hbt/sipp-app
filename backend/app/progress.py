@@ -8,7 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import Score
-from app.models import ConceptCard, Lesson, Sip, User, utcnow
+from app.config import get_settings
+from app.models import ConceptCard, Lesson, Module, Sip, User, utcnow
 
 # Stars earned once every lesson of a module is finished.
 MODULE_BONUS = 3
@@ -75,13 +76,31 @@ def _zone(tz: str):
         return timezone.utc
 
 
-def streak(days: set[date], today: date) -> int:
-    """Consecutive days ending today, or yesterday if nothing done yet today."""
-    start = today if today in days else today - timedelta(days=1)
-    n = 0
-    while start - timedelta(days=n) in days:
-        n += 1
-    return n
+# One missed day per week is forgiven: losing a long streak to a single busy day makes people quit.
+FREEZE_EVERY_DAYS = 7
+
+
+def streak_detail(days: set[date], today: date, freeze: bool = True) -> tuple[int, list[date]]:
+    """Active days in a row ending today (or yesterday), and the missed days a freeze bridged."""
+    d = today if today in days else today - timedelta(days=1)
+    n, frozen = 0, []
+    while True:
+        if d in days:
+            n += 1
+        elif (
+            freeze and n > 0 and d - timedelta(days=1) in days
+            and (not frozen or (frozen[-1] - d).days >= FREEZE_EVERY_DAYS)
+        ):
+            frozen.append(d)
+        else:
+            break
+        d -= timedelta(days=1)
+    return n, frozen
+
+
+def streak(days: set[date], today: date, freeze: bool = False) -> int:
+    """Consecutive active days ending today, or yesterday if nothing done yet today."""
+    return streak_detail(days, today, freeze)[0]
 
 
 async def stats(session: AsyncSession, user: User, tz: str = "UTC") -> dict:
@@ -101,20 +120,49 @@ async def stats(session: AsyncSession, user: User, tz: str = "UTC") -> dict:
         )
     ).all()
     bonus = MODULE_BONUS * len(finished_modules([(m, bool(d)) for m, d in modules]))
-    days = set()
+    days: set[date] = set()
+    per_day: dict[date, int] = {}
     for completed_at, _ in rows:
         dt = completed_at if completed_at.tzinfo else completed_at.replace(tzinfo=timezone.utc)
-        days.add(dt.astimezone(zone).date())
+        day = dt.astimezone(zone).date()
+        days.add(day)
+        per_day[day] = per_day.get(day, 0) + 1
     today = utcnow().astimezone(zone).date()
     monday = today - timedelta(days=today.weekday())
     concepts = await session.scalar(
         select(func.count()).select_from(ConceptCard).where(ConceptCard.user_id == user.id)
     )
+    quiz_stars = await session.scalar(
+        select(func.coalesce(func.sum(Module.quiz_stars), 0))
+        .join(Sip, Sip.id == Module.sip_id)
+        .where(Sip.user_id == user.id)
+    )
+    card_days = (
+        await session.scalars(select(ConceptCard.created_at).where(ConceptCard.user_id == user.id))
+    ).all()
+
+    def week_of(start: date) -> dict:
+        end = start + timedelta(days=7)
+        lessons = sum(n for d, n in per_day.items() if start <= d < end)
+        notions = sum(
+            1 for c in card_days
+            if start <= (c if c.tzinfo else c.replace(tzinfo=timezone.utc)).astimezone(zone).date() < end
+        )
+        return {"lessons": lessons, "minutes": lessons * get_settings().lesson_minutes, "notions": notions,
+                "active_days": sum(1 for d in days if start <= d < end)}
+
+    n, frozen = streak_detail(days, today)
     return {
-        "streak_days": streak(days, today),
+        "streak_days": n,
+        "freeze_used": [d.isoformat() for d in frozen],
+        "freeze_available": not any((today - d).days < FREEZE_EVERY_DAYS for d in frozen),
+        "lessons_today": per_day.get(today, 0),
+        "daily_goal": user.daily_goal,
+        "this_week": week_of(monday),
+        "last_week": week_of(monday - timedelta(days=7)),
         "completed_today": today in days,
         "lessons_completed": len(rows),
-        "total_stars": sum(s or 0 for _, s in rows) + bonus,
+        "total_stars": sum(s or 0 for _, s in rows) + bonus + (quiz_stars or 0),
         "week": [monday + timedelta(days=i) in days for i in range(7)],
         "month": today.strftime("%Y-%m"),
         "month_days": sorted(d.day for d in days if (d.year, d.month) == (today.year, today.month)),

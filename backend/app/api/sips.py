@@ -322,6 +322,8 @@ async def complete_lesson(
         stars=lesson.stars,
         streak_days=st["streak_days"],
         module_bonus=MODULE_BONUS if first_time and lesson.module_id in finished else 0,
+        module_id=lesson.module_id,
+        module_done=lesson.module_id in finished,
     )
 
 
