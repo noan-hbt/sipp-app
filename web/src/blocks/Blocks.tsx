@@ -6,7 +6,7 @@ import python from 'highlight.js/lib/languages/python'
 import sql from 'highlight.js/lib/languages/sql'
 import typescript from 'highlight.js/lib/languages/typescript'
 import { AnimatePresence, motion } from 'motion/react'
-import { useId, useMemo, useState, type ReactNode } from 'react'
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { MathDisplay, RichText } from '../components/RichText'
 import { Button, Icon } from '../components/ui'
@@ -174,76 +174,73 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
 
 const COLUMN_TONES: Tone[] = ['peach', 'lavender', 'mint', 'sky', 'butter']
 
-// Side by side only while every cell stays a few words; longer text reads better stacked.
-const SHORT_CELL = 40
-const SHORT_NAME = 22
-
+/** One card per item, swiped sideways: each keeps its colour and reads on its own, whatever the text length. */
 function Comparison({ b }: { b: B.ComparisonBlock }) {
   const tones = b.items.map((_, i) => TONES[COLUMN_TONES[i % COLUMN_TONES.length]])
-  const pair =
-    b.items.length === 2 &&
-    b.items.every((it) => it.name.length <= SHORT_NAME && it.values.every((v) => (v ?? '').length <= SHORT_CELL))
+  const deck = useRef<HTMLDivElement>(null)
+  const [at, setAt] = useState(0)
+  const go = (i: number) => {
+    const el = deck.current?.children[i] as HTMLElement | undefined
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="compare" tone="lavender">
         Comparer
       </Kicker>
       <H>{b.title}</H>
-      {pair ? (
-        // Two items: a face-to-face, each column keeps its colour down to the last line.
-        <div role="table" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div role="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, position: 'relative' }}>
-            {b.items.map((it, i) => (
-              <span role="columnheader" key={i} style={{ padding: '12px 14px', borderRadius: i ? '8px 20px 8px 8px' : '20px 8px 8px 8px', background: tones[i][0], color: tones[i][1], fontSize: 16, fontWeight: 700, lineHeight: 1.25, textAlign: 'center' }}>
-                <RichText text={it.name} />
+      <div
+        ref={deck}
+        role="list"
+        aria-label={`${b.items.length} éléments comparés`}
+        onScroll={(e) => {
+          const el = e.currentTarget
+          const card = el.firstElementChild as HTMLElement | null
+          if (card) setAt(Math.min(b.items.length - 1, Math.round(el.scrollLeft / (card.offsetWidth + 10))))
+        }}
+        style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollSnapType: 'x mandatory', margin: '0 -20px', padding: '0 20px 4px', scrollPaddingInline: 20, scrollbarWidth: 'none' }}
+      >
+        {b.items.map((it, i) => (
+          <motion.article
+            key={i}
+            role="listitem"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.08 * i }}
+            style={{ scrollSnapAlign: 'start', flex: `0 0 ${b.items.length === 1 ? 100 : 84}%`, borderRadius: 24, background: 'var(--surface)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <span style={{ padding: '14px 16px', background: tones[i][0], color: tones[i][1], fontFamily: 'var(--display)', fontSize: 19, fontWeight: 600, lineHeight: 1.2, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <RichText text={it.name} />
+              <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 600, opacity: 0.75, flexShrink: 0 }}>
+                {i + 1}/{b.items.length}
               </span>
-            ))}
-            <span aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 30, height: 30, borderRadius: 15, background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center' }}>
-              VS
             </span>
-          </div>
-          {b.dimensions.map((d, j) => (
-            <motion.div key={j} role="row" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + j * 0.08 }} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 6 }}>
-              <span role="rowheader" style={{ alignSelf: 'center', padding: '3px 12px', borderRadius: 12, background: 'var(--bg-deep)', fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)' }}>
-                <RichText text={d} />
-              </span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                {b.items.map((it, i) => (
-                  <span role="cell" key={i} style={{ padding: '10px 12px', borderRadius: j === b.dimensions.length - 1 ? (i ? '8px 8px 20px 8px' : '8px 8px 8px 20px') : 8, background: tones[i][0], color: 'var(--ink)', fontSize: 15, lineHeight: 1.4 }}>
+            <dl style={{ margin: 0, padding: '12px 16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {b.dimensions.map((d, j) => (
+                <div key={j}>
+                  <dt style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', letterSpacing: '.03em', textTransform: 'uppercase' }}>
+                    <RichText text={d} />
+                  </dt>
+                  <dd style={{ margin: '2px 0 0', fontSize: 15, lineHeight: 1.45 }}>
                     <RichText text={it.values[j] ?? '–'} />
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        // Long text or three items and more: one card per criterion; each answer sits under the
-        // item's coloured name, with the item's colour as a bar, so it never needs a column to read.
-        <div role="table" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {b.items.map((it, i) => (
-              <span key={i} style={{ padding: '4px 11px', borderRadius: 12, background: tones[i][0], color: tones[i][1], fontSize: 13, fontWeight: 700, lineHeight: 1.35 }}>
-                <RichText text={it.name} />
-              </span>
-            ))}
-          </div>
-          {b.dimensions.map((d, j) => (
-            <motion.div key={j} role="rowgroup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + j * 0.08 }} style={{ borderRadius: 20, background: 'var(--surface)', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <span role="rowheader" style={{ fontSize: 15, fontWeight: 700 }}>
-                <RichText text={d} />
-              </span>
-              {b.items.map((it, i) => (
-                <div role="row" key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: `4px solid ${tones[i][0]}` }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: tones[i][1], textTransform: 'uppercase', letterSpacing: '.03em', lineHeight: 1.3 }}>
-                    <RichText text={it.name} />
-                  </span>
-                  <span role="cell" style={{ fontSize: 15, lineHeight: 1.4 }}>
-                    <RichText text={it.values[j] ?? '–'} />
-                  </span>
+                  </dd>
                 </div>
               ))}
-            </motion.div>
+            </dl>
+          </motion.article>
+        ))}
+      </div>
+      {b.items.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+          {b.items.map((it, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Voir ${it.name}`}
+              aria-current={i === at}
+              onClick={() => go(i)}
+              style={{ border: 'none', padding: 0, height: 8, width: i === at ? 22 : 8, borderRadius: 4, background: i === at ? tones[i][1] : 'var(--line-strong)', transition: 'width .2s, background .2s' }}
+            />
           ))}
         </div>
       )}
