@@ -18,6 +18,8 @@ import { track } from '../lib/telemetry'
 const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
 const ALMOST = ['Presque !', 'Pas tout à fait…', 'Bien tenté !']
 
+const HELP_HINT_KEY = 'sipp.help-hint'
+
 export function Lesson() {
   const { lessonId = '' } = useParams()
   const nav = useNavigate()
@@ -154,6 +156,27 @@ export function LessonPlayer({
   const [answers, setAnswers] = useState<Record<number, Answer>>(() => fromList(resume))
   const [sheetOpen, setSheetOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  // First lessons only: point once at the help button, which is easy to miss.
+  const [helpHint, setHelpHint] = useState(() => {
+    try {
+      return !localStorage.getItem(HELP_HINT_KEY)
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    if (!helpHint || !onHelp) return
+    const t = setTimeout(() => dismissHint(), 6000)
+    return () => clearTimeout(t)
+  }, [helpHint]) // eslint-disable-line react-hooks/exhaustive-deps
+  function dismissHint() {
+    setHelpHint(false)
+    try {
+      localStorage.setItem(HELP_HINT_KEY, '1')
+    } catch {
+      /* private mode */
+    }
+  }
   // Between the answer and the feedback sheet: the block shows its result, no bottom bar.
   const [grading, setGrading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -212,7 +235,7 @@ export function LessonPlayer({
 
   return (
     <Screen kind="modal">
-      <header className="topbar">
+      <header className="topbar" style={{ position: 'relative' }}>
         <IconButton label="Quitter la leçon" onClick={onClose}>
           {Icon.close}
         </IconButton>
@@ -226,6 +249,7 @@ export function LessonPlayer({
             whileTap={{ scale: 0.9 }}
             onClick={() => {
               play('tap')
+              dismissHint()
               setHelpOpen(true)
             }}
             className="icon-btn"
@@ -237,6 +261,21 @@ export function LessonPlayer({
             </svg>
           </motion.button>
         )}
+        <AnimatePresence>
+          {onHelp && helpHint && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: -6, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ delay: 0.8 }}
+              onClick={dismissHint}
+              style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, zIndex: 5, maxWidth: 220, padding: '10px 12px', borderRadius: '16px 4px 16px 16px', border: 'none', background: 'var(--ink)', color: '#fff', fontSize: 13, fontWeight: 600, lineHeight: 1.35, textAlign: 'left', boxShadow: '0 8px 24px rgba(0,0,0,.18)' }}
+            >
+              {'Un passage pas clair ? Touche « ? » : je réexplique autrement.'}
+            </motion.button>
+          )}
+        </AnimatePresence>
       </header>
       {saveNotice}
 
