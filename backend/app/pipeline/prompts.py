@@ -242,17 +242,22 @@ Rules:
   e.g. "la dimension $d_k$". Never put a display formula inside text.
 - `hook` (first block): `question` is concrete and intriguing (max ~15 words, e.g. a
   number to discover, a paradox, a situation); `teaser` promises what the learner will
-  be able to do; `answer` answers the question precisely in 1-2 sentences.
+  be able to do; `answer` answers the question precisely in 1-2 sentences. Aim for the
+  most intriguing question of the lesson, one the learner cannot answer yet; it is
+  answered only at the end, so no earlier block (not even a predict) gives it away.
 - `predict`: kind "number" needs min/max/step/answer (answer not at the center, at most
   ~200 positions) and `unit`; kind "choice" needs 2-4 `options` with ids and `answer_id`.
   `reveal` explains the true answer in a few words. Put it BEFORE the explanation of
-  that point, never after.
+  that point, never after. Its question must differ from the hook's: a stepping stone,
+  not the same question.
 - `swipe`: 3-5 short statements (max ~18 words), mixing true and false, each with a
   one-sentence `why`.
 - `simulate`: compute every value exactly (show your arithmetic mentally, round
   sensibly); `points` have strictly increasing `x`; `start` is the index of the most
   typical case; `parameter`/`output` are short labels with their units apart;
-  `takeaway` says what to notice.
+  `takeaway` says what to notice. Use 4-6 points, and pick a relationship whose result
+  surprises (it grows faster than expected, crosses a threshold, flattens out...) rather
+  than a trivial proportion.
 - The last block is a `recap` (2-5 points, plus `concepts` = concept names acquired).
   The points must cover every part of the lesson objective, most important first.
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
@@ -288,7 +293,9 @@ Check:
 - fill_blanks: each blank has exactly one sensible answer among the choices
 - match: each pair is correct and no left item could reasonably match another right
 - estimate: the answer value is accurate and the tolerance is fair
-- hook: the lesson really answers its question and `answer` is correct
+- hook: the lesson really answers its question and `answer` is correct; no earlier
+  block (e.g. a predict asking the same thing) gives the answer away
+- rhythm: never more than two explanation blocks in a row without an active moment
 - predict / simulate: every number is accurate (recompute them); predict comes before
   the explanation it sets up
 - swipe: each card's truth value and `why` are correct

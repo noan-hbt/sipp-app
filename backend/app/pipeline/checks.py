@@ -174,6 +174,12 @@ def check_lesson(
         res.warnings.append("lesson does not open with a 'hook' block")
     if sum(1 for b in blocks if b.type in ("predict", "swipe", "simulate")) < 2:
         res.warnings.append("lesson has fewer than two play moments (predict, swipe, simulate)")
+    run = longest = 0
+    for b in blocks:
+        run = run + 1 if b.type in ("concept", "example", "analogy", "text", "comparison", "sequence", "cause_effect", "scenario") else 0
+        longest = max(longest, run)
+    if longest > 3:
+        res.warnings.append(f"{longest} explanation blocks in a row: break them with an active moment")
 
     # duplicated content
     seen: dict[str, int] = {}
