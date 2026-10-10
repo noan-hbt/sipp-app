@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { ErrorNotice } from '../components/ErrorNotice'
@@ -39,7 +39,8 @@ export function Review() {
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
   const [i, setI] = useState(0)
   const [shown, setShown] = useState(false)
-  const [knew, setKnew] = useState(0)
+  const [results, setResults] = useState<boolean[]>([])
+  const [leaving, setLeaving] = useState<boolean | null>(null)
   const [picked, setPicked] = useState<string | null>(null)
   const concepts = useQuery({ queryKey: ['concepts'], queryFn: Api.concepts })
   const saving = useRef(false)
@@ -50,14 +51,17 @@ export function Review() {
       track('card_reviewed', { knew: k })
       play(k ? 'correct' : 'tap')
       haptic(k ? 12 : 6)
-      if (k) setKnew((n) => n + 1)
+      setResults((r) => [...r, k])
+      setLeaving(null)
       setShown(false)
       setPicked(null)
       setI((n) => n + 1)
     },
+    onError: () => setLeaving(null),
     onSettled: () => { saving.current = false },
   })
 
+  const knew = results.filter(Boolean).length
   const cards = session.data?.cards ?? []
   const card = cards[i]
   const finished = session.data && i >= cards.length
@@ -69,9 +73,16 @@ export function Review() {
     nav(-1)
   }
 
+  function flip() {
+    play('reveal')
+    haptic(6)
+    setShown(true)
+  }
+
   function rate(k: boolean) {
     if (!card || saving.current) return
     saving.current = true
+    if (!choices) setLeaving(k)
     answer.mutate({ id: card.id, k })
   }
 
@@ -105,6 +116,21 @@ export function Review() {
               <CountUp value={knew} delay={0.3} />
               <span style={{ fontSize: 44, color: 'var(--lavender-ink)' }}>/{cards.length}</span>
             </span>
+          )}
+          {!empty && (
+            <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 6, maxWidth: 260 }}>
+              {results.map((k, n) => (
+                <motion.span
+                  key={n}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.5 + n * 0.06, type: 'spring', stiffness: 420, damping: 16 }}
+                  style={{ width: 22, height: 22, borderRadius: 11, display: 'grid', placeItems: 'center', background: k ? 'var(--mint-lip)' : 'var(--surface)', color: k ? '#fff' : 'var(--rose-ink)' }}
+                >
+                  {k ? Icon.check(12) : <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor' }} />}
+                </motion.span>
+              ))}
+            </div>
           )}
           <h1 className="title-xl">{empty ? (noNotions ? 'Pas encore de notions' : 'Rien à réviser') : 'Révision finie !'}</h1>
           <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
@@ -142,84 +168,25 @@ export function Review() {
       {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, 'Tes cartes n’ont pas pu être actualisées. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />}
 
       <div style={{ flex: 1, padding: '30px 22px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div style={{ position: 'relative', flex: 1, maxHeight: 520 }}>
+        <div style={{ position: 'relative', flex: 1, maxHeight: 520, perspective: 1400 }}>
           {i + 2 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 18, right: 18, top: -16, bottom: 26, borderRadius: 32, background: 'var(--lavender-strong)', transform: 'rotate(4deg)' }} />}
           {i + 1 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 8, right: 8, top: -8, bottom: 16, borderRadius: 32, background: 'var(--surface)', opacity: 0.6, transform: 'rotate(-3deg)' }} />}
-          <AnimatePresence mode="popLayout">
-            <motion.article
+          <AnimatePresence initial={false}>
+            <FlashCard
               key={card.id}
-              initial={{ opacity: 0, y: 30, scale: 0.92, rotate: 3 }}
-              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, x: -140, rotate: -12 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-              className="scroll"
-              style={{ position: 'absolute', inset: '0 0 8px', borderRadius: 32, background: 'var(--surface)', padding: 22, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 40px rgba(46,38,96,.14)' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img src={topicArt(card.sip_title)} alt="" width={36} height={36} style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', lineHeight: 1.3 }}>
-                  {card.sip_title} · vue {ago(card.last_reviewed_at ?? card.learned_at)}
-                </span>
-              </div>
-              <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>
-                {choices ? 'Quelle définition ?' : 'Tu te souviens ?'}
-              </span>
-              <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
-                <RichText text={card.name} />
-              </h1>
-              {choices ? (
-                <div role="radiogroup" aria-label="Choisis la bonne définition" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {choices.map((o) => {
-                    const right = o.id === card.id
-                    const state = !picked ? 'idle' : right ? 'right' : o.id === picked ? 'wrong' : 'idle'
-                    return (
-                      <motion.button
-                        key={o.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={picked === o.id}
-                        disabled={!!picked}
-                        whileTap={{ scale: 0.98 }}
-                        animate={state === 'wrong' ? { x: [0, -6, 6, -3, 0] } : {}}
-                        onClick={() => {
-                          setPicked(o.id)
-                          if (!right) play('wrong')
-                          if (right) setTimeout(() => rate(true), 700)
-                        }}
-                        style={{
-                          border: 'none', borderRadius: 20, padding: '12px 14px', textAlign: 'left', fontSize: 15, lineHeight: 1.4, fontWeight: 500, color: 'var(--ink)',
-                          background: state === 'right' ? 'var(--mint)' : state === 'wrong' ? 'var(--rose)' : 'var(--bg-deep)',
-                          boxShadow: state === 'right' ? 'inset 0 0 0 2.5px var(--mint-strong)' : state === 'wrong' ? 'inset 0 0 0 2.5px var(--coral)' : 'none',
-                          opacity: picked && state === 'idle' ? 0.55 : 1,
-                        }}
-                      >
-                        <RichText text={o.text} />
-                      </motion.button>
-                    )
-                  })}
-                </div>
-              ) : (
-              <AnimatePresence mode="wait" initial={false}>
-                {shown ? (
-                  <motion.div key="a" initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 24 }} style={{ marginTop: 'auto', borderRadius: 22, background: 'var(--bg-deep)', padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <span className="kicker" style={{ color: 'var(--faint)' }}>Réponse</span>
-                    <p className="lx-lead">
-                      <RichText text={card.definition} />
-                    </p>
-                    {card.explanation && (
-                      <p className="lx-p" style={{ fontSize: 15 }}>
-                        <RichText text={card.explanation} />
-                      </p>
-                    )}
-                  </motion.div>
-                ) : (
-                  <motion.p key="q" exit={{ opacity: 0 }} className="lx-small" style={{ fontSize: 16 }}>
-                    Dis-la avec tes mots dans ta tête, puis retourne la carte.
-                  </motion.p>
-                )}
-              </AnimatePresence>
-              )}
-            </motion.article>
+              card={card}
+              choices={choices}
+              shown={shown}
+              leaving={leaving}
+              picked={picked}
+              onFlip={flip}
+              onPick={(id) => {
+                setPicked(id)
+                if (id !== card.id) play('wrong')
+                else setTimeout(() => rate(true), 700)
+              }}
+              onRate={rate}
+            />
           </AnimatePresence>
         </div>
       </div>
@@ -238,28 +205,168 @@ export function Review() {
           )
         ) : shown ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
-            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ height: 62, borderRadius: 31, color: 'var(--rose-ink)', boxShadow: 'none' }}>
+            <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending || leaving !== null} style={{ height: 62, borderRadius: 31, color: 'var(--rose-ink)', boxShadow: 'none' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
               </svg>
               À revoir
             </Button>
-            <Button variant="dark" onClick={() => rate(true)} disabled={answer.isPending} style={{ height: 62, borderRadius: 31 }}>
+            <Button variant="mint" onClick={() => rate(true)} disabled={answer.isPending || leaving !== null} style={{ height: 62, borderRadius: 31 }}>
               {Icon.check(18)} Je savais
             </Button>
           </div>
         ) : (
-          <Button
-            onClick={() => {
-              play('reveal')
-              setShown(true)
-            }}
-            style={{ height: 62, borderRadius: 31 }}
-          >
+          <Button onClick={flip} style={{ height: 62, borderRadius: 31 }}>
             Retourner la carte
           </Button>
         )}
       </div>
     </Screen>
+  )
+}
+
+const face: CSSProperties = {
+  position: 'absolute', inset: 0, borderRadius: 32, background: 'var(--surface)', padding: 22,
+  display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 20px 40px rgba(46,38,96,.14)',
+  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+}
+
+const stamp: CSSProperties = { height: 34, padding: '0 14px', borderRadius: 17, display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 14 }
+
+/** One notion card: tap to flip it over, then swipe right if you knew it, left to see it again. */
+function FlashCard({ card, choices, shown, leaving, picked, onFlip, onPick, onRate }: {
+  card: Concept
+  choices: { id: string; text: string }[] | null
+  shown: boolean
+  leaving: boolean | null
+  picked: string | null
+  onFlip: () => void
+  onPick: (id: string) => void
+  onRate: (knew: boolean) => void
+}) {
+  const reduce = useReducedMotion()
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-200, 200], [-14, 14])
+  const yes = useTransform(x, [20, 110], [0, 1])
+  const no = useTransform(x, [-110, -20], [1, 0])
+  const [ticked, setTicked] = useState(false)
+  useEffect(() => {
+    const c = animate(x, leaving === null ? 0 : leaving ? 520 : -520, { type: 'spring', stiffness: 160, damping: 22 })
+    return () => c.stop()
+  }, [leaving]) // eslint-disable-line react-hooks/exhaustive-deps
+  const canSwipe = shown && !choices && leaving === null
+  const meta = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <img src={topicArt(card.sip_title)} alt="" width={30} height={30} style={{ flexShrink: 0 }} />
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', lineHeight: 1.3 }}>
+        {card.sip_title} · vue {ago(card.last_reviewed_at ?? card.learned_at)}
+      </span>
+    </div>
+  )
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+      transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+      drag={canSwipe ? 'x' : false}
+      dragSnapToOrigin
+      dragElastic={0.9}
+      whileDrag={{ scale: 1.03 }}
+      onDrag={(_, d) => {
+        const past = Math.abs(d.offset.x) > 100
+        if (past !== ticked) {
+          setTicked(past)
+          if (past) haptic(6)
+        }
+      }}
+      onDragEnd={(_, d) => {
+        setTicked(false)
+        if (Math.abs(d.offset.x) > 100 || Math.abs(d.velocity.x) > 600) onRate(d.offset.x > 0)
+      }}
+      style={{ x, rotate, position: 'absolute', inset: '0 0 8px', touchAction: 'pan-y', cursor: canSwipe ? 'grab' : 'default' }}
+    >
+      <motion.div
+        animate={{ rotateY: shown && !choices ? 180 : 0 }}
+        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 24 }}
+        style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d' }}
+      >
+        {choices ? (
+          <article className="scroll" style={face}>
+            {meta}
+            <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Quelle définition ?</span>
+            <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
+              <RichText text={card.name} />
+            </h1>
+            <div role="radiogroup" aria-label="Choisis la bonne définition" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {choices.map((o) => {
+                const right = o.id === card.id
+                const state = !picked ? 'idle' : right ? 'right' : o.id === picked ? 'wrong' : 'idle'
+                return (
+                  <motion.button
+                    key={o.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={picked === o.id}
+                    disabled={!!picked}
+                    whileTap={{ scale: 0.98 }}
+                    animate={state === 'wrong' ? { x: [0, -6, 6, -3, 0] } : {}}
+                    onClick={() => onPick(o.id)}
+                    style={{
+                      border: 'none', borderRadius: 20, padding: '12px 14px', textAlign: 'left', fontSize: 15, lineHeight: 1.4, fontWeight: 500, color: 'var(--ink)',
+                      background: state === 'right' ? 'var(--mint)' : state === 'wrong' ? 'var(--rose)' : 'var(--bg-deep)',
+                      boxShadow: state === 'right' ? 'inset 0 0 0 2.5px var(--mint-strong)' : state === 'wrong' ? 'inset 0 0 0 2.5px var(--coral)' : 'none',
+                      opacity: picked && state === 'idle' ? 0.55 : 1,
+                    }}
+                  >
+                    <RichText text={o.text} />
+                  </motion.button>
+                )
+              })}
+            </div>
+          </article>
+        ) : (
+          <>
+            <article aria-hidden={shown} onClick={shown ? undefined : onFlip} style={{ ...face, cursor: shown ? 'default' : 'pointer' }}>
+              {meta}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textAlign: 'center' }}>
+                <motion.img
+                  src={topicArt(card.sip_title)}
+                  alt=""
+                  width={128}
+                  height={128}
+                  draggable={false}
+                  animate={reduce ? {} : { y: [0, -6, 0] }}
+                  transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Tu te souviens ?</span>
+                <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
+                  <RichText text={card.name} />
+                </h1>
+              </div>
+              <span style={{ fontSize: 14, color: 'var(--faint)', textAlign: 'center' }}>Dis-la avec tes mots dans ta tête, puis retourne la carte.</span>
+            </article>
+            <article aria-hidden={!shown} className="scroll" style={{ ...face, transform: 'rotateY(180deg)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', minHeight: 34 }}>
+                <motion.span style={{ ...stamp, opacity: no, rotate: -10, background: 'var(--rose)', color: 'var(--rose-ink)' }}>À REVOIR</motion.span>
+                <motion.span style={{ ...stamp, opacity: yes, rotate: 10, background: 'var(--mint)', color: 'var(--mint-ink)' }}>JE SAVAIS</motion.span>
+              </div>
+              <h2 className="display" style={{ fontSize: 26, lineHeight: 1.05, letterSpacing: '-0.035em' }}>
+                <RichText text={card.name} />
+              </h2>
+              <p className="lx-lead">
+                <RichText text={card.definition} />
+              </p>
+              {card.explanation && (
+                <p className="lx-p" style={{ fontSize: 15 }}>
+                  <RichText text={card.explanation} />
+                </p>
+              )}
+              <span style={{ marginTop: 'auto', fontSize: 13, color: 'var(--faint)', textAlign: 'center' }}>Glisse à droite si tu savais, à gauche pour la revoir.</span>
+            </article>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
   )
 }
