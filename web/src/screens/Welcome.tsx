@@ -72,7 +72,7 @@ export function Welcome() {
         className="bottom-bar"
         style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 12 }}
       >
-        <Button variant="dark" onClick={() => nav('/start')} sound="pop">
+        <Button onClick={() => nav('/start')} sound="pop">
           Créer mon parcours
         </Button>
         <Button variant="soft" onClick={() => nav('/demo')}>

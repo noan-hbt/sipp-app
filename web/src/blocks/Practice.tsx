@@ -138,7 +138,6 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
             })}
           </div>
           <Button
-            variant="dark"
             disabled={!complete}
             onClick={() => {
               const vals = filled.map((c) => choices[c!])
@@ -407,7 +406,6 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
         </motion.p>
       ) : (
         <Button
-          variant="dark"
           onClick={() => {
             const good = Math.abs(value - b.answer) <= b.tolerance
             grade(good)

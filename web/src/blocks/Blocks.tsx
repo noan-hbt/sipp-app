@@ -526,7 +526,6 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
         })}
         {b.kind === 'multiple_choice' && !answered && (
           <Button
-            variant="dark"
             disabled={!selected.length}
             style={{ marginTop: 4 }}
             onClick={() => grade(selected.length === correctIds.length && selected.every((s) => correctIds.includes(s)), selected)}
@@ -547,7 +546,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
           <textarea id={inputId} rows={3} value={answered ? String(answer!.value) : text} disabled={answered} onChange={(e) => setText(e.target.value)} placeholder="Écris ce que tu en penses…" />
         </div>
         {!answered && (
-          <Button variant="dark" disabled={!text.trim()} sound="pop" onClick={() => onAnswer({ correct: null, value: text.trim() })}>
+          <Button disabled={!text.trim()} sound="pop" onClick={() => onAnswer({ correct: null, value: text.trim() })}>
             Vérifier
           </Button>
         )}

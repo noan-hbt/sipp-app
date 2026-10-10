@@ -340,7 +340,7 @@ export function LessonDone() {
             transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 1.3 }}
             style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 6 }}
           >
-            <Button variant="dark" sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
+            <Button sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
               {s.next_lesson_id ? 'Leçon suivante' : 'Voir mon parcours'}
             </Button>
             {s.progress.total > 0 && s.progress.completed >= s.progress.total && <ShareButton sipId={s.sipId} title={s.title} />}
