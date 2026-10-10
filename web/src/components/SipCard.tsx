@@ -55,7 +55,7 @@ export function Tile({
         <span
           aria-hidden="true"
          
-          style={{ position: 'absolute', top: -12, right: -6, width: 98, height: 98, display: 'grid', placeItems: 'center' }}
+          style={{ position: 'absolute', top: 10, right: 8, width: 98, height: 98, display: 'grid', placeItems: 'center' }}
         >
           {art}
         </span>

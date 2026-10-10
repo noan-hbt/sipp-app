@@ -256,7 +256,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                 onClick={() => pick(idea.text)}
                 style={{ position: 'relative', border: 'none', height: 124, borderRadius: 24, padding: 12, background: pal.bg, color: 'var(--ink)', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 2 }}
               >
-                <img src={topicArt(idea.text)} alt="" width={72} height={72} style={{ position: 'absolute', top: -10, right: -4 }} draggable={false} />
+                <img src={topicArt(idea.text)} alt="" width={62} height={62} style={{ position: 'absolute', top: 8, right: 6 }} draggable={false} />
                 <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.15 }}>{idea.label}</span>
                 <span style={{ fontSize: 12, fontWeight: 600, color: pal.ink, lineHeight: 1.25 }}>{idea.hint}</span>
               </motion.button>
