@@ -347,8 +347,14 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
             <motion.div
               key={index + depth}
               animate={{ rotate: depth === 1 ? -3 : 5, scale: 1 - depth * 0.04, y: depth * 8 }}
-              style={{ position: 'absolute', inset: 0, borderRadius: 32, background: depth === 1 ? 'color-mix(in srgb, var(--surface) 70%, var(--lavender))' : 'color-mix(in srgb, var(--surface) 40%, var(--lavender))' }}
-            />
+              style={{ position: 'absolute', inset: 0, borderRadius: 32, background: depth === 1 ? 'color-mix(in srgb, var(--surface) 70%, var(--lavender))' : 'color-mix(in srgb, var(--surface) 40%, var(--lavender))', display: 'grid', placeItems: 'center' }}
+            >
+              {depth === 1 && (
+                <span aria-hidden="true" className="display" style={{ fontSize: 96, lineHeight: 1, color: 'var(--lavender-ink)', opacity: 0.18 }}>
+                  ?
+                </span>
+              )}
+            </motion.div>
           )
         })}
         <AnimatePresence>

@@ -477,7 +477,7 @@ export function LessonPlayer({
         </AnimatePresence>
         <ComboBadge combo={combo} />
       </header>
-      {saveNotice}
+      {saveNotice && <div style={{ position: 'relative', padding: '0 20px' }}>{saveNotice}</div>}
 
       <div ref={scrollRef} className="scroll" style={{ position: 'relative', padding: `10px 20px ${sheetOpen ? 340 : 150}px`, overflowX: 'hidden' }}>
         <AnimatePresence mode="wait" initial={false} custom={dir}>
