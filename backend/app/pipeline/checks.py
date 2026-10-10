@@ -172,6 +172,8 @@ def check_lesson(
         res.errors.append("exactly one 'hook' block is allowed and it must be the first block")
     elif not hooks:
         res.warnings.append("lesson does not open with a 'hook' block")
+    if sum(1 for b in blocks if b.type in ("predict", "swipe", "simulate")) < 2:
+        res.warnings.append("lesson has fewer than two play moments (predict, swipe, simulate)")
 
     # duplicated content
     seen: dict[str, int] = {}

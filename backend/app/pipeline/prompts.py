@@ -177,8 +177,15 @@ Rules:
   than two content blocks in a row; (3) a short challenge (checks), then the recap.
   The lesson must fully answer the hook's question.
 - Make it a pleasure: surprising facts, concrete numbers, situations from the learner's
-  life, a light touch of humor when it fits. Prefer `predict` before a surprising
-  explanation and `simulate` when a relationship between numbers is the point.
+  life, a light touch of humor when it fits.
+- Every lesson has at least TWO play moments among `predict`, `swipe` and `simulate`:
+  * a `predict` early in discovery, right BEFORE the explanation it sets up (a number
+    to guess whenever the topic has one, otherwise a choice);
+  * `simulate` whenever a result depends on a quantity (amount, duration, rate, dose,
+    count...): let the learner move it and watch the result change;
+  * `swipe` in the challenge act to sweep 3-5 misconceptions or quick checks at once,
+    instead of several separate true_false questions.
+  Prefer them over plain `question(true_false)` and over a static `example` with numbers.
 - Prefer intuition before formalism. Pick examples that fit the learner's world.
 - Use `code` only for technical topics where the learner codes or the objective is
   practical; use `math` only when the formula IS the concept and the learner's level
