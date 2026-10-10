@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
+import { topicArt } from '../components/SipIcon'
 import { Button } from '../components/ui'
 import { DEMO_LESSON } from '../demo/demoLesson'
 import { play } from '../lib/sound'
@@ -25,6 +26,7 @@ export function Demo() {
           setDone(f)
         }}
         finishing={false}
+        art={topicArt(DEMO_LESSON.sip_title, 'sleep')}
       />
     )
   }
