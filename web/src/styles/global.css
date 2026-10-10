@@ -94,11 +94,34 @@
   --map-mod5-ink: #8a3d16;
   --map-hi: #ffffff;
   --map-shadow2: #eadfd3;
-  /* dock: the dark floating surfaces (tab bar, hero tiles) */
-  --dock: #1d1a17;
+  /* dock: the warm hero surfaces (resume tile, streak, wish box, map bar); caramel in light, dark in dark mode */
+  --dock: #d9622b;
   --dock-ink: #ffffff;
-  --dock-muted: #a69d95;
+  --dock-muted: rgba(255, 255, 255, 0.82);
   --dock-line: transparent;
+  --dock-accent: #e5763f;
+  --dock-kicker: #fff0c2;
+  --dock-soft: rgba(255, 255, 255, 0.2);
+  --dock-bar: #ffffff;
+  --dock-btn: #ffffff;
+  --dock-btn-ink: #d9622b;
+  --dock-cta-ink: #d9622b;
+  /* tab bar: white floating bar in light */
+  --nav-bg: #ffffff;
+  --nav-muted: #8a817a;
+  --nav-pill: #ffe6d4;
+  --nav-pill-ink: #b8471a;
+  --nav-line: transparent;
+  --nav-shadow: 0 12px 32px rgba(120, 70, 30, 0.14);
+  /* current plan card in the profile: soft peach in light */
+  --plan-bg: #ffe6d4;
+  --plan-ink: #1d1a17;
+  --plan-muted: #8a3d16;
+  --plan-accent: #ffd2b5;
+  --plan-track: #ffffff;
+  --plan-kicker: #8a3d16;
+  --plan-bar: #d9622b;
+  --plan-line: transparent;
   --frost: rgba(255, 255, 255, 0.7);
 
   /* relief is gone: flat surfaces, a hairline where needed */
@@ -200,6 +223,27 @@
   --dock-ink: #f5ede4;
   --dock-muted: #9a9086;
   --dock-line: #3b322a;
+  --dock-accent: var(--primary);
+  --dock-kicker: var(--sun);
+  --dock-soft: rgba(255, 255, 255, 0.1);
+  --dock-bar: var(--sun);
+  --dock-btn: var(--primary);
+  --dock-btn-ink: #ffffff;
+  --dock-cta-ink: #1d1a17;
+  --nav-bg: #2a231d;
+  --nav-muted: #9a9086;
+  --nav-pill: var(--primary);
+  --nav-pill-ink: #ffffff;
+  --nav-line: #3b322a;
+  --nav-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+  --plan-bg: #2a231d;
+  --plan-ink: #f5ede4;
+  --plan-muted: #9a9086;
+  --plan-accent: var(--primary);
+  --plan-track: rgba(255, 255, 255, 0.14);
+  --plan-kicker: var(--sun);
+  --plan-bar: var(--sun);
+  --plan-line: #3b322a;
   --frost: rgba(23, 19, 15, 0.55);
 }
 @media (prefers-color-scheme: dark) {
@@ -287,6 +331,27 @@
     --dock-ink: #f5ede4;
     --dock-muted: #9a9086;
     --dock-line: #3b322a;
+    --dock-accent: var(--primary);
+    --dock-kicker: var(--sun);
+    --dock-soft: rgba(255, 255, 255, 0.1);
+    --dock-bar: var(--sun);
+    --dock-btn: var(--primary);
+    --dock-btn-ink: #ffffff;
+    --dock-cta-ink: #1d1a17;
+    --nav-bg: #2a231d;
+    --nav-muted: #9a9086;
+    --nav-pill: var(--primary);
+    --nav-pill-ink: #ffffff;
+    --nav-line: #3b322a;
+    --nav-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    --plan-bg: #2a231d;
+    --plan-ink: #f5ede4;
+    --plan-muted: #9a9086;
+    --plan-accent: var(--primary);
+    --plan-track: rgba(255, 255, 255, 0.14);
+    --plan-kicker: var(--sun);
+    --plan-bar: var(--sun);
+    --plan-line: #3b322a;
     --frost: rgba(23, 19, 15, 0.55);
   }
 }

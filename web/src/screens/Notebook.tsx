@@ -92,7 +92,7 @@ export function Notebook() {
           }}
           style={{ flexShrink: 0, border: 'none', borderRadius: 24, padding: '14px 16px', background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
         >
-          <span style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--primary)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+          <span style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--dock-btn)', color: 'var(--dock-btn-ink)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
             </svg>

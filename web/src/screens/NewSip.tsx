@@ -156,7 +156,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           className="wish-box"
           style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--dock)', color: 'var(--dock-ink)' }}
         >
-          <label htmlFor="wish" className="kicker" style={{ color: 'var(--sun)' }}>
+          <label htmlFor="wish" className="kicker" style={{ color: 'var(--dock-kicker)' }}>
             Je veux…
           </label>
           <div style={{ position: 'relative' }}>
@@ -182,7 +182,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                 if (create.isError) create.reset()
               }}
               className="display"
-              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 23, lineHeight: 1.2, color: 'var(--dock-ink)', caretColor: 'var(--primary)', padding: 0 }}
+              style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', background: 'transparent', fontSize: 23, lineHeight: 1.2, color: 'var(--dock-ink)', caretColor: 'var(--dock-ink)', padding: 0 }}
             />
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -208,8 +208,8 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                     padding: '0 12px',
                     borderRadius: 17,
                     border: 'none',
-                    background: on ? 'var(--primary)' : 'rgba(255,255,255,.1)',
-                    color: on ? '#fff' : 'var(--dock-ink)',
+                    background: on ? 'var(--dock-btn)' : 'var(--dock-soft)',
+                    color: on ? 'var(--dock-btn-ink)' : 'var(--dock-ink)',
                     fontSize: 13,
                     fontWeight: on ? 700 : 600,
                     transition: 'background .2s',

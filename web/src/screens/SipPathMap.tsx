@@ -500,7 +500,7 @@ export function SipPathMap({
           }}
         >
           <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
-            <span className="kicker" style={{ color: "#ffc93d" }}>
+            <span className="kicker" style={{ color: "var(--dock-kicker)" }}>
               Leçon {now.index + 1} · {now.lesson.status !== "ready" ? "je la prépare" : `${LESSON_MINUTES} min`}
             </span>
             <span
@@ -515,8 +515,8 @@ export function SipPathMap({
               height: 56,
               padding: "0 22px",
               borderRadius: 28,
-              background: C.peach,
-              color: "#fff",
+              background: "var(--dock-btn)",
+              color: "var(--dock-btn-ink)",
               display: "flex",
               alignItems: "center",
               gap: 6,
@@ -872,8 +872,8 @@ function MapNode({
         }}
         style={{ ...common, background: "var(--dock)" }}
       >
-        <span style={{ width: 62, height: 62, borderRadius: 31, background: C.peach, display: "grid", placeItems: "center" }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+        <span style={{ width: 62, height: 62, borderRadius: 31, background: "var(--dock-btn)", display: "grid", placeItems: "center" }}>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="var(--dock-btn-ink)" aria-hidden="true">
             <path d="M8 5.5v13l11-6.5z" />
           </svg>
         </span>

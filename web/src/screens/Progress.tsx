@@ -83,7 +83,7 @@ function StreakHero({ s }: { s: Stats }) {
         initial={{ scale: 0.2 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 110, damping: 15, delay: 0.1 }}
-        style={{ position: 'absolute', right: -50, top: -50, width: 200, height: 200, borderRadius: 100, background: 'var(--primary)' }}
+        style={{ position: 'absolute', right: -50, top: -50, width: 200, height: 200, borderRadius: 100, background: 'var(--dock-accent)' }}
       />
       <motion.span
         aria-hidden="true"
@@ -94,7 +94,7 @@ function StreakHero({ s }: { s: Stats }) {
       >
         <img src={illustration('scene-freeze')} alt="" width={112} height={112} style={{ display: 'block' }} />
       </motion.span>
-      <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
+      <span className="kicker" style={{ position: 'relative', color: 'var(--dock-kicker)' }}>
         {s.completed_today ? 'Série en cours' : n ? 'Série à garder aujourd’hui' : 'Ta série'}
       </span>
       <span style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 10 }}>

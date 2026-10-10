@@ -254,7 +254,7 @@ function Week({ week, frozen }: { week?: boolean[]; frozen?: string[] }) {
   )
 }
 
-/** The next lesson: dark tile, caramel sun, the topic illustration floating in it. */
+/** The next lesson: warm hero tile (caramel in light, dark in dark mode) with the topic illustration. */
 function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
   const ratio = sip.progress.completed / Math.max(1, sip.progress.total)
   return (
@@ -272,7 +272,7 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
         initial={{ scale: 0.3, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 120, damping: 16, delay: 0.2 }}
-        style={{ position: 'absolute', right: -48, bottom: -70, width: 230, height: 230, borderRadius: 115, background: 'var(--primary)' }}
+        style={{ position: 'absolute', right: -48, bottom: -70, width: 230, height: 230, borderRadius: 115, background: 'var(--dock-accent)' }}
       />
       <motion.span
         aria-hidden="true"
@@ -283,7 +283,7 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
       >
         <img src={topicArt(sip.title ?? sip.input_text, sip.theme)} alt="" width={148} height={148} draggable={false} style={{ display: 'block' }} />
       </motion.span>
-      <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
+      <span className="kicker" style={{ position: 'relative', color: 'var(--dock-kicker)' }}>
         {sip.progress.completed ? 'À suivre' : 'On commence'} · {LESSON_MINUTES} min
       </span>
       <span className="display" style={{ position: 'relative', maxWidth: '62%', fontSize: 25, lineHeight: 1.04, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -291,15 +291,15 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
       </span>
       {sip.next_lesson_title && <span style={{ position: 'relative', maxWidth: '58%', fontSize: 14, color: 'var(--dock-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sip.title}</span>}
       <span style={{ position: 'relative', marginTop: 'auto', paddingTop: 8, display: 'flex', alignItems: 'center', gap: 10, maxWidth: '62%' }}>
-        <span style={{ height: 46, padding: '0 18px 0 14px', borderRadius: 23, background: '#fff', color: '#1d1a17', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+        <span style={{ height: 46, padding: '0 18px 0 14px', borderRadius: 23, background: '#fff', color: 'var(--dock-cta-ink)', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 4.5v15l13-7.5z" fill="#1d1a17" />
+            <path d="M7 4.5v15l13-7.5z" fill="currentColor" />
           </svg>
           {sip.progress.completed > 0 ? 'Continuer' : 'Commencer'}
         </span>
       </span>
       <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, maxWidth: '54%', fontSize: 13, fontWeight: 600, color: 'var(--dock-ink)' }}>
-        <LiquidBar value={ratio} height={6} track="rgba(255,255,255,.14)" color="var(--sun)" delay={0.5} label="Avancement du Sip" />
+        <LiquidBar value={ratio} height={6} track="var(--dock-soft)" color="var(--dock-bar)" delay={0.5} label="Avancement du Sip" />
         {sip.progress.completed}/{sip.progress.total}
       </span>
     </motion.button>

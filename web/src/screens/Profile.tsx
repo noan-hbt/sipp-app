@@ -129,30 +129,30 @@ export function Profile() {
             </button>
           </motion.section>
 
-          <motion.section variants={item} aria-label="Ton abonnement" style={{ borderRadius: 30, padding: 20, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', position: 'relative', overflow: 'hidden' }}>
+          <motion.section variants={item} aria-label="Ton abonnement" style={{ borderRadius: 30, padding: 20, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--plan-bg)', color: 'var(--plan-ink)', boxShadow: 'inset 0 0 0 1px var(--plan-line)', position: 'relative', overflow: 'hidden' }}>
             <motion.span
               aria-hidden="true"
               initial={{ scale: 0.3 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 120, damping: 16, delay: 0.2 }}
-              style={{ position: 'absolute', right: -40, top: -40, width: 132, height: 132, borderRadius: 66, background: 'var(--primary)' }}
+              style={{ position: 'absolute', right: -40, top: -40, width: 132, height: 132, borderRadius: 66, background: 'var(--plan-accent)' }}
             />
             <img src={illustration('scene-premium')} alt="" width={84} height={84} style={{ position: 'absolute', right: 0, top: 0 }} />
             {subscription ? (
               <>
                 <div style={{ position: 'relative', paddingRight: 92 }}>
-                  <span className="kicker" style={{ color: 'var(--sun)' }}>
+                  <span className="kicker" style={{ color: 'var(--plan-kicker)' }}>
                     {subscription.on_trial ? 'Essai' : 'Offre'} {planNames[subscription.plan]}
                   </span>
                   <h2 className="title-m" style={{ marginTop: 6 }}>{subscription.on_trial ? 'Ton essai est en cours' : planNames[subscription.plan]}</h2>
                   {subscription.on_trial && subscription.plan_expires_at && (
-                    <p style={{ fontSize: 14, marginTop: 2, color: 'var(--dock-muted)' }}>
+                    <p style={{ fontSize: 14, marginTop: 2, color: 'var(--plan-muted)' }}>
                       Essai gratuit · jusqu’au {new Date(subscription.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
                     </p>
                   )}
                 </div>
                 <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--dock-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--plan-muted)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Bibliothèque</span>
                     <span>{subscription.slots_used} / {subscription.slots} places</span>
                   </p>
@@ -163,20 +163,20 @@ export function Profile() {
                     aria-valuemax={100}
                     aria-valuenow={Math.round(slotsProgress * 100)}
                     aria-valuetext={`${subscription.slots_used}/${subscription.slots} emplacements`}
-                    style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,.14)', overflow: 'hidden' }}
+                    style={{ height: 8, borderRadius: 4, background: 'var(--plan-track)', overflow: 'hidden' }}
                   >
-                    <motion.div className="liquid" initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--sun)' }} />
+                    <motion.div className="liquid" initial={{ width: 0 }} animate={{ width: `${slotsProgress * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18 }} style={{ height: '100%', borderRadius: 4, background: 'var(--plan-bar)' }} />
                   </div>
                 </div>
-                <p style={{ position: 'relative', fontSize: 14, color: 'var(--dock-muted)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
-                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: 'var(--dock-muted)' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
+                <p style={{ position: 'relative', fontSize: 14, color: 'var(--plan-muted)' }}>Nouveaux Sips ce mois-ci : {subscription.sips_this_month} / {subscription.sips_per_month >= 1000 ? '∞' : subscription.sips_per_month}</p>
+                {subscription.plan === 'free' && <p style={{ position: 'relative', fontSize: 14, color: 'var(--plan-muted)' }}>Parcours courts, préparés avec un modèle plus léger.</p>}
                 {subscription.subscription && (() => {
                   const sub = subscription.subscription
                   const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '')
                   const kind = sub.interval === 'year' ? 'annuel' : 'mensuel'
                   return (
                     <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <p role={sub.status === 'past_due' ? 'alert' : undefined} style={{ fontSize: 14, fontWeight: 500, color: sub.status === 'past_due' ? 'var(--rose-ink)' : 'var(--lavender-deep)' }}>
+                      <p role={sub.status === 'past_due' ? 'alert' : undefined} style={{ fontSize: 14, fontWeight: 500, color: sub.status === 'past_due' ? 'var(--rose-ink)' : 'var(--plan-muted)' }}>
                         {sub.status === 'past_due'
                           ? `Ton dernier paiement a échoué. Mets à jour ton moyen de paiement avant le ${day(subscription.plan_expires_at)} pour garder ton offre.`
                           : sub.cancel_at_period_end
@@ -188,7 +188,7 @@ export function Profile() {
                           {sub.status === 'past_due' ? 'Mettre à jour le paiement' : 'Gérer'}
                         </Button>
                         {!sub.cancel_at_period_end && (
-                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}>
+                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, color: 'var(--plan-ink)', boxShadow: 'inset 0 0 0 2px color-mix(in srgb, var(--plan-ink) 18%, transparent)' }}>
                             Résilier
                           </Button>
                         )}
@@ -202,13 +202,13 @@ export function Profile() {
                     {trial.isPending ? 'Activation de ton essai…' : `Essayer Essentiel gratuitement · ${subscription.trial_days} jours`}
                   </Button>
                 ) : null}
-                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '6px 0', fontSize: 15, fontWeight: 700, color: 'var(--dock-ink)' }}>
+                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '6px 0', fontSize: 15, fontWeight: 700, color: 'var(--plan-ink)' }}>
                   Voir les offres →
                 </button>
                 {trial.isError && <p role="alert" style={{ color: 'var(--coral)', fontSize: 14 }}>Ton essai n’a pas pu démarrer. Réessaie dans un instant.</p>}
               </>
             ) : (
-              <p role="status" style={{ position: 'relative', color: 'var(--dock-muted)' }}>{plan.isError ? 'Ton abonnement est indisponible pour le moment.' : 'Chargement de ton abonnement…'}</p>
+              <p role="status" style={{ position: 'relative', color: 'var(--plan-muted)' }}>{plan.isError ? 'Ton abonnement est indisponible pour le moment.' : 'Chargement de ton abonnement…'}</p>
             )}
           </motion.section>
 

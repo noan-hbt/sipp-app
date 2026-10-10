@@ -15,7 +15,7 @@ export function isTabPath(path: string) {
 
 const SPRING = { type: 'spring', stiffness: 520, damping: 40 } as const
 
-/** Floating dark dock: the active tab grows into a caramel pill with its name, plus the « new Sip » button. */
+/** Floating tab bar (white in light, dark in dark mode): the active tab grows into a pill with its name, plus the « new Sip » button. */
 export function TabBar() {
   const { pathname } = useLocation()
   const nav = useNavigate()
@@ -45,8 +45,8 @@ export function TabBar() {
           padding: 7,
           display: 'flex',
           gap: 4,
-          background: 'var(--dock)',
-          boxShadow: '0 14px 34px rgba(29,26,23,.22), inset 0 0 0 1px var(--dock-line)',
+          background: 'var(--nav-bg)',
+          boxShadow: 'var(--nav-shadow), inset 0 0 0 1px var(--nav-line)',
         }}
       >
         {TABS.map((t) => {
@@ -74,13 +74,13 @@ export function TabBar() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 7,
-                color: active ? '#fff' : 'var(--dock-muted)',
+                color: active ? 'var(--nav-pill-ink)' : 'var(--nav-muted)',
                 fontSize: 14,
                 fontWeight: 700,
                 borderRadius: 25,
               }}
             >
-              {active && <motion.span layoutId="tab-pill" style={{ position: 'absolute', inset: 0, borderRadius: 25, background: 'var(--primary)' }} transition={SPRING} />}
+              {active && <motion.span layoutId="tab-pill" style={{ position: 'absolute', inset: 0, borderRadius: 25, background: 'var(--nav-pill)' }} transition={SPRING} />}
               <motion.span layout="position" style={{ position: 'relative', display: 'grid' }}>
                 {t.icon}
               </motion.span>
