@@ -189,7 +189,7 @@ function ProgramTile({ program: p, index, onOpen }: { program: Program; index: n
   const current = p.chapters.find((c) => chapterState(c, next) !== 'done')
   const generating = p.status === 'generating'
   const name = p.title ?? 'Programme'
-  const pal = sipPalette(name)
+  const pal = sipPalette(name, p.theme)
   return (
     <Tile
       name={name}
@@ -199,7 +199,7 @@ function ProgramTile({ program: p, index, onOpen }: { program: Program; index: n
       bg={generating ? 'var(--surface)' : pal.bg}
       ink={pal.ink}
       metaColor={generating ? 'var(--muted)' : undefined}
-      art={generating ? <Mascot mood="think" size={80} /> : <img src={topicArt(name)} alt="" width={98} height={98} draggable={false} />}
+      art={generating ? <Mascot mood="think" size={80} /> : <img src={topicArt(name, p.theme)} alt="" width={98} height={98} draggable={false} />}
       meta={generating ? 'Je dessine la suite…' : current ? `Chapitre ${current.position} sur ${p.chapters.length}` : 'Programme terminé'}
       progress={generating ? null : done / Math.max(1, p.chapters.length)}
     />

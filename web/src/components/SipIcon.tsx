@@ -1,4 +1,4 @@
-/** Flat topic illustrations (public/illustrations/topic-*.webp), picked from the Sip's words. */
+/** Flat topic illustrations (public/illustrations/topic-*.webp): the theme the AI chose for the Sip, else picked from its words. */
 
 type Tone = 'coral' | 'sun' | 'mint' | 'lilac' | 'sky' | 'peach'
 
@@ -63,7 +63,10 @@ const TOPICS: [string, Tone, string[]][] = [
 
 const norm = (s: string) => ` ${s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ')} `
 
-export function topicOf(text: string | null | undefined): { key: string; tone: Tone } {
+export function topicOf(text: string | null | undefined, theme?: string | null): { key: string; tone: Tone } {
+  if (theme === 'general') return { key: 'general', tone: 'sun' }
+  const chosen = theme ? TOPICS.find(([key]) => key === theme) : undefined
+  if (chosen) return { key: chosen[0], tone: chosen[1] }
   const t = norm(text ?? '')
   for (const [key, tone, words] of TOPICS) {
     if (words.some((w) => t.includes(' ' + w))) return { key, tone }
@@ -71,8 +74,8 @@ export function topicOf(text: string | null | undefined): { key: string; tone: T
   return { key: 'general', tone: 'sun' }
 }
 
-export function sipPalette(text: string | null | undefined) {
-  return TONES[topicOf(text).tone]
+export function sipPalette(text: string | null | undefined, theme?: string | null) {
+  return TONES[topicOf(text, theme).tone]
 }
 
 export function illustration(name: string) {
@@ -80,13 +83,13 @@ export function illustration(name: string) {
 }
 
 /** The topic's illustration, for art that sits outside a tile. */
-export function topicArt(text: string | null | undefined) {
-  return illustration('topic-' + topicOf(text).key)
+export function topicArt(text: string | null | undefined, theme?: string | null) {
+  return illustration('topic-' + topicOf(text, theme).key)
 }
 
 /** Pastel tile with the topic illustration. */
-export function SipIcon({ text, size = 48, radius }: { text: string | null | undefined; size?: number; radius?: number }) {
-  const { key, tone } = topicOf(text)
+export function SipIcon({ text, theme, size = 48, radius }: { text: string | null | undefined; theme?: string | null; size?: number; radius?: number }) {
+  const { key, tone } = topicOf(text, theme)
   return (
     <span
       style={{

@@ -27,6 +27,7 @@ from app.pipeline.schemas import LearningProfile
 from app.plans import check_active_builds, check_plan, count_generation
 from app.progress import MODULE_BONUS, finished_modules, score_for, stars_for, stats
 from app.quota import check_cost, lock_user
+from app.themes import theme_of
 
 router = APIRouter(tags=["sips"])
 
@@ -69,6 +70,7 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
     return dict(
         id=sip.id,
         title=sip.title,
+        theme=theme_of(sip.profile),
         input_text=sip.input_text,
         status=sip.status,
         stage=sip.stage,

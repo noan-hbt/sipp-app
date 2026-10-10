@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.pipeline.blocks import Block
+from app.themes import Theme
 
 
 class _Out(BaseModel):
@@ -22,6 +23,11 @@ class SkillLevel(_Out):
 class LearningProfile(_Out):
     topic: str
     title: str = Field(max_length=300, description="Short, catchy title for this Sip, in the learner's language.")
+    theme: Theme = Field(
+        default="general",
+        description="Visual theme that best fits the subject (picks its illustration and map scenery). "
+        "Use 'general' only when nothing fits.",
+    )
     language: str = Field(description="ISO 639-1 code of the language to teach in, e.g. 'fr'.")
     current_level: Literal["none", "beginner", "intermediate", "advanced", "expert"]
     level_details: list[SkillLevel] = Field(

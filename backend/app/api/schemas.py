@@ -136,6 +136,7 @@ class Progress(BaseModel):
 class SipSummary(BaseModel):
     id: str
     title: str | None
+    theme: str | None = Field(default=None, description="Visual theme key chosen when the Sip was understood.")
     input_text: str
     status: str
     stage: str | None
@@ -195,6 +196,7 @@ class ProgramOut(BaseModel):
     status: str
     error: str | None
     title: str | None
+    theme: str | None = None
     summary: str | None
     lite: bool
     note: str | None = None

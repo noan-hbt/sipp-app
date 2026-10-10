@@ -281,7 +281,7 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
         transition={{ type: 'spring', stiffness: 200, damping: 13, delay: 0.35 }}
         style={{ position: 'absolute', right: 0, bottom: 10 }}
       >
-        <img src={topicArt(sip.title ?? sip.input_text)} alt="" width={148} height={148} draggable={false} style={{ display: 'block' }} />
+        <img src={topicArt(sip.title ?? sip.input_text, sip.theme)} alt="" width={148} height={148} draggable={false} style={{ display: 'block' }} />
       </motion.span>
       <span className="kicker" style={{ position: 'relative', color: 'var(--sun)' }}>
         {sip.progress.completed ? 'À suivre' : 'On commence'} · {LESSON_MINUTES} min

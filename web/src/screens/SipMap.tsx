@@ -120,7 +120,7 @@ export function SipMap() {
     flat.reduce((s, l) => s + (l.stars ?? 0), 0) +
     modules.reduce((s, m) => s + (m.bonus_earned ? (m.bonus_stars ?? 0) : 0), 0);
   const name = sip.data?.title ?? sip.data?.input_text ?? "";
-  const pal = sipPalette(name);
+  const pal = sipPalette(name, sip.data?.theme);
 
   // Bring the current lesson into view on open.
   const nowRef = useRef<HTMLDivElement>(null);
@@ -190,6 +190,7 @@ export function SipMap() {
         <SipPathMap
           modules={modules}
           title={name}
+          theme={sip.data.theme}
           chapter={sip.data.chapter}
           totalStars={totalStars}
           streak={stats.data?.streak_days}
@@ -332,7 +333,7 @@ export function SipMap() {
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 260, damping: 14 }}
               >
-                <SipIcon text={name} size={104} radius={0} />
+                <SipIcon text={name} theme={sip.data.theme} size={104} radius={0} />
               </motion.div>
             </div>
           </div>

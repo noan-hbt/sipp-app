@@ -171,6 +171,7 @@ function side(x: number, size: number, width: number, max: number) {
 export function SipPathMap({
   modules,
   title,
+  theme,
   chapter,
   totalStars,
   streak,
@@ -185,6 +186,7 @@ export function SipPathMap({
 }: {
   modules: ModuleOut[];
   title: string;
+  theme?: string | null;
   chapter?: number | null;
   totalStars: number;
   streak?: number;
@@ -205,7 +207,7 @@ export function SipPathMap({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const topic = topicOf(title).key;
+  const topic = topicOf(title, theme).key;
   const landKey = topic in LANDS ? topic : "general" in LANDS ? "general" : null;
   const land = landKey ? LANDS[landKey] : null;
 

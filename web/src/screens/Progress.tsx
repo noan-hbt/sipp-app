@@ -236,7 +236,7 @@ function SipProgress({ sip, delay, onOpen }: { sip: SipSummary; delay: number; o
       onClick={onOpen}
       style={{ border: 'none', borderRadius: 24, background: 'var(--surface)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
     >
-      <SipIcon text={name} size={48} />
+      <SipIcon text={name} theme={sip.theme} size={48} />
       <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ fontSize: 16, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>

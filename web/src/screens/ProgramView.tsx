@@ -125,7 +125,7 @@ export function ProgramView() {
     )
 
   const current = p.chapters.find((c) => chapterState(c, next) === 'current')
-  const pal = sipPalette(p.title)
+  const pal = sipPalette(p.title, p.theme)
   return (
     <Screen>
       <div className="scroll" style={{ paddingBottom: 48 }}>
@@ -139,7 +139,7 @@ export function ProgramView() {
             </div>
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 6 }}>
               <motion.div initial={{ scale: 0.7, rotate: -8 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 14 }}>
-                <SipIcon text={p.title} size={140} radius={0} />
+                <SipIcon text={p.title} theme={p.theme} size={140} radius={0} />
               </motion.div>
               <h1 className="display" style={{ fontSize: 26, lineHeight: 1.1 }}>
                 {p.title}

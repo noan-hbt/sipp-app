@@ -32,7 +32,9 @@ Rules:
 - `out_of_scope`: 1 to 3 short labels of nearby topics the path will deliberately leave
   out given the goals (e.g. "Lever des fonds" for someone starting alone). The learner
   sees them before the path is built and can bring them back.
-- The title is short (max ~6 words), in the learner's language, no emoji."""
+- The title is short (max ~6 words), in the learner's language, no emoji.
+- `theme`: the closest visual theme to the subject itself (e.g. a mortgage is finance, Ancient
+  Rome is history, learning Japanese is language), not to the learner's goal."""
 
 ROADMAP = """\
 You are the program architect of Sipp, a micro-learning app. The learner's goal is too

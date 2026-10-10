@@ -14,6 +14,8 @@ export interface Progress { completed: number; total: number }
 export interface SipSummary {
   id: string
   title: string | null
+  /** Visual theme chosen by the AI (illustration, tone, map scenery); null on older Sips. */
+  theme?: string | null
   input_text: string
   status: 'queued' | 'generating' | 'ready' | 'failed'
   stage: string | null
@@ -54,6 +56,7 @@ export interface ModuleOut {
 export interface Profile {
   topic: string
   title: string
+  theme?: string
   language: string
   current_level: string
   level_details: { area: string; level: string }[]
@@ -179,6 +182,7 @@ export interface Program {
   status: 'generating' | 'adjusting' | 'ready' | 'failed'
   error: string | null
   title: string | null
+  theme?: string | null
   summary: string | null
   lite: boolean
   note?: string | null

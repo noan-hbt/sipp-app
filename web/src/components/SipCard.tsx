@@ -79,7 +79,7 @@ export function SipTile({ sip, index, onOpen }: { sip: SipSummary; index?: numbe
   const failed = sip.status === 'failed'
   const done = isDone(sip)
   const name = sip.title ?? sip.input_text
-  const pal = sipPalette(name)
+  const pal = sipPalette(name, sip.theme)
   return (
     <Tile
       name={name}
@@ -88,7 +88,7 @@ export function SipTile({ sip, index, onOpen }: { sip: SipSummary; index?: numbe
       bg={failed ? 'var(--rose-soft)' : building ? 'var(--surface)' : pal.bg}
       ink={failed ? 'var(--rose-ink)' : pal.ink}
       metaColor={building ? 'var(--muted)' : undefined}
-      art={building ? <Mascot mood="think" size={80} /> : failed ? <Mascot mood="oops" size={80} /> : <img src={topicArt(name)} alt="" width={98} height={98} draggable={false} />}
+      art={building ? <Mascot mood="think" size={80} /> : failed ? <Mascot mood="oops" size={80} /> : <img src={topicArt(name, sip.theme)} alt="" width={98} height={98} draggable={false} />}
       meta={
         building ? (
           'Je prépare ton parcours…'

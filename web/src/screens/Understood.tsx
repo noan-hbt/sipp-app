@@ -49,7 +49,7 @@ export function Understood() {
   const { interpretation, input } = state
   const update = (patch: Partial<Profile>) => setProfile((p) => (p ? { ...p, ...patch } : p))
   const goal = profile.goals[0] ?? ''
-  const pal = sipPalette(`${profile.topic} ${input}`)
+  const pal = sipPalette(`${profile.topic} ${input}`, profile.theme)
   const known = profile.prior_knowledge ?? []
   const left = profile.out_of_scope ?? []
   const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
@@ -77,7 +77,7 @@ export function Understood() {
           style={{ position: 'relative', marginTop: 10, borderRadius: 28, padding: '18px 18px 16px', minHeight: 120, background: pal.bg, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 4 }}
         >
           <motion.img
-            src={topicArt(`${profile.topic} ${input}`)}
+            src={topicArt(`${profile.topic} ${input}`, profile.theme)}
             alt=""
             width={112}
             height={112}

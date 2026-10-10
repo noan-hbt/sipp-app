@@ -14,6 +14,7 @@ from app.models import Lesson, Program, ProgramStatus, Sip, SipStatus, User, utc
 from app.pipeline import engine, programs
 from app.plans import check_active_builds, check_plan, count_generation
 from app.quota import check_cost, lock_user
+from app.themes import theme_of
 
 router = APIRouter(tags=["programs"])
 
@@ -40,6 +41,7 @@ async def _out(session: AsyncSession, program: Program) -> ProgramOut:
         status=program.status,
         error=program.error,
         title=program.title,
+        theme=theme_of(program.profile),
         summary=program.summary,
         lite=program.lite,
         note=program.note,
