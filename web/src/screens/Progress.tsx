@@ -138,9 +138,20 @@ function ThisWeek({ w, last }: { w: WeekStats; last: WeekStats | null }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {rows.map(([label, n, before]) => (
-          <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span className="display" style={{ fontSize: 26 }}><CountUp value={n} delay={0.3} /></span>
-            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{label}{before !== undefined && before > 0 ? ` · ${before} avant` : ''}</span>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{label}</span>
+            {before !== undefined && before > 0 && (
+            <span aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+              <span style={{ height: 6, borderRadius: 3, background: 'var(--bg-deep)', overflow: 'hidden' }}>
+                <motion.span initial={{ width: 0 }} animate={{ width: `${(n / Math.max(1, n, before ?? 0)) * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.35 }} style={{ display: 'block', height: '100%', borderRadius: 3, background: 'var(--primary)' }} />
+              </span>
+              <span style={{ height: 6, borderRadius: 3, background: 'var(--bg-deep)', overflow: 'hidden' }}>
+                <span style={{ display: 'block', height: '100%', width: `${(before / Math.max(1, n, before)) * 100}%`, borderRadius: 3, background: 'var(--line-strong)' }} />
+              </span>
+            </span>
+            )}
+            {before !== undefined && before > 0 && <span style={{ fontSize: 11, color: 'var(--faint)' }}>{before} la semaine d’avant</span>}
           </div>
         ))}
       </div>
@@ -196,12 +207,15 @@ function Month({ month, days, today }: { month: string; days: number[]; today: n
         {Array.from({ length: count }, (_, i) => {
           const d = i + 1
           const on = active.has(d)
+          const col = (lead + i) % 7
+          const joinLeft = on && col > 0 && active.has(d - 1)
+          const joinRight = on && col < 6 && active.has(d + 1)
           return (
             <motion.span
               key={d}
-              initial={on ? { scale: 0.5 } : false}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 16, delay: 0.1 + d * 0.012 }}
+              initial={on ? { opacity: 0 } : false}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.25, delay: 0.1 + d * 0.012 }}
               style={{
                 height: 34,
                 display: 'grid',
@@ -209,13 +223,22 @@ function Month({ month, days, today }: { month: string; days: number[]; today: n
                 borderRadius: 12,
                 fontSize: 14,
                 fontWeight: on ? 600 : 500,
-                // Only active days are filled: grey "missed" boxes would read as failures.
-                background: on ? 'var(--primary)' : 'transparent',
+                position: 'relative',
                 color: on ? '#fff' : d <= today ? 'var(--ink-soft)' : 'var(--faint)',
-                boxShadow: d === today ? '0 0 0 2.5px var(--surface), 0 0 0 4.5px var(--primary)' : 'none',
+                boxShadow: d === today && !on ? 'inset 0 0 0 2px var(--primary)' : 'none',
               }}
             >
-              {d}
+              {/* Only active days are filled: grey "missed" boxes would read as failures. Runs of days join up. */}
+              {on && (
+                <span
+                  style={{
+                    position: 'absolute', top: 0, bottom: 0, left: joinLeft ? -3 : 0, right: joinRight ? -3 : 0, background: 'var(--primary)',
+                    borderRadius: `${joinLeft ? 0 : 12}px ${joinRight ? 0 : 12}px ${joinRight ? 0 : 12}px ${joinLeft ? 0 : 12}px`,
+                    boxShadow: d === today ? 'inset 0 0 0 2.5px color-mix(in srgb, #fff 55%, transparent)' : 'none',
+                  }}
+                />
+              )}
+              <span style={{ position: 'relative' }}>{d}</span>
             </motion.span>
           )
         })}

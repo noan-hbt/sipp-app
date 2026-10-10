@@ -88,44 +88,49 @@ export function Profile() {
 
   return (
     <Screen kind="fade">
-      <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 6px', gap: 14 }}>
-        <motion.span
-          initial={{ scale: 0.5, rotate: -15 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 14 }}
-          style={{ width: 72, height: 72, borderRadius: 36, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}
-        >
-          <Mascot size={56} />
-        </motion.span>
-        <div style={{ minWidth: 0 }}>
-          <h1 className="display" style={{ fontSize: 36, lineHeight: 1 }}>Moi</h1>
-          <p className="muted" style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
-            {me.data?.email ?? (me.isError ? 'Ton email est indisponible pour le moment.' : 'Chargement…')}
-          </p>
-        </div>
-      </header>
-
-      <div className="scroll" style={{ padding: '14px 16px 130px' }}>
+      <div className="scroll" style={{ padding: 'calc(var(--safe-top) + 16px) 16px 130px' }}>
         <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <motion.section variants={item} aria-label="Tes statistiques">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+          <motion.section variants={item} aria-label="Tes statistiques" style={{ position: 'relative', borderRadius: 32, padding: '20px 16px 16px', background: 'var(--peach-soft)', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <motion.span
+              aria-hidden="true"
+              initial={{ scale: 0.3 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 120, damping: 16 }}
+              style={{ position: 'absolute', right: -36, top: -46, width: 170, height: 170, borderRadius: 85, background: 'var(--surface)', opacity: 0.55 }}
+            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 12, paddingLeft: 4 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h1 className="display" style={{ fontSize: 40, lineHeight: 1, letterSpacing: '-0.05em' }}>Moi</h1>
+                <p style={{ fontSize: 14, marginTop: 4, color: 'var(--peach-ink)', fontWeight: 500, overflowWrap: 'anywhere' }}>
+                  {me.data?.email ?? (me.isError ? 'Ton email est indisponible pour le moment.' : 'Chargement…')}
+                </p>
+              </div>
+              <motion.span
+                initial={{ scale: 0.5, rotate: -15 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 14 }}
+                style={{ flexShrink: 0, display: 'grid' }}
+              >
+                <Mascot size={84} />
+              </motion.span>
+            </div>
+            <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {[
-                { label: stats.data?.streak_days === 1 ? 'jour de série' : 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, bg: 'var(--butter)', ink: 'var(--butter-ink)' },
-                { label: stats.data?.lessons_completed === 1 ? 'leçon' : 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--peach-ink)'), bg: 'var(--peach-soft)', ink: 'var(--peach-ink)' },
-                { label: stats.data?.total_stars === 1 ? 'étoile' : 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, bg: 'var(--lavender)', ink: 'var(--lavender-ink)' },
-              ].map(({ label, value, icon, bg, ink }, i) => (
-                <div key={i} style={{ borderRadius: 22, padding: 14, display: 'flex', flexDirection: 'column', gap: 6, background: bg }}>
+                { label: stats.data?.streak_days === 1 ? 'jour de série' : 'jours de série', value: stats.data?.streak_days, icon: Icon.flame, ink: 'var(--butter-ink)' },
+                { label: stats.data?.lessons_completed === 1 ? 'leçon' : 'leçons', value: stats.data?.lessons_completed, icon: Icon.check(18, 'var(--peach-ink)'), ink: 'var(--peach-ink)' },
+                { label: stats.data?.total_stars === 1 ? 'étoile' : 'étoiles', value: stats.data?.total_stars, icon: <Star size={18} />, ink: 'var(--lavender-ink)' },
+              ].map(({ label, value, icon, ink }, i) => (
+                <div key={i} style={{ borderRadius: 22, padding: 12, display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--surface)' }}>
                   <span aria-hidden="true" style={{ display: 'grid' }}>{icon}</span>
-                  <span className="hero-num" style={{ fontSize: 32, paddingTop: 2 }}>{value === undefined ? '—' : <CountUp value={value} delay={0.2 + i * 0.1} />}</span>
+                  <span className="hero-num" style={{ fontSize: 30, paddingTop: 2 }}>{value === undefined ? '—' : <CountUp value={value} delay={0.2 + i * 0.1} />}</span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: ink }}>{label}</span>
                 </div>
               ))}
             </div>
-            {stats.isError && <p role="status" className="muted" style={{ fontSize: 13, marginTop: 10 }}>Tes statistiques sont indisponibles pour le moment.</p>}
-            <button type="button" onClick={() => nav('/progress')} style={{ ...rowStyle, marginTop: 8, borderRadius: 20, background: 'var(--surface)' }}>
-              {rowIcon('var(--peach-soft)', 'var(--primary)', 'M4 20V10M10 20V4M16 20v-7M22 20H2')}
-              <span style={{ flex: 1, textAlign: 'left' }}>Voir mes progrès</span>
-              <span aria-hidden="true" style={{ color: 'var(--faint)' }}>→</span>
+            {stats.isError && <p role="status" style={{ position: 'relative', fontSize: 13, color: 'var(--peach-ink)' }}>Tes statistiques sont indisponibles pour le moment.</p>}
+            <button type="button" onClick={() => nav('/progress')} style={{ position: 'relative', border: 'none', borderRadius: 24, height: 48, background: 'var(--primary)', color: '#fff', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+              Voir mes progrès
             </button>
           </motion.section>
 
