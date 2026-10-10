@@ -171,10 +171,10 @@ export function Generating() {
           </motion.div>
         </div>
 
+        <div role="status">
         <AnimatePresence mode="wait">
           <motion.h2
             key={bad ? 'failed' : phase}
-            role="status"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -185,6 +185,7 @@ export function Generating() {
             {firstFailed ? 'Ta première leçon m’a résisté' : failed ? 'Oups, j’ai buggé' : readError ? 'Ton parcours ne se charge pas' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
           </motion.h2>
         </AnimatePresence>
+        </div>
 
         {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Ton parcours n’a pas pu se charger. Réessaie.')} retry={() => void sip.refetch()} busy={sip.isFetching} />}
         {failed ? (

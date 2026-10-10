@@ -62,7 +62,7 @@ export function Review() {
   const card = cards[i]
   const finished = session.data && i >= cards.length
   // Every other card is a quick multiple choice: recognising beats nothing on a tired day.
-  const choices = useMemo(() => (card && i % 2 === 1 && concepts.data ? choicesFor(card, concepts.data) : null), [card, i, concepts.data])
+  const choices = useMemo(() => (card && i % 2 === 1 && Array.isArray(concepts.data) ? choicesFor(card, concepts.data) : null), [card, i, concepts.data])
   const close = () => {
     void qc.invalidateQueries({ queryKey: ['concepts'] })
     void qc.invalidateQueries({ queryKey: ['review'] })
