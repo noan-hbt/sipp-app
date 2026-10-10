@@ -84,7 +84,7 @@ export function Understood() {
             initial={{ scale: 0.4, rotate: -15 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ type: 'spring', stiffness: 220, damping: 12, delay: 0.25 }}
-            style={{ position: 'absolute', top: -22, right: -4 }}
+            style={{ position: 'absolute', top: 'calc(50% - 56px)', right: 4 }}
           />
           <span className="kicker" style={{ color: pal.ink }}>Ton sujet</span>
           <span className="display" style={{ fontSize: 24, lineHeight: 1.08, paddingRight: 100 }}>{profile.title}</span>
