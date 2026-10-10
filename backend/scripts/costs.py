@@ -2,6 +2,9 @@
 
 .venv/Scripts/python scripts/costs.py --db "$DATABASE_PUBLIC_URL"
 .venv/Scripts/python scripts/costs.py --sqlite real.db real2.db real3.db real4.db
+.venv/Scripts/python scripts/costs.py --db "$DATABASE_PUBLIC_URL" --since 2026-10-10T14:00
+
+--since keeps only the LLM calls made from that UTC time, to cost one test run.
 
 Only the explicitly supplied databases are opened; app.db is never imported.
 """
@@ -320,11 +323,23 @@ def report(data, sources, notes, settings):
             print("  - " + note)
 
 
+def _after(value, since):
+    """Compare a logged timestamp (datetime or ISO string, naive means UTC) with the cutoff."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    def utc(d):
+        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    return utc(value) >= utc(since)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--db", help="Explicit SQLAlchemy PostgreSQL or SQLite URL; no env fallback.")
     source.add_argument("--sqlite", nargs="+", metavar="FILE", help="Merge existing local SQLite files.")
+    parser.add_argument("--since", type=datetime.fromisoformat, help="Only LLM calls from this UTC time (ISO 8601).")
     args = parser.parse_args()
     try:
         if args.sqlite:
@@ -333,6 +348,9 @@ def main():
             snapshot, label = read_url(args.db)
             snapshots = [(label, snapshot)]
         data, notes = merge_snapshots(snapshots)
+        if args.since:
+            data["llm_calls"] = [c for c in data["llm_calls"] if _after(c.get("created_at"), args.since)]
+            notes.append(f"Only LLM calls since {args.since.isoformat()} UTC.")
         report(data, [source for source, _ in snapshots], notes, get_settings())
     except Exception as error:
         # Database exceptions can contain connection credentials: do not echo them.
