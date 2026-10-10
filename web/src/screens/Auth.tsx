@@ -115,14 +115,14 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
                 fontSize: 15,
                 position: 'relative',
                 fontWeight: 700,
-                color: mode === m ? 'var(--on-ink)' : 'var(--muted)',
+                color: mode === m ? '#fff' : 'var(--muted)',
                 transition: 'color .2s',
               }}
             >
               {mode === m && (
                 <motion.span
                   layoutId="auth-pill"
-                  style={{ position: 'absolute', inset: 0, borderRadius: 22, background: 'var(--ink)' }}
+                  style={{ position: 'absolute', inset: 0, borderRadius: 22, background: 'var(--primary)' }}
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}

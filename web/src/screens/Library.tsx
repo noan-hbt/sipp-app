@@ -91,9 +91,9 @@ export function Library() {
               play('tap')
               setParams(k === 'sips' ? {} : { tab: k }, { replace: true })
             }}
-            style={{ position: 'relative', height: 42, border: 'none', borderRadius: 20, background: 'transparent', color: tab === k ? 'var(--on-ink)' : 'var(--muted)', fontSize: 15, fontWeight: 700, transition: 'color .2s' }}
+            style={{ position: 'relative', height: 42, border: 'none', borderRadius: 20, background: 'transparent', color: tab === k ? 'var(--ink)' : 'var(--muted)', fontSize: 15, fontWeight: 700, transition: 'color .2s' }}
           >
-            {tab === k && <motion.span layoutId="lib-tab" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--ink)' }} />}
+            {tab === k && <motion.span layoutId="lib-tab" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--surface)', boxShadow: '0 2px 8px rgba(60,40,20,.08)' }} />}
             <span style={{ position: 'relative' }}>{label}</span>
           </button>
         ))}
@@ -150,8 +150,8 @@ export function Library() {
                   whiteSpace: 'nowrap',
                   fontSize: 14,
                   fontWeight: 600,
-                  background: filter === k ? 'var(--ink)' : 'var(--surface)',
-                  color: filter === k ? 'var(--on-ink)' : 'var(--ink)',
+                  background: filter === k ? 'var(--primary)' : 'var(--surface)',
+                  color: filter === k ? '#fff' : 'var(--ink)',
                 }}
               >
                 {label}
