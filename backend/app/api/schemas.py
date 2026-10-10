@@ -229,7 +229,7 @@ class MatchAnswer(BaseModel):
 
 
 AnswerText = Annotated[str, Field(max_length=4000)]
-AnswerValue = AnswerText | StrictBool | Annotated[float, Field(allow_inf_nan=False)] | Annotated[list[AnswerText], Field(max_length=50)] | MatchAnswer | None
+AnswerValue = AnswerText | StrictBool | Annotated[float, Field(allow_inf_nan=False)] | Annotated[list[AnswerText], Field(max_length=50)] | Annotated[list[StrictBool], Field(max_length=50)] | MatchAnswer | None
 
 
 class BlockAnswer(BaseModel):

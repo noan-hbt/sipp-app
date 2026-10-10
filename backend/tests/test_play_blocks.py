@@ -51,3 +51,11 @@ def test_swipe_cards_are_scored_one_by_one_and_predict_is_not_graded():
     answers = [{"block": 0, "value": 3}, {"block": 1, "value": [True, True, True]}]
     score = score_for(blocks, answers, None)
     assert (score.correct, score.total) == (2, 3)
+
+
+def test_swipe_answers_pass_the_api_schema():
+    from app.api.schemas import CompleteIn, ResumeIn
+
+    body = {"answers": [{"block": 4, "value": [True, False, True], "correct": False}]}
+    assert ResumeIn(step=5, **body).answers[0].value == [True, False, True]
+    assert CompleteIn(**body, score={"correct": 2, "total": 3}).answers[0].value == [True, False, True]
