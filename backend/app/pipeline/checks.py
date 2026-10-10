@@ -11,7 +11,9 @@ from app.pipeline.blocks import (
     FillBlanksBlock,
     MatchBlock,
     EstimateBlock,
+    HookBlock,
     RecapBlock,
+    SwipeBlock,
 )
 from app.pipeline.schemas import LessonDraft, ModuleMapping
 
@@ -134,12 +136,12 @@ def inline_math_unbalanced(block) -> bool:
     return found
 
 
-CHECK_BLOCKS = (QuestionBlock, FillBlanksBlock, MatchBlock, EstimateBlock)
+CHECK_BLOCKS = (QuestionBlock, FillBlanksBlock, MatchBlock, EstimateBlock, SwipeBlock)
 
 
 def estimate_minutes(draft: LessonDraft) -> float:
     words = sum(block_words(b) for b in draft.blocks)
-    interactions = sum(1 for b in draft.blocks if b.type in ("question", "misconception", "application", "fill_blanks", "match", "estimate"))
+    interactions = sum(1 for b in draft.blocks if b.type in ("question", "misconception", "application", "fill_blanks", "match", "estimate", "predict", "swipe", "simulate"))
     return words / WORDS_PER_MINUTE + interactions * SECONDS_PER_INTERACTION / 60
 
 
@@ -159,10 +161,17 @@ def check_lesson(
         res.errors.append("exactly one 'recap' block is allowed and it must be the last block")
 
     if not any(isinstance(b, CHECK_BLOCKS) for b in blocks):
-        res.errors.append("lesson needs at least one comprehension check (question, fill_blanks, match or estimate)")
+        res.errors.append("lesson needs at least one comprehension check (question, fill_blanks, match, estimate or swipe)")
 
     if isinstance(blocks[0], (*CHECK_BLOCKS, RecapBlock)):
         res.errors.append("lesson must not open with a question or recap")
+
+    # the story opens on its hook, and only there
+    hooks = [i for i, b in enumerate(blocks) if isinstance(b, HookBlock)]
+    if len(hooks) > 1 or (hooks and hooks[0] != 0):
+        res.errors.append("exactly one 'hook' block is allowed and it must be the first block")
+    elif not hooks:
+        res.warnings.append("lesson does not open with a 'hook' block")
 
     # duplicated content
     seen: dict[str, int] = {}

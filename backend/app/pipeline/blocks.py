@@ -273,6 +273,108 @@ class ApplicationBlock(_Block):
     optional: bool = True
 
 
+# --- Story & play -------------------------------------------------------------------
+
+
+class HookBlock(_Block):
+    type: Literal["hook"]
+    question: Str = Field(description="A concrete, intriguing question the lesson answers (max ~15 words).")
+    teaser: Str = Field(description="One sentence promising what the learner will be able to do.")
+    answer: Str = Field(description="The question's answer in one or two sentences, revealed at the end.")
+
+
+class PredictOption(_Block):
+    id: Str
+    text: Str
+
+
+class PredictBlock(_Block):
+    """Guess BEFORE the explanation: not graded, the gap with reality is what teaches."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    type: Literal["predict"]
+    kind: Literal["number", "choice"]
+    prompt: Str
+    min: float | None = None
+    max: float | None = None
+    step: float | None = Field(default=None, gt=0)
+    answer: float | None = Field(default=None, description="number only: the true value.")
+    unit: str | None = None
+    options: list[PredictOption] = Field(default_factory=list, description="choice only: 2-4 options.")
+    answer_id: str | None = Field(default=None, description="choice only: id of the true option.")
+    reveal: Str = Field(description="What the true answer means, shown right after the guess (max ~50 words).")
+
+    @model_validator(mode="after")
+    def _shape(self) -> "PredictBlock":
+        if self.kind == "number":
+            if self.min is None or self.max is None or self.step is None or self.answer is None:
+                raise ValueError("predict number needs min, max, step and answer")
+            if not self.min < self.answer < self.max:
+                raise ValueError("predict needs min < answer < max")
+            if (self.max - self.min) / self.step > 2000:
+                raise ValueError("predict step too small for the range (max 2000 positions)")
+            if self.options or self.answer_id:
+                raise ValueError("predict number must not have options")
+        else:
+            if not 2 <= len(self.options) <= 4:
+                raise ValueError("predict choice needs 2-4 options")
+            ids = [o.id for o in self.options]
+            if len(set(ids)) != len(ids) or self.answer_id not in ids:
+                raise ValueError("predict choice needs unique option ids and an answer_id among them")
+        return self
+
+
+class SwipeCard(_Block):
+    statement: Str = Field(description="A short claim to judge (max ~18 words).")
+    is_true: bool
+    why: Str = Field(description="One sentence: why it is true or false.")
+
+
+class SwipeBlock(_Block):
+    type: Literal["swipe"]
+    prompt: str | None = Field(default=None, description="Optional theme of the cards.")
+    cards: list[SwipeCard] = Field(min_length=3, max_length=5)
+
+    @model_validator(mode="after")
+    def _mixed(self) -> "SwipeBlock":
+        if len({c.is_true for c in self.cards}) < 2:
+            raise ValueError("swipe cards must mix true and false statements")
+        return self
+
+
+class SimulatePoint(_Block):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+    x: float
+    y: float
+
+
+class SimulateBlock(_Block):
+    """Move one knob, watch one result change. Every value is precomputed: the app never interpolates."""
+
+    type: Literal["simulate"]
+    prompt: Str
+    parameter: Str = Field(description="What the learner changes, e.g. 'Durée'.")
+    parameter_unit: str | None = Field(default=None, description="e.g. 'ans'.")
+    output: Str = Field(description="What changes, e.g. 'Intérêts payés'.")
+    output_unit: str | None = Field(default=None, description="e.g. '€'.")
+    points: list[SimulatePoint] = Field(min_length=3, max_length=6, description="Strictly increasing x, exact y.")
+    start: int = Field(default=0, ge=0, description="Index of the point shown first.")
+    takeaway: Str = Field(description="What the learner should notice, one or two sentences.")
+
+    @model_validator(mode="after")
+    def _points(self) -> "SimulateBlock":
+        xs = [p.x for p in self.points]
+        if any(b <= a for a, b in zip(xs, xs[1:])):
+            raise ValueError("simulate points need strictly increasing x")
+        if self.start >= len(self.points):
+            raise ValueError("simulate start must index a point")
+        if any(p.y < 0 for p in self.points):
+            raise ValueError("simulate values must not be negative (they are drawn as bars)")
+        return self
+
+
 # --- Conclusion --------------------------------------------------------------
 
 
@@ -299,6 +401,10 @@ Block = Annotated[
     | MatchBlock
     | EstimateBlock
     | ApplicationBlock
+    | HookBlock
+    | PredictBlock
+    | SwipeBlock
+    | SimulateBlock
     | RecapBlock,
     Field(discriminator="type"),
 ]
@@ -320,5 +426,9 @@ BLOCK_TYPES = [
     "match",
     "estimate",
     "application",
+    "hook",
+    "predict",
+    "swipe",
+    "simulate",
     "recap",
 ]

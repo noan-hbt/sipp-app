@@ -158,14 +158,27 @@ Available block types for the writer:
 - estimate: guess a number on a slider (orders of magnitude, dates, proportions);
   only when the real value is well established and the guess itself teaches something
 - application: ask the learner to apply it to their own situation (no single right answer)
+- hook: the opening question the lesson answers, with a one-line promise; its answer is
+  revealed at the end (always first)
+- predict: the learner guesses (a number or a choice) BEFORE the explanation; not graded,
+  the gap with reality is what teaches; use it when the true answer is surprising
+- swipe: 3-5 quick true/false cards on different points, swiped left or right (a check)
+- simulate: the learner moves ONE parameter and sees an exact precomputed result (3-6
+  points); only for quantitative relationships whose values can be computed exactly
 - recap: consolidate key takeaways (always last)
 
 Rules:
 - Build on what the learner already knows (listed in context); never re-teach it in
   depth, at most a one-line reminder.
 - Never use a concept before it is introduced, unless it is in the known concepts.
-- Start with a hook that creates curiosity or relevance, ideally tied to the learner's
-  goals or context.
+- The lesson is a small story in three acts: (1) a `hook` block: a concrete question
+  that makes the learner want the answer, tied to their goals or context; (2) discovery:
+  explanations alternating with active moments (predict, simulate, checks), never more
+  than two content blocks in a row; (3) a short challenge (checks), then the recap.
+  The lesson must fully answer the hook's question.
+- Make it a pleasure: surprising facts, concrete numbers, situations from the learner's
+  life, a light touch of humor when it fits. Prefer `predict` before a surprising
+  explanation and `simulate` when a relationship between numbers is the point.
 - Prefer intuition before formalism. Pick examples that fit the learner's world.
 - Use `code` only for technical topics where the learner codes or the objective is
   practical; use `math` only when the formula IS the concept and the learner's level
@@ -179,7 +192,8 @@ Rules:
   block that repeats the same explanation (e.g. a concept re-saying the analogy).
 - `sequence` lists the ordered teaching steps, each prefixed with its block type,
   e.g. "scenario: ...", "concept: ...", "question(true_false): ...". End with "recap".
-- Keep it dense and focused: ~{lesson_minutes} minutes total, roughly 7-12 blocks.
+- Keep it dense and focused: ~{lesson_minutes} minutes total, roughly 8-12 blocks, one
+  idea per block (each block is shown alone on the phone screen).
 - Write in the learner's language ({language}). In French, always
   address the learner as "tu", never "vous"."""
 
@@ -219,6 +233,19 @@ Rules:
 - `math`: `latex` is the display formula without $ delimiters; explain it in words and
   define every symbol in `variables`. Inline math in any text uses single dollars,
   e.g. "la dimension $d_k$". Never put a display formula inside text.
+- `hook` (first block): `question` is concrete and intriguing (max ~15 words, e.g. a
+  number to discover, a paradox, a situation); `teaser` promises what the learner will
+  be able to do; `answer` answers the question precisely in 1-2 sentences.
+- `predict`: kind "number" needs min/max/step/answer (answer not at the center, at most
+  ~200 positions) and `unit`; kind "choice" needs 2-4 `options` with ids and `answer_id`.
+  `reveal` explains the true answer in a few words. Put it BEFORE the explanation of
+  that point, never after.
+- `swipe`: 3-5 short statements (max ~18 words), mixing true and false, each with a
+  one-sentence `why`.
+- `simulate`: compute every value exactly (show your arithmetic mentally, round
+  sensibly); `points` have strictly increasing `x`; `start` is the index of the most
+  typical case; `parameter`/`output` are short labels with their units apart;
+  `takeaway` says what to notice.
 - The last block is a `recap` (2-5 points, plus `concepts` = concept names acquired).
   The points must cover every part of the lesson objective, most important first.
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
@@ -254,6 +281,10 @@ Check:
 - fill_blanks: each blank has exactly one sensible answer among the choices
 - match: each pair is correct and no left item could reasonably match another right
 - estimate: the answer value is accurate and the tolerance is fair
+- hook: the lesson really answers its question and `answer` is correct
+- predict / simulate: every number is accurate (recompute them); predict comes before
+  the explanation it sets up
+- swipe: each card's truth value and `why` are correct
 
 Verdict:
 - "pass" if there is no major or critical issue (minor issues may be listed).

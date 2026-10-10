@@ -60,6 +60,32 @@ export interface EstimateBlock {
 }
 export interface ApplicationBlock { type: 'application'; prompt: string; guidance?: string; optional?: boolean }
 export interface RecapBlock { type: 'recap'; points: string[]; concepts?: string[] }
+export interface HookBlock { type: 'hook'; question: string; teaser: string; answer: string }
+export interface PredictBlock {
+  type: 'predict'
+  kind: 'number' | 'choice'
+  prompt: string
+  min?: number | null
+  max?: number | null
+  step?: number | null
+  answer?: number | null
+  unit?: string | null
+  options?: { id: string; text: string }[]
+  answer_id?: string | null
+  reveal: string
+}
+export interface SwipeBlock { type: 'swipe'; prompt?: string | null; cards: { statement: string; is_true: boolean; why: string }[] }
+export interface SimulateBlock {
+  type: 'simulate'
+  prompt: string
+  parameter: string
+  parameter_unit?: string | null
+  output: string
+  output_unit?: string | null
+  points: { x: number; y: number }[]
+  start?: number
+  takeaway: string
+}
 
 export type Block =
   | TextBlock
@@ -78,16 +104,33 @@ export type Block =
   | MatchBlock
   | EstimateBlock
   | ApplicationBlock
+  | HookBlock
+  | PredictBlock
+  | SwipeBlock
+  | SimulateBlock
   | RecapBlock
 
 /** Blocks the learner must answer before continuing. */
 export function isInteractive(b: Block) {
-  return b.type === 'question' || b.type === 'misconception' || b.type === 'fill_blanks' || b.type === 'match' || b.type === 'estimate'
+  return (
+    b.type === 'question' || b.type === 'misconception' || b.type === 'fill_blanks' || b.type === 'match' ||
+    b.type === 'estimate' || b.type === 'predict' || b.type === 'swipe'
+  )
 }
 
-/** Graded blocks count toward the lesson score (open questions are not graded). */
+/** Graded blocks count toward the lesson score (open questions and bets are not graded). */
 export function isGraded(b: Block) {
-  return isInteractive(b) && !(b.type === 'question' && b.kind === 'open')
+  return isInteractive(b) && b.type !== 'predict' && !(b.type === 'question' && b.kind === 'open')
+}
+
+/** Blocks that show their own result in place: no feedback sheet after them. */
+export function selfFeedback(b: Block) {
+  return b.type === 'predict' || b.type === 'swipe'
+}
+
+/** Checks inside a block: a swipe holds one per card. */
+export function checksIn(b: Block) {
+  return b.type === 'swipe' ? b.cards.length : isGraded(b) ? 1 : 0
 }
 
 /** LLM markup stripped: **bold**, `code`, $math$ keep their words only. */
@@ -116,9 +159,13 @@ export function blockText(b: Block): string {
     case 'match': return join(b.prompt)
     case 'estimate': return join(b.prompt)
     case 'application': return join(b.prompt, b.guidance)
+    case 'hook': return join(b.question, b.teaser)
+    case 'predict': return join(b.prompt, ...(b.options ?? []).map((o) => o.text))
+    case 'swipe': return join('Vrai ou faux', b.prompt, ...b.cards.map((c) => c.statement))
+    case 'simulate': return join(b.prompt, b.takeaway)
     case 'recap': return join('À retenir', ...b.points)
   }
 }
 
 /** Content worth keeping as a note: what teaches, not what tests. */
-export const isKeepable = (b: Block) => !isInteractive(b) && b.type !== 'application'
+export const isKeepable = (b: Block) => !isInteractive(b) && b.type !== 'application' && b.type !== 'hook' && b.type !== 'simulate'

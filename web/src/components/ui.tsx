@@ -1,5 +1,5 @@
 import { motion, useReducedMotion, type HTMLMotionProps } from 'motion/react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { haptic, play } from '../lib/sound'
 
 type Variant = 'peach' | 'dark' | 'soft' | 'mint' | 'ghost'
@@ -66,7 +66,7 @@ export function Button({
 }
 
 /** Small rounded-square icon button. */
-export function IconButton({ label, children, onClick }: { label: string; children: ReactNode; onClick?: () => void }) {
+export function IconButton({ label, children, onClick, style }: { label: string; children: ReactNode; onClick?: () => void; style?: CSSProperties }) {
   return (
     <motion.button
       className="icon-btn"
@@ -77,6 +77,7 @@ export function IconButton({ label, children, onClick }: { label: string; childr
       }}
       whileTap={{ scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 600, damping: 25 }}
+      style={style}
     >
       {children}
     </motion.button>

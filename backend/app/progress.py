@@ -40,6 +40,13 @@ def score_for(blocks: list[dict], answers: list[dict], fallback: Score | None) -
         value = answer.get("value", answer.get("choice"))
         type_ = block.get("type")
         kind = block.get("kind")
+        if type_ == "swipe" and block.get("cards"):
+            # Each card is its own check: one verdict per card, in order.
+            truths = [c.get("is_true") for c in block["cards"]]
+            picks = value if isinstance(value, list) else []
+            total += len(truths)
+            correct += sum(1 for t, v in zip(truths, picks) if isinstance(v, bool) and v == t)
+            continue
         if type_ == "question" and kind in ("single_choice", "multiple_choice") and block.get("correct_option_ids"):
             if isinstance(value, str):
                 value = [value]

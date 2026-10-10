@@ -13,6 +13,7 @@ import { Button, Icon } from '../components/ui'
 import type * as B from '../lib/blocks'
 import { haptic, play } from '../lib/sound'
 import { Kicker, TONES, type Tone } from './Kicker'
+import { Hook, Predict, Simulate, Swipe } from './Play'
 import { Estimate, FillBlanks, Match } from './Practice'
 
 hljs.registerLanguage('python', python)
@@ -666,8 +667,32 @@ function Recap({ b }: { b: B.RecapBlock }) {
   )
 }
 
-export function BlockView({ block, answer, onAnswer }: { block: B.Block; answer?: Answer; onAnswer: (a: Answer) => void }) {
+export function BlockView({
+  block,
+  answer,
+  onAnswer,
+  onCheck,
+  title,
+  art,
+}: {
+  block: B.Block
+  answer?: Answer
+  onAnswer: (a: Answer) => void
+  /** One verdict inside a block (a swipe card), for the combo counter. */
+  onCheck?: (ok: boolean) => void
+  /** Lesson title and topic art, shown by the hook. */
+  title?: string
+  art?: string
+}) {
   switch (block.type) {
+    case 'hook':
+      return <Hook b={block} title={title} art={art} />
+    case 'predict':
+      return <Predict b={block} answer={answer} onAnswer={onAnswer} />
+    case 'swipe':
+      return <Swipe b={block} answer={answer} onAnswer={onAnswer} onCheck={onCheck} />
+    case 'simulate':
+      return <Simulate b={block} />
     case 'text':
       return <Text b={block} />
     case 'concept':
