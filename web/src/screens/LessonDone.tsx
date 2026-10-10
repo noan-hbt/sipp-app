@@ -214,8 +214,9 @@ export function LessonDone() {
           <motion.img
             src={illustration('scene-celebrate')}
             alt=""
-            width={220}
-            height={220}
+            width={190}
+            height={190}
+            style={{ marginTop: 18, marginBottom: -20 }}
             initial={{ scale: 0.4, rotate: -10, opacity: 0 }}
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 13, delay: 0.1 }}
