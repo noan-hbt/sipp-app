@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { CountUp, RevealLines } from '../components/motion'
@@ -12,7 +12,7 @@ import { UpsellSheet, useFeatures, type Feature } from '../components/UpsellShee
 import { Api, type CompleteOut, type Feeling } from '../lib/api'
 import { LESSON_MINUTES } from '../lib/format'
 import { shareSip } from '../lib/share'
-import { play } from '../lib/sound'
+import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 
 type DoneState = CompleteOut & {
@@ -164,6 +164,75 @@ function FeelingCard({ lessonId, delay }: { lessonId: string; delay: number }) {
   )
 }
 
+/** A finished module: a gift that wobbles until tapped, then bursts into the bonus stars. */
+function ModuleChest({ bonus }: { bonus: number }) {
+  const [open, setOpen] = useState(false)
+  const reduce = useReducedMotion()
+  return (
+    <motion.button
+      type="button"
+      disabled={open}
+      onClick={() => {
+        setOpen(true)
+        play('complete')
+        haptic(18)
+      }}
+      initial={{ scale: 0.7, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 15, delay: 1.1 }}
+      whileTap={open ? undefined : { scale: 0.96 }}
+      aria-label={open ? `Module terminé : ${bonus} étoiles bonus` : 'Module terminé : ouvrir ton cadeau'}
+      style={{ position: 'relative', border: 'none', borderRadius: 24, background: 'var(--butter)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', color: 'var(--ink)', overflow: 'visible' }}
+    >
+      <span style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+        <AnimatePresence mode="wait">
+          {!open ? (
+            <motion.img
+              key="gift"
+              src={illustration('scene-premium')}
+              alt=""
+              width={72}
+              height={72}
+              animate={reduce ? {} : { rotate: [0, -8, 8, -5, 5, 0] }}
+              transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 1.4, delay: 1.6 }}
+              exit={{ scale: 1.6, opacity: 0, transition: { duration: 0.25 } }}
+            />
+          ) : (
+            <motion.span key="star" initial={{ scale: 0, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 420, damping: 12, delay: 0.1 }} style={{ display: 'grid' }}>
+              <Star size={54} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+        {open && !reduce && Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2
+          return (
+            <motion.span
+              key={i}
+              aria-hidden="true"
+              initial={{ x: 0, y: 0, scale: 0.4, opacity: 1 }}
+              animate={{ x: Math.cos(a) * 70, y: Math.sin(a) * 50, scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              style={{ position: 'absolute', display: 'grid' }}
+            >
+              <Star size={14} />
+            </motion.span>
+          )
+        })}
+      </span>
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <span className="display" style={{ fontSize: 18 }}>Module terminé !</span>
+        {open ? (
+          <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: 15, fontWeight: 700, color: 'var(--butter-ink)' }}>
+            +<CountUp value={bonus} delay={0.2} /> étoiles bonus
+          </motion.span>
+        ) : (
+          <span style={{ fontSize: 14, color: 'var(--butter-ink)', fontWeight: 600 }}>Touche ton cadeau pour l’ouvrir</span>
+        )}
+      </span>
+    </motion.button>
+  )
+}
+
 /** The last lesson of a Sip: an image to share. */
 function ShareButton({ sipId, title }: { sipId: string; title: string }) {
   const sip = useQuery({ queryKey: ['sip', sipId], queryFn: ({ signal }) => Api.sip(sipId, signal) })
@@ -269,22 +338,7 @@ export function LessonDone() {
             ))}
           </div>
 
-          {!!s.module_bonus && (
-            <motion.div
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 380, damping: 15, delay: 1.1 }}
-              style={{ borderRadius: 20, background: 'var(--butter)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}
-            >
-              <span style={{ display: 'flex' }}>
-                <Star size={30} animate delay={1.3} />
-              </span>
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <span className="display" style={{ fontSize: 18 }}>Module terminé !</span>
-                <span style={{ fontSize: 14, color: 'var(--muted)' }}>+{s.module_bonus} étoiles bonus</span>
-              </span>
-            </motion.div>
-          )}
+          {!!s.module_bonus && <ModuleChest bonus={s.module_bonus} />}
 
           {!!s.module_done && s.module_id && (
             <motion.section
