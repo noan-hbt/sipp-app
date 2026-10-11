@@ -695,6 +695,14 @@ function Bookmark({ size = 14, filled }: { size?: number; filled: boolean }) {
   )
 }
 
+/** True when an element between the target and the block scrolls sideways. */
+function scrollsSideways(el: HTMLElement | null, root: Element) {
+  for (; el && el !== root; el = el.parentElement) {
+    if (el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true
+  }
+  return false
+}
+
 /** A passage kept by a long press; a small ribbon marks it, and is the way back for keyboards and screen readers. */
 function Keepable({ kept, onToggle, children }: { kept: boolean; onToggle: () => void; children: ReactNode }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -714,14 +722,19 @@ function Keepable({ kept, onToggle, children }: { kept: boolean; onToggle: () =>
       onContextMenu={(e) => e.preventDefault()}
       onPointerDown={(e) => {
         if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
+        // Inside something that scrolls sideways (comparison cards, code), a press is a swipe, not a keep.
+        if (scrollsSideways(e.target as HTMLElement, e.currentTarget)) return
         start.current = { x: e.clientX, y: e.clientY }
-        setPressing(true)
+        // The squeeze shows only once the finger stays put: a quick swipe never moves the block under it.
         timer.current = setTimeout(() => {
-          cancel()
-          haptic(15)
-          play('pop')
-          onToggle()
-        }, 480)
+          setPressing(true)
+          timer.current = setTimeout(() => {
+            cancel()
+            haptic(15)
+            play('pop')
+            onToggle()
+          }, 330)
+        }, 150)
       }}
       onPointerMove={(e) => {
         if (start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 8) cancel()
