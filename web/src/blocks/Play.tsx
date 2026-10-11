@@ -103,7 +103,7 @@ function PredictHeader({ b }: { b: B.PredictBlock }) {
   return (
     <>
       <Kicker icon="question" tone="lavender">
-        Parie d’abord
+        À ton avis ?
       </Kicker>
       <h2 className="display" style={{ fontSize: 26, lineHeight: 1.1, letterSpacing: '-0.035em' }}>
         <RichText text={b.prompt} />
@@ -179,7 +179,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
           {!answered && (
             <input
               type="range"
-              aria-label="Ton pari"
+              aria-label="Ton estimation"
               min={min}
               max={max}
               step={step}
@@ -204,7 +204,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
             transition={{ delay: 0.9 }}
             style={{ height: 32, padding: '0 14px', borderRadius: 16, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 700, color: close ? 'var(--mint-ink)' : 'var(--lavender-ink)' }}
           >
-            {close ? `Pile dans le mille avec ${withUnit(fmt(bet), b.unit)} !` : `Ton pari : ${withUnit(fmt(bet), b.unit)} · écart de ${withUnit(fmt(snap(gap + min) - min), b.unit)}`}
+            {close ? `Pile dans le mille avec ${withUnit(fmt(bet), b.unit)} !` : `Ton estimation : ${withUnit(fmt(bet), b.unit)} · écart de ${withUnit(fmt(snap(gap + min) - min), b.unit)}`}
           </motion.span>
         )}
       </div>
@@ -219,7 +219,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
             onAnswer({ correct: null, value })
           }}
         >
-          Je parie {withUnit(fmt(value), b.unit)}
+          Je dirais {withUnit(fmt(value), b.unit)}
         </Button>
       )}
     </section>
@@ -256,7 +256,7 @@ function PredictChoice({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
                 <RichText text={o.text} />
               </span>
               {picked && truth && <span style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--mint-strong)', display: 'grid', placeItems: 'center' }}>{Icon.check(14, '#fff')}</span>}
-              {picked && mine && !truth && <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Ton pari</span>}
+              {picked && mine && !truth && <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Ton choix</span>}
             </motion.button>
           )
         })}

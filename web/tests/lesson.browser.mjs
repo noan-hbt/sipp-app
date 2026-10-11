@@ -55,7 +55,7 @@ test('leçon v2 : accroche, pari, swipe, et chaque carte compte dans le score', 
   await page.getByRole('button', { name: 'Je veux savoir' }).click()
 
   // The bet is not graded: no feedback sheet, Continue shows up once the guess is placed.
-  await page.getByRole('button', { name: /Je parie/ }).click()
+  await page.getByRole('button', { name: /Je dirais/ }).click()
   await page.getByRole('button', { name: 'Continuer' }).click()
 
   await page.getByText('Plus court = moins cher.').waitFor({ timeout: 8000 })
