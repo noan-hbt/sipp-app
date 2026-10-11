@@ -15,13 +15,19 @@ const fold = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 
-/** Three strokes: how well a notion is learned (1 fragile → 3 well learned). */
-export function Mastery({ level, color = 'var(--primary)' }: { level: number; color?: string }) {
+const MASTERY = ['', 'Fragile', 'S’installe', 'Ancrée']
+
+/** How well a notion is learned, as a pill: three strokes (1 fragile → 3 well learned) and a word; "À revoir" when due. */
+export function Mastery({ level, due = false, color = 'var(--primary)' }: { level: number; due?: boolean; color?: string }) {
+  const label = due ? 'À revoir' : MASTERY[Math.min(3, Math.max(1, level))]
   return (
-    <span aria-label={`Maîtrise : ${level} sur 3`} role="img" style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-      {[1, 2, 3].map((i) => (
-        <span key={i} style={{ width: 16, height: 5, borderRadius: 3, background: color, opacity: i <= level ? 1 : 0.22 }} />
-      ))}
+    <span role="img" aria-label={`Maîtrise : ${label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, height: 24, padding: '0 9px', borderRadius: 12, background: 'color-mix(in srgb, var(--surface) 70%, transparent)', color, fontSize: 12, fontWeight: 700 }}>
+      <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
+        {[1, 2, 3].map((i) => (
+          <span key={i} style={{ width: 8, height: 8, borderRadius: 4, background: 'currentColor', opacity: i <= level ? 1 : 0.25 }} />
+        ))}
+      </span>
+      {label}
     </span>
   )
 }
@@ -180,7 +186,7 @@ function NotionRow({ c, open, onToggle, onLesson }: { c: Concept; open: boolean;
           <span className="display" style={{ fontSize: open ? 22 : 17, lineHeight: 1.1, letterSpacing: '-0.02em', overflowWrap: 'anywhere' }}>
             <RichText text={c.name} />
           </span>
-          {open && <Mastery level={c.mastery} color={pal.ink} />}
+          {open && <Mastery level={c.mastery} due={c.due} color={pal.ink} />}
         </span>
         {!open && (
           <>
@@ -188,7 +194,7 @@ function NotionRow({ c, open, onToggle, onLesson }: { c: Concept; open: boolean;
               <RichText text={c.definition} />
             </span>
             <span style={{ marginTop: 'auto', paddingTop: 4 }}>
-              <Mastery level={c.mastery} color={pal.ink} />
+              <Mastery level={c.mastery} due={c.due} color={pal.ink} />
             </span>
           </>
         )}
