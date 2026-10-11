@@ -99,7 +99,7 @@ export function Home() {
             )}
             {s && <StreakTile stats={s} onGo={() => nav('/progress')} />}
             {s && <GoalTile stats={s} onGo={() => nav('/profile')} />}
-            {due > 0 && <ReviewTile due={due} onGo={() => nav('/review')} />}
+            {due > 0 && <ReviewTile due={due} onGo={(express) => nav(express ? '/review?n=3' : '/review')} />}
             {resume && topics.length === 0 && roomForMore && (
               <motion.button
                 variants={item}
@@ -159,15 +159,16 @@ function FrozeYesterday({ stats }: { stats: Stats }) {
 
 const RECAP_KEY = 'sipp.recap-seen'
 
-/** Monday to Wednesday: how last week went, until dismissed. */
+/** Monday to Wednesday: how last week went; Saturday and Sunday: how this week is going. Until dismissed. */
 function Recap({ stats }: { stats: Stats }) {
-  const week = iso(monday())
+  const day = (new Date().getDay() + 6) % 7
+  const weekend = day >= 5
+  const week = `${iso(monday())}${weekend ? '-we' : ''}`
   const [seen, setSeen] = useState(() => {
     try { return localStorage.getItem(RECAP_KEY) === week } catch { return false }
   })
-  const w = stats.last_week
-  const day = (new Date().getDay() + 6) % 7
-  if (seen || !w || w.lessons === 0 || day > 2) return null
+  const w = weekend ? stats.this_week : day <= 2 ? stats.last_week : null
+  if (seen || !w || w.lessons === 0) return null
   const close = () => {
     setSeen(true)
     try { localStorage.setItem(RECAP_KEY, week) } catch { /* private mode */ }
@@ -179,11 +180,11 @@ function Recap({ stats }: { stats: Stats }) {
     [w.active_days, w.active_days > 1 ? 'jours actifs' : 'jour actif'],
   ]
   return (
-    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 12, padding: 14, borderRadius: 24, background: 'var(--lavender)', display: 'flex', flexDirection: 'column', gap: 10 }} aria-label="Ta semaine dernière">
+    <motion.section initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 12, padding: 14, borderRadius: 24, background: 'var(--lavender)', display: 'flex', flexDirection: 'column', gap: 10 }} aria-label={weekend ? 'Ta semaine' : 'Ta semaine dernière'}>
       <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <img src={illustration('scene-recap')} alt="" width={40} height={40} style={{ margin: '-6px 0' }} />
-          <span className="display" style={{ fontSize: 17, color: 'var(--lavender-ink)' }}>Ta semaine dernière</span>
+          <span className="display" style={{ fontSize: 17, color: 'var(--lavender-ink)' }}>{weekend ? 'Ta semaine' : 'Ta semaine dernière'}</span>
         </span>
         <button onClick={close} aria-label="Masquer" style={{ border: 'none', background: 'none', color: 'var(--lavender-ink)', display: 'grid', padding: 10, margin: -10 }}>{Icon.cross(16)}</button>
       </span>
@@ -196,13 +197,15 @@ function Recap({ stats }: { stats: Stats }) {
         ))}
       </span>
       <span style={{ fontSize: 14, color: 'var(--lavender-ink)', lineHeight: 1.4 }}>
-        {w.active_days >= 5 ? 'Une semaine solide. On garde ce rythme ?' : w.active_days >= 3 ? 'Beau rythme. Un jour de plus cette semaine ?' : 'Chaque leçon compte. On vise un jour de plus cette semaine ?'}
+        {weekend
+          ? w.active_days >= 5 ? 'Une semaine solide. Tu finis en beauté ?' : w.active_days >= 3 ? 'Beau rythme. Une leçon ce week-end pour boucler ?' : 'C’est déjà ça. Une leçon ce week-end pour finir la semaine ?'
+          : w.active_days >= 5 ? 'Une semaine solide. On garde ce rythme ?' : w.active_days >= 3 ? 'Beau rythme. Un jour de plus cette semaine ?' : 'Chaque leçon compte. On vise un jour de plus cette semaine ?'}
       </span>
     </motion.section>
   )
 }
 
-/** Monday → Sunday as day tiles: caramel when a lesson was done, sky when the freeze saved it, dark for today. */
+/** Monday → Sunday as day tiles: caramel when a lesson was done, sky when the freeze saved it, a caramel ring for today. */
 function Week({ week, frozen }: { week?: boolean[]; frozen?: string[] }) {
   const todayIdx = (new Date().getDay() + 6) % 7
   const mon = monday()
@@ -218,8 +221,8 @@ function Week({ week, frozen }: { week?: boolean[]; frozen?: string[] }) {
         const isToday = i === todayIdx
         const saved = !done && frozenIdx.has(i)
         const future = i > todayIdx
-        const bg = done ? 'var(--primary)' : saved ? 'var(--sky)' : isToday ? 'var(--ink)' : 'var(--surface)'
-        const fg = done ? '#fff' : saved ? 'var(--sky-ink)' : isToday ? 'var(--on-ink)' : future ? 'var(--faint)' : 'var(--muted)'
+        const bg = done ? 'var(--primary)' : saved ? 'var(--sky)' : 'var(--surface)'
+        const fg = done ? '#fff' : saved ? 'var(--sky-ink)' : isToday ? 'var(--primary)' : future ? 'var(--faint)' : 'var(--muted)'
         return (
           <motion.span
             key={i}
@@ -237,7 +240,7 @@ function Week({ week, frozen }: { week?: boolean[]; frozen?: string[] }) {
               gap: 1,
               background: bg,
               color: fg,
-              boxShadow: isToday ? '0 0 0 3px var(--bg), 0 0 0 5px var(--ink)' : 'none',
+              boxShadow: isToday ? (done ? '0 0 0 3px var(--bg), 0 0 0 5px var(--primary)' : 'inset 0 0 0 2.5px var(--primary)') : 'none',
               fontSize: 12,
               fontWeight: 600,
               opacity: future ? 0.75 : 1,
@@ -314,25 +317,43 @@ function StreakTile({ stats, onGo }: { stats: Stats; onGo: () => void }) {
       variants={item}
       whileTap={{ scale: 0.96 }}
       onClick={onGo}
-      aria-label={`Série de ${n} jour${n > 1 ? 's' : ''}, voir mes progrès`}
+      aria-label={n === 0 ? 'Pas encore de série, voir mes progrès' : `Série de ${n} jour${n > 1 ? 's' : ''}, voir mes progrès`}
       style={{ position: 'relative', border: 'none', textAlign: 'left', borderRadius: 30, padding: 16, height: 172, background: 'var(--butter)', color: 'var(--butter-ink)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
     >
       <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, fontWeight: 700 }}>
         Série
-        <motion.span
+        {n > 0 && <motion.span
           animate={lit ? { scale: [1, 1.2, 1], rotate: [0, -8, 8, 0] } : { opacity: 0.5 }}
           transition={{ duration: 0.9, delay: 0.6 }}
           style={{ display: 'grid', filter: lit ? 'none' : 'grayscale(1)' }}
         >
           {Icon.flame}
-        </motion.span>
+        </motion.span>}
       </span>
-      <span className="hero-num" style={{ fontSize: n > 99 ? 58 : 76, color: 'var(--ink)' }}>
-        <CountUp value={n} delay={0.3} duration={1.1} />
-      </span>
-      <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>
-        {n === 0 ? 'Une leçon lance ta série' : `jour${n > 1 ? 's' : ''} d’affilée${lit ? '' : ' · à garder'}`}
-      </span>
+      {n === 0 ? (
+        <>
+          <motion.span
+            aria-hidden="true"
+            animate={{ rotate: [-4, 4, -4], scale: [1, 1.05, 1] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ display: 'grid', width: 64, height: 64, transformOrigin: '50% 90%' }}
+          >
+            <svg width="64" height="64" viewBox="0 0 24 24">
+              <path d="M12 2c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-7 0 2 1 3 2 3 0-3-1-5 1-8z" fill="none" stroke="var(--coral)" strokeWidth="1.4" strokeLinejoin="round" strokeDasharray="2.2 2" />
+            </svg>
+          </motion.span>
+          <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.2, color: 'var(--ink)' }}>Lance ta série aujourd’hui</span>
+        </>
+      ) : (
+        <>
+          <span className="hero-num" style={{ fontSize: n > 99 ? 58 : 76, color: 'var(--ink)' }}>
+            <CountUp value={n} delay={0.3} duration={1.1} />
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>
+            {`jour${n > 1 ? 's' : ''} d’affilée${lit ? '' : ' · à garder'}`}
+          </span>
+        </>
+      )}
     </motion.button>
   )
 }
@@ -371,23 +392,42 @@ function GoalTile({ stats, onGo }: { stats: Stats; onGo: () => void }) {
   )
 }
 
-/** Notions to refresh: a little fan of cards that opens when it lands. */
-function ReviewTile({ due, onGo }: { due: number; onGo: () => void }) {
+/** Notions to refresh: a little fan of cards that opens when it lands. With many due, three cards on the go. */
+function ReviewTile({ due, onGo }: { due: number; onGo: (express?: boolean) => void }) {
+  const express = due > 3
   return (
-    <motion.button
+    <motion.div
       variants={item}
       whileTap={{ scale: 0.97 }}
-      onClick={() => {
-        play('pop')
-        onGo()
-      }}
-      style={{ gridColumn: '1 / -1', border: 'none', textAlign: 'left', borderRadius: 26, padding: '0 14px 0 18px', height: 84, background: 'var(--lavender)', color: 'var(--lavender-ink)', display: 'flex', alignItems: 'center', gap: 12 }}
+      style={{ position: 'relative', gridColumn: '1 / -1', borderRadius: 26, padding: '0 14px 0 18px', minHeight: 84, background: 'var(--lavender)', color: 'var(--lavender-ink)', display: 'flex', alignItems: 'center', gap: 12 }}
     >
-      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <button
+        type="button"
+        aria-label={`Réviser ${due} notion${due > 1 ? 's' : ''}`}
+        onClick={() => {
+          play('pop')
+          onGo()
+        }}
+        style={{ position: 'absolute', inset: 0, border: 'none', borderRadius: 26, background: 'transparent' }}
+      />
+      <span style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: express ? '14px 0' : 0, pointerEvents: 'none' }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>
           {due} notion{due > 1 ? 's' : ''} à réviser
         </span>
-        <span style={{ fontSize: 14 }}>2 minutes pour les ancrer</span>
+        <span style={{ fontSize: 14 }}>{express ? `Environ ${Math.max(2, Math.round(due / 2))} minutes, ou juste 3 :` : '2 minutes pour les ancrer'}</span>
+        {express && (
+          <button
+            type="button"
+            onClick={() => {
+              play('pop')
+              onGo(true)
+            }}
+            style={{ pointerEvents: 'auto', position: 'relative', marginTop: 6, height: 34, padding: '0 14px', borderRadius: 17, border: 'none', background: 'var(--lavender-ink)', color: 'var(--lavender)', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>
+            3 cartes express
+          </button>
+        )}
       </span>
       <span aria-hidden="true" style={{ position: 'relative', width: 78, height: 50 }}>
         {[
@@ -404,7 +444,7 @@ function ReviewTile({ due, onGo }: { due: number; onGo: () => void }) {
           />
         ))}
       </span>
-    </motion.button>
+    </motion.div>
   )
 }
 

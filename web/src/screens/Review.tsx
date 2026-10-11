@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { RichText } from '../components/RichText'
@@ -33,6 +33,8 @@ function choicesFor(card: Concept, all: Concept[]): { id: string; text: string }
 /** Today's spaced review: recall the notion, reveal it, say honestly whether you knew it. */
 export function Review() {
   const nav = useNavigate()
+  // ?n=3: a quick round of a few cards from the home screen.
+  const limit = Number(useSearchParams()[0].get('n')) || undefined
   const qc = useQueryClient()
   // The session's cards are fixed once loaded, even as answers move them out of "due".
   const session = useQuery({ queryKey: ['review-session'], queryFn: Api.review, staleTime: Infinity, gcTime: 0 })
@@ -62,7 +64,9 @@ export function Review() {
   })
 
   const knew = results.filter(Boolean).length
-  const cards = session.data?.cards ?? []
+  const allCards = session.data?.cards ?? []
+  const cards = limit ? allCards.slice(0, limit) : allCards
+  const left = allCards.length - cards.length
   const card = cards[i]
   const finished = session.data && i >= cards.length
   // Every other card is a quick multiple choice: recognising beats nothing on a tired day.
@@ -138,7 +142,7 @@ export function Review() {
               ? noNotions
                 ? 'Termine ta première leçon : je garderai ses notions clés et te les ferai réviser au bon moment.'
                 : 'Tes notions sont encore fraîches. Je te les ressortirai au bon moment.'
-              : `${knew} sur ${cards.length} déjà bien en tête. Les autres reviendront demain.`}
+              : `${knew} sur ${cards.length} déjà bien en tête. ${left > 0 ? `Encore ${left} à revoir quand tu veux.` : 'Les autres reviendront demain.'}`}
           </p>
         </div>
         <div className="bottom-bar">
