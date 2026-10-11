@@ -596,9 +596,12 @@ function Plate({
         top,
         maxWidth: width,
         transform: "translateY(-50%)",
-        padding: "6px 10px",
+        padding: "7px 11px",
         borderRadius: 14,
         background: C.label,
+        boxShadow: "0 4px 14px rgba(40, 28, 16, 0.14)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
         display: "flex",
         flexDirection: "column",
         alignItems: right ? "flex-start" : "flex-end",
@@ -788,7 +791,7 @@ function MapNode({
           {done ? Icon.check(26, "#fff") : Icon.lock}
         </motion.button>
         <Plate left={label.left} top={node.y} width={label.w} right={label.onRight}>
-          <span style={{ fontSize: 13, fontWeight: done ? 700 : 600, lineHeight: 1.25, color: done ? C.ink : C.muted }}>
+          <span style={{ fontSize: 13, fontWeight: done ? 700 : 600, lineHeight: 1.25, color: done ? C.ink : "var(--ink-soft)" }}>
             {done ? node.lesson.title : `${node.index + 1} · ${node.lesson.title}`}
           </span>
           {done && (

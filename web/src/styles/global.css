@@ -58,7 +58,7 @@
   --map-bg: #fbf5ee;
   --land-bg: #faf3ea;
   --land-road: #efe3d3;
-  --land-label: rgba(250, 243, 234, 0.92);
+  --land-label: rgba(255, 250, 244, 0.97);
   --land-filter: none;
   --map-bgDeep: #f3ebe2;
   --map-ink: #1d1a17;
@@ -183,7 +183,7 @@
   --map-bg: #17130f;
   --land-bg: #17130f;
   --land-road: #2e261f;
-  --land-label: rgba(23, 19, 15, 0.86);
+  --land-label: rgba(23, 19, 15, 0.94);
   --land-filter: invert(1) hue-rotate(180deg) brightness(1.1) contrast(0.92);
   --map-bgDeep: #221c17;
   --map-ink: #f5ede4;
@@ -291,7 +291,7 @@
     --map-bg: #17130f;
     --land-bg: #17130f;
     --land-road: #2e261f;
-    --land-label: rgba(23, 19, 15, 0.86);
+    --land-label: rgba(23, 19, 15, 0.94);
     --land-filter: invert(1) hue-rotate(180deg) brightness(1.1) contrast(0.92);
     --map-bgDeep: #221c17;
     --map-ink: #f5ede4;
