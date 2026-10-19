@@ -89,6 +89,7 @@ export default function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/new" element={<NewSip />} />
               <Route path="/new/confirm" element={<Understood />} />
+              <Route path="/demo" element={<Demo signedIn />} />
               <Route path="/review" element={<Review />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/offers" element={<Offers />} />
