@@ -144,6 +144,14 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         sip.profile = profile.model_dump()
         sip.title = profile.title
     profile = LearningProfile.model_validate(sip.profile)
+    if profile.safety == "refuse":
+        # Nothing is built and the creation is given back; the note says why, kindly.
+        sip.status, sip.stage, sip.error = SipStatus.FAILED, "refused", profile.safety_note or "refused"
+        owner = await session.get(User, sip.user_id)
+        if owner is not None and owner.gen_count > 0:
+            owner.gen_count -= 1
+        await session.commit()
+        return
 
     # 1b. Big goal: write the program roadmap, this Sip becomes its first chapter.
     if sip.program_id is None and profile.breadth == "program":

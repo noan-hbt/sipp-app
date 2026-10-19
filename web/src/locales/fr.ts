@@ -764,6 +764,13 @@ export const fr = {
     lessons: (n: number, time: string) => `${n} leçons · ${time}`,
     prepare: 'Préparer ce chapitre',
   },
+  safety: {
+    refused: 'Ce sujet-là, je ne peux pas l’enseigner.',
+    help: 'Si tu traverses un moment difficile, tu peux appeler le 3114 (gratuit, 24 h/24 en France) ou le numéro d’urgence de ton pays. Tu n’es pas seul·e.',
+    other: 'Tu peux essayer un autre sujet, ou un autre angle sur celui-ci.',
+    otherTopic: 'Choisir un autre sujet',
+    age: 'En créant ton compte, tu confirmes avoir au moins 15 ans.',
+  },
   // @end
 }
 

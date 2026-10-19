@@ -763,5 +763,12 @@ export const en: Messages = {
     lessons: (n: number, time: string) => `${n} lessons · ${time}`,
     prepare: 'Prepare this chapter',
   },
+  safety: {
+    refused: 'That’s a topic I can’t teach.',
+    help: 'If you’re going through a hard time, please reach out to a local helpline or your emergency number. You’re not alone.',
+    other: 'You can try another topic, or another angle on this one.',
+    otherTopic: 'Pick another topic',
+    age: 'By creating your account, you confirm you are at least 15.',
+  },
   // @end
 }

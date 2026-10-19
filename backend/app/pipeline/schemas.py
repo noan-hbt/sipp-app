@@ -54,6 +54,20 @@ class LearningProfile(_Out):
         default_factory=list,
         description="Nearby topics the path deliberately leaves out (short labels).",
     )
+    safety: Literal["ok", "care", "refuse"] = Field(
+        default="ok",
+        description="ok = teach it fully; care = teach it fully, with one short pointer to a professional "
+        "for personal decisions (health, law, money); refuse = the request seeks real help to seriously harm "
+        "oneself or others.",
+    )
+    safety_kind: Literal["self_harm", "harm_others", "sexual_minors", "other"] | None = Field(
+        default=None, description="Only when safety is 'refuse'."
+    )
+    safety_note: str | None = Field(
+        default=None,
+        description="care: one sentence shown before the path (when to see a professional). refuse: a short, kind "
+        "message that names what Sipp can teach instead. In the learner's language.",
+    )
 
 
 # 1b. Roadmap (big goals only) -------------------------------------------------

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import HelpIn, HelpOut, InterpretIn, InterpretOut
-from app.api.sips import _own_lesson
+from app.api.sips import _own_lesson, topic_refused
 from app.auth import current_user
 from app.config import get_settings
 from app.db import get_session
@@ -59,6 +59,8 @@ async def interpret(
         )
     except LLMError as e:
         raise _unavailable() from e
+    if profile.safety == "refuse":
+        raise topic_refused(profile)
     lo, hi = s.lite_lesson_budget if plan["lite"] else s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])
     return InterpretOut(
         profile=profile.model_dump(),

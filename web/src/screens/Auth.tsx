@@ -169,6 +169,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           <Button type="submit" disabled={busy || !email || password.length < 8} sound={null} style={{ marginTop: 6 }}>
             {busy ? '…' : mode === 'login' ? t.auth.loginCta : t.auth.registerCta}
           </Button>
+          {mode === 'register' && <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>{t.safety.age}</p>}
         </motion.form>
       </div>
     </Screen>

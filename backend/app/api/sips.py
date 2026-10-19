@@ -32,6 +32,14 @@ from app.themes import theme_of
 router = APIRouter(tags=["sips"])
 
 
+def topic_refused(profile: LearningProfile) -> HTTPException:
+    """A request Sipp will not teach (real help to seriously harm oneself or others)."""
+    return HTTPException(
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        {"code": "topic_refused", "message": profile.safety_note or "", "kind": profile.safety_kind or "other"},
+    )
+
+
 async def _own_sip(session: AsyncSession, user: User, sip_id: str) -> Sip:
     sip = await session.get(Sip, sip_id)
     if sip is None or sip.user_id != user.id:
@@ -105,6 +113,8 @@ async def create_sip(
             profile = LearningProfile.model_validate(body.profile)
         except ValidationError as e:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "invalid profile") from e
+        if profile.safety == "refuse":
+            raise topic_refused(profile)
         sip.profile, sip.title = profile.model_dump(), profile.title
     count_generation(user)
     session.add(sip)
@@ -207,6 +217,8 @@ async def retry_sip(
     sip = await _own_sip(session, user, sip_id)
     if sip.status != SipStatus.FAILED:
         raise HTTPException(status.HTTP_409_CONFLICT, "sip is not in failed state")
+    if sip.stage == "refused":
+        raise topic_refused(LearningProfile.model_validate(sip.profile))
     await check_active_builds(session, user)
     await check_cost(session, user)
     program = await session.get(Program, sip.program_id) if sip.program_id else None
