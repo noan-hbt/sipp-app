@@ -70,6 +70,9 @@ export interface Profile {
   context?: string | null
   assumptions: string[]
   out_of_scope?: string[]
+  safety?: 'ok' | 'care' | 'refuse'
+  safety_note?: string | null
+  safety_kind?: string | null
 }
 export interface Interpretation {
   profile: Profile

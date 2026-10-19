@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
+import { Refusal, refusalOf } from '../components/Refusal'
 import { Screen } from '../components/Screen'
 import { RevealLines } from '../components/motion'
 import { sipPalette, topicArt } from '../components/SipIcon'
@@ -52,7 +53,8 @@ export function Understood() {
   const pal = sipPalette(`${profile.topic} ${input}`, profile.theme)
   const known = profile.prior_knowledge ?? []
   const left = profile.out_of_scope ?? []
-  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
+  const refusal = refusalOf(create.error)
+  const err = refusal ? null : create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
 
   return (
     <Screen>
@@ -158,6 +160,12 @@ export function Understood() {
           )}
         </motion.div>
 
+        {profile.safety === 'care' && profile.safety_note && (
+          // Taught in full; one line on where a professional should decide.
+          <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} style={{ borderRadius: 24, background: 'var(--sky)', color: 'var(--sky-ink)', padding: '14px 16px', fontSize: 15, lineHeight: 1.4 }}>
+            {profile.safety_note}
+          </motion.p>
+        )}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ borderRadius: 24, background: 'var(--butter)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--butter-ink)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <circle cx="12" cy="13" r="8" />
@@ -178,6 +186,7 @@ export function Understood() {
           </span>
         </motion.div>
 
+        {refusal && <Refusal info={refusal} />}
         <AnimatePresence>
           {err && (
             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 20, background: 'var(--rose-soft)' }}>

@@ -3,10 +3,11 @@ import { AnimatePresence, animate, motion, useMotionValue, useTransform, type Mo
 import { useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
+import { Refusal } from '../components/Refusal'
 import { ErrorNotice } from '../components/ErrorNotice'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
-import { Icon, IconButton } from '../components/ui'
+import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type SipDetail } from '../lib/api'
 import { duration } from '../lib/format'
 import { play } from '../lib/sound'
@@ -73,6 +74,8 @@ export function Generating() {
   const firstFailed = sip.data?.status === 'ready' && sip.data.modules[0]?.lessons[0]?.status === 'failed'
   const failed = sip.data?.status === 'failed' || firstFailed
   const readError = sip.isError || sip.isPaused
+  // A request Sipp does not teach: no retry, the kind note and another topic instead.
+  const refused = sip.data?.status === 'failed' && sip.data.stage === 'refused'
   const { phase, from, to, mapped } = progressOf(sip.data)
   const lastPhase = useRef(phase)
   const done = phase === 'done'
@@ -122,7 +125,7 @@ export function Generating() {
       <div className="scroll" style={{ position: 'relative', padding: '0 20px calc(var(--safe-bottom) + 28px)', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span className="kicker" style={{ color: bad ? 'var(--rose-ink)' : 'var(--primary)' }}>
-            {bad ? t.generating.kickerBad : phase === 'done' ? t.generating.kickerDone : t.generating.kicker}
+            {refused ? null : bad ? t.generating.kickerBad : phase === 'done' ? t.generating.kickerDone : t.generating.kicker}
           </span>
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="display" style={{ fontSize: 34, lineHeight: 1, letterSpacing: '-0.045em', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {heading}
@@ -145,6 +148,7 @@ export function Generating() {
           )}
         </div>
 
+        {!refused && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 150 }}>
           <span className="hero-num" aria-hidden="true" style={{ fontSize: 92, color: bad ? 'var(--rose-ink)' : 'var(--ink)' }}>
             <motion.span>{pct}</motion.span>
@@ -158,6 +162,7 @@ export function Generating() {
             {bad ? <Mascot mood="oops" size={130} /> : <img src={illustration(done ? 'scene-celebrate' : 'scene-brewing')} alt="" width={150} height={150} style={{ display: 'block' }} />}
           </motion.div>
         </div>
+        )}
 
         <div role="status">
         <AnimatePresence mode="wait">
@@ -170,13 +175,18 @@ export function Generating() {
             className="display"
             style={{ fontSize: 21, lineHeight: 1.15 }}
           >
-            {firstFailed ? t.generating.firstFailed : failed ? t.generating.failed : readError ? t.generating.readError : sip.data?.chapter && phase === 'read' ? t.generating.chapterRead : TITLES[phase]}
+            {refused ? t.safety.refused : firstFailed ? t.generating.firstFailed : failed ? t.generating.failed : readError ? t.generating.readError : sip.data?.chapter && phase === 'read' ? t.generating.chapterRead : TITLES[phase]}
           </motion.h2>
         </AnimatePresence>
         </div>
 
         {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? t.generating.offline : t.generating.loadFailed)} retry={() => void sip.refetch()} busy={sip.isFetching} />}
-        {failed ? (
+        {refused ? (
+          <>
+            <Refusal info={{ message: sip.data?.error || t.safety.refused, selfHarm: sip.data?.profile?.safety_kind === 'self_harm' }} />
+            <Button onClick={() => nav('/new', { replace: true })}>{t.safety.otherTopic}</Button>
+          </>
+        ) : failed ? (
           <ErrorNotice message={apiErrorMessage(retry.error, firstFailed ? t.generating.retryFirst : t.generating.retryPath)} retry={() => retry.mutate()} busy={retry.isPending} />
         ) : (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
+import { Refusal, refusalOf } from '../components/Refusal'
 import { Screen } from '../components/Screen'
 import { RevealLines } from '../components/motion'
 import { sipPalette, topicArt } from '../components/SipIcon'
@@ -80,7 +81,8 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
     onError: () => play('wrong'),
   })
   const paywall = create.error instanceof ApiError && create.error.status === 402
-  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
+  const refusal = refusalOf(create.error)
+  const err = refusal ? null : create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
   const ready = text.trim().length >= 3
 
   function pick(wish: string) {
@@ -204,6 +206,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           </div>
         </motion.div>
 
+        {refusal && <Refusal info={refusal} />}
         <AnimatePresence>
           {err && (
             <motion.div

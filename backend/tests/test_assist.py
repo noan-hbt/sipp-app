@@ -186,3 +186,41 @@ async def test_preview_reserves_budget_and_bounds_concurrency(auth_client, monke
         await asyncio.gather(first, return_exceptions=True)
         app.dependency_overrides.clear()
     assert len(fake.calls) == 1
+
+
+REFUSED = {**PROFILE, "safety": "refuse", "safety_kind": "self_harm", "safety_note": "Tu n’es pas seul·e, de l’aide existe."}
+
+
+async def test_harmful_request_is_refused_with_a_kind_note(auth_client):
+    use(FakeClient({"LearningProfile": [REFUSED]}))
+    try:
+        r = await auth_client.post("/sips/interpret", json={"input": "un sujet dangereux"})
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 422
+    assert r.json()["detail"] == {"code": "topic_refused", "message": REFUSED["safety_note"], "kind": "self_harm"}
+    # A refused profile sent back by the client is refused too, and nothing is counted.
+    assert (await auth_client.post("/sips", json={"input": "x" * 5, "profile": REFUSED})).status_code == 422
+    assert (await auth_client.get("/auth/me/plan")).json()["sips_this_month"] == 0
+
+
+async def test_care_topics_are_taught(auth_client):
+    use(FakeClient({"LearningProfile": [{**PROFILE, "safety": "care", "safety_note": "Pour ton traitement, vois ton médecin."}]}))
+    try:
+        r = await auth_client.post("/sips/interpret", json={"input": "comprendre l’insuline"})
+    finally:
+        app.dependency_overrides.clear()
+    assert r.status_code == 200 and r.json()["profile"]["safety"] == "care"
+
+
+async def test_refused_in_background_builds_nothing_and_gives_the_creation_back(auth_client):
+    sip_id = (await auth_client.post("/sips", json={"input": "un sujet dangereux"})).json()["id"]
+    assert (await auth_client.get("/auth/me/plan")).json()["sips_this_month"] == 1
+    worker = FakeClient({"LearningProfile": [REFUSED]})
+    await drain(worker)
+    sip = (await auth_client.get(f"/sips/{sip_id}")).json()
+    assert (sip["status"], sip["stage"], sip["error"]) == ("failed", "refused", REFUSED["safety_note"])
+    assert [name for name, _ in worker.calls] == ["LearningProfile"]
+    assert (await auth_client.get("/auth/me/plan")).json()["sips_this_month"] == 0
+    r = await auth_client.post(f"/sips/{sip_id}/retry")
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "topic_refused"
