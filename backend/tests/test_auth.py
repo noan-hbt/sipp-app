@@ -225,3 +225,18 @@ async def test_password_work_is_off_loop_and_bounded(monkeypatch):
         release.set()
         await asyncio.gather(first, second, return_exceptions=True)
         await asyncio.sleep(0.01)
+
+
+async def test_new_requests_to_the_ai_need_consent_once(client):
+    r = await client.post("/auth/register", json={"email": "c@b.co", "password": "password123"})
+    client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
+    assert (await client.get("/auth/me")).json()["ai_consent_at"] is None
+    for path, body in (("/sips", {"input": "taux"}), ("/sips/interpret", {"input": "taux"})):
+        refused = await client.post(path, json=body)
+        assert refused.status_code == 403 and refused.json()["detail"]["code"] == "ai_consent_required"
+
+    first = (await client.post("/auth/me/ai-consent")).json()["ai_consent_at"]
+    assert first is not None
+    again = (await client.post("/auth/me/ai-consent")).json()["ai_consent_at"]
+    assert again.rstrip("Z") == first.rstrip("Z")  # the first agreement is kept
+    assert (await client.post("/sips", json={"input": "taux"})).status_code == 202

@@ -178,6 +178,21 @@ export const fr = {
     confirm: 'C’est bien ça, on y va',
     refine: 'Préciser autre chose',
   },
+  aiConsent: {
+    kicker: 'Avant de commencer',
+    title: ['Sipp écrit tes cours', 'avec l’IA'] as [string, string],
+    points: [
+      {
+        title: 'Ce qui est envoyé',
+        body: 'Ce que tu veux apprendre, et tes questions pendant une leçon, sont envoyés à des modèles d’intelligence artificielle d’OpenAI et d’Anthropic, via le service OpenRouter, pour écrire tes leçons.',
+      },
+      { title: 'Ce qui ne l’est jamais', body: 'Ton email et ton identité ne leur sont pas transmis.' },
+      { title: 'Un conseil', body: 'N’écris pas d’informations personnelles dont tu n’as pas besoin pour apprendre (nom, santé…).' },
+    ],
+    agree: 'J’accepte, on y va',
+    logout: 'Me déconnecter',
+    failed: 'Ton accord n’a pas pu être enregistré. Réessaie.',
+  },
   generating: {
     levels: { none: 'grand débutant', beginner: 'débutant', intermediate: 'intermédiaire', advanced: 'à l’aise', expert: 'expert' } as Record<string, string>,
     phases: {

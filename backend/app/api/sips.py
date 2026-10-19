@@ -17,7 +17,7 @@ from app.api.schemas import (
     SipDetail,
     SipSummary,
 )
-from app.auth import current_user
+from app.auth import current_user, require_ai_consent
 from app.concepts import add_cards
 from app.db import get_session
 from app.jobs.queue import enqueue
@@ -93,7 +93,7 @@ def _summary(sip: Sip, lessons: list[Lesson]) -> dict:
     )
 
 
-@router.post("/sips", response_model=SipSummary, status_code=202)
+@router.post("/sips", response_model=SipSummary, status_code=202, dependencies=[Depends(require_ai_consent)])
 async def create_sip(
     body: SipCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):

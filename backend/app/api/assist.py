@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import HelpIn, HelpOut, InterpretIn, InterpretOut
 from app.api.sips import _own_lesson, topic_refused
-from app.auth import current_user
+from app.auth import current_user, require_ai_consent
 from app.config import get_settings
 from app.db import get_session
 from app.llm.client import ChatClient, LLMError, OpenRouterClient
@@ -38,7 +38,7 @@ def _unavailable() -> HTTPException:
     )
 
 
-@router.post("/sips/interpret", response_model=InterpretOut)
+@router.post("/sips/interpret", response_model=InterpretOut, dependencies=[Depends(require_ai_consent)])
 async def interpret(
     body: InterpretIn,
     user: User = Depends(current_user),
@@ -74,7 +74,7 @@ def _compact(block: dict) -> str:
     return json.dumps(block, ensure_ascii=False)
 
 
-@router.post("/lessons/{lesson_id}/help", response_model=HelpOut)
+@router.post("/lessons/{lesson_id}/help", response_model=HelpOut, dependencies=[Depends(require_ai_consent)])
 async def lesson_help(
     lesson_id: str,
     body: HelpIn,

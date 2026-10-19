@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import ChapterOut, ProgramOut, SipSummary
 from app.api.sips import _lessons, _own_sip, _summary
-from app.auth import current_user
+from app.auth import current_user, require_ai_consent
 from app.db import get_session
 from app.jobs.queue import enqueue
 from app.models import Lesson, Program, ProgramStatus, Sip, SipStatus, User, utcnow
@@ -92,7 +92,12 @@ async def delete_program(
     await session.commit()
 
 
-@router.post("/programs/{program_id}/chapters/{position}", response_model=SipSummary, status_code=202)
+@router.post(
+    "/programs/{program_id}/chapters/{position}",
+    response_model=SipSummary,
+    status_code=202,
+    dependencies=[Depends(require_ai_consent)],
+)
 async def start_chapter(
     program_id: str,
     position: int,
@@ -141,7 +146,7 @@ async def start_chapter(
     return _summary(sip, [])
 
 
-@router.post("/sips/{sip_id}/extend", response_model=ProgramOut, status_code=202)
+@router.post("/sips/{sip_id}/extend", response_model=ProgramOut, status_code=202, dependencies=[Depends(require_ai_consent)])
 async def extend_sip(
     sip_id: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):

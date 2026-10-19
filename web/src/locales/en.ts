@@ -179,6 +179,21 @@ export const en: Messages = {
     confirm: 'That’s it, let’s go',
     refine: 'Clarify something',
   },
+  aiConsent: {
+    kicker: 'Before we start',
+    title: ['Sipp writes your lessons', 'with AI'] as [string, string],
+    points: [
+      {
+        title: 'What is sent',
+        body: 'What you want to learn, and your questions during a lesson, are sent to AI models from OpenAI and Anthropic, through the OpenRouter service, to write your lessons.',
+      },
+      { title: 'What never is', body: 'Your email and your identity are not passed on to them.' },
+      { title: 'A tip', body: 'Don’t write personal information you don’t need for learning (name, health…).' },
+    ],
+    agree: 'I agree, let’s go',
+    logout: 'Log out',
+    failed: 'Your answer couldn’t be saved. Try again.',
+  },
   generating: {
     levels: { none: 'complete beginner', beginner: 'beginner', intermediate: 'intermediate', advanced: 'confident', expert: 'expert' },
     phases: {

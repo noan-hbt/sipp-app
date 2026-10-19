@@ -35,4 +35,5 @@ async def client():
 async def auth_client(client):
     r = await client.post("/auth/register", json={"email": "a@b.co", "password": "password123"})
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
+    await client.post("/auth/me/ai-consent")
     return client

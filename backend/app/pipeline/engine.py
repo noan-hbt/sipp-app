@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.jobs.queue import check_claim, enqueue
-from app.llm.client import StructuredLLM
+from app.llm.client import LLMError, StructuredLLM
 from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus, User, utcnow
 from app.pipeline import programs, prompts, solve
 from app.pipeline.checks import check_lesson, clean_mapping, normalize
@@ -476,7 +476,16 @@ async def generate_lesson(
         review, solved = await asyncio.gather(
             review_call,
             llm.generate("solve", prompts.SOLVE, solve_text, Solved, escalate=False),
+            return_exceptions=True,
         )
+        if isinstance(review, BaseException):
+            raise review
+        if isinstance(solved, BaseException):
+            # An extra check: if it cannot run, the lesson goes on with the review alone.
+            if not isinstance(solved, (LLMError, HTTPException)):
+                raise solved
+            log.warning("lesson %s: answer check skipped: %s", lesson.id, solved)
+            return checks, review, []
         return checks, review, solve.disagreements(solved, key)
 
     checks, review, disputed = await inspect(draft)
