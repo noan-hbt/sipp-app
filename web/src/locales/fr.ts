@@ -73,6 +73,8 @@ export const fr = {
     registerTitle: ['Garde ton Sip', 'au chaud.'],
     loginTitle: ['Content de', 'te revoir !'],
     registerBody: 'Crée ton compte pour retrouver ta leçon et continuer ton parcours.',
+    wishTitle: ['Dernière étape,', 'et j’écris.'] as [string, string],
+    wishBody: 'Crée ton compte : je commence ton parcours tout de suite, et tu le retrouves où que tu sois.',
     loginBody: 'Connecte-toi pour reprendre là où tu en étais.',
     registerTab: 'Créer un compte',
     loginTab: 'Se connecter',

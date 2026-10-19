@@ -157,7 +157,9 @@ def pct(values: list[float], q: float) -> float | None:
 
 HEDGES = re.compile(
     r"\b(généralement|en général|souvent|parfois|peut|peuvent|pourrait|forcément|plutôt|certain(?:e)?s?|"
-    r"generally|usually|often|sometimes|may|might|can|could|typically|some)\b",
+    r"temporairement|notamment|progressivement|éventuellement|possiblement|susceptibles?|"
+    r"generally|usually|often|sometimes|may|might|can|could|typically|some|certain|temporarily|"
+    r"notably|potentially|possibly|tends? to)\b",
     re.IGNORECASE,
 )
 
@@ -171,7 +173,7 @@ def ttfl_of(r: dict) -> float | None:
     return None
 
 
-def hedging(lesson: dict) -> float:
+def lesson_text(lesson: dict) -> str:
     words: list[str] = []
 
     def walk(v) -> None:
@@ -186,7 +188,19 @@ def hedging(lesson: dict) -> float:
                 walk(x)
 
     walk(lesson.get("blocks") or [])
-    text = " ".join(words)
+    return " ".join(words)
+
+
+NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def numbers(lesson: dict) -> int:
+    """Concrete figures quoted in the lesson (hours, percentages, doses...)."""
+    return len(NUMBER.findall(lesson_text(lesson)))
+
+
+def hedging(lesson: dict) -> float:
+    text = lesson_text(lesson)
     total = len(text.split())
     return 100 * len(HEDGES.findall(text)) / total if total else 0.0
 
@@ -209,6 +223,7 @@ def summarize(results: list[dict], args: argparse.Namespace) -> str:
     good = [l for l in all_lessons if l["status"] == "ready"]
     ttfl = [ttfl_of(r) for r in ready if ttfl_of(r) is not None and r["lessons"] and r["lessons"][0]["status"] == "ready"]
     hedges = [hedging(l) for l in good]
+    figures = [numbers(l) for l in good]
     build_cost = [sum(c["cost"] or 0 for c in r.get("calls", []) if not c["lesson"]) for r in ready]
     lesson_calls = [c for r in results for c in r.get("calls", []) if c["lesson"]]
     lesson_cost = sum(c["cost"] or 0 for c in lesson_calls) / len(all_lessons) if all_lessons else 0
@@ -222,7 +237,8 @@ def summarize(results: list[dict], args: argparse.Namespace) -> str:
         f"- Lessons ready: {len(good)}/{len(all_lessons)}; revisions: {sum(l['revisions'] or 0 for l in all_lessons)}",
         f"- Answer-key disagreements found by the solver: {len(disagreements)}; questions removed: {len(removed)}",
         f"- Time to first lesson (request to lesson ready): median {fmt_s(pct(ttfl, 0.5))}, p90 {fmt_s(pct(ttfl, 0.9))}",
-        f"- Hedging words per 100 words of lesson (generally, may, often...): {statistics.mean(hedges) if hedges else 0:.1f}",
+        f"- Hedging words per 100 words of lesson (may, some, temporarily...): {statistics.mean(hedges) if hedges else 0:.1f}",
+        f"- Figures quoted per lesson: {statistics.mean(figures) if figures else 0:.1f}",
         f"- Cost: build mean ${statistics.mean(build_cost) if build_cost else 0:.4f}, lesson mean ${lesson_cost:.4f}",
         "",
         "## Time by stage", "",

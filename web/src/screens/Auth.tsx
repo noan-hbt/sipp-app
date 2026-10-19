@@ -9,6 +9,7 @@ import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 import { t } from '../lib/i18n'
+import { WISH_KEY } from './NewSip'
 
 export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' }) {
   const nav = useNavigate()
@@ -19,6 +20,15 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const shake = useAnimationControls()
+  // Coming from the topic screen: the path is written right after sign-up, there is no lesson yet.
+  const [wish] = useState(() => {
+    try {
+      return !!sessionStorage.getItem(WISH_KEY)
+    } catch {
+      return false
+    }
+  })
+  const registerTitle = wish ? t.auth.wishTitle : t.auth.registerTitle
 
   async function submit(e?: React.FormEvent) {
     e?.preventDefault()
@@ -85,10 +95,10 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
 
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <h1 key={mode} className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={mode === 'register' ? [{ text: t.auth.registerTitle[0] }, { text: t.auth.registerTitle[1], color: 'var(--primary)' }] : [{ text: t.auth.loginTitle[0] }, { text: t.auth.loginTitle[1], color: 'var(--primary)' }]} />
+            <RevealLines lines={mode === 'register' ? [{ text: registerTitle[0] }, { text: registerTitle[1], color: 'var(--primary)' }] : [{ text: t.auth.loginTitle[0] }, { text: t.auth.loginTitle[1], color: 'var(--primary)' }]} />
           </h1>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            {mode === 'register' ? t.auth.registerBody : t.auth.loginBody}
+            {mode === 'register' ? (wish ? t.auth.wishBody : t.auth.registerBody) : t.auth.loginBody}
           </p>
         </div>
 
