@@ -1,10 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'motion/react'
 import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { TabBar } from './components/TabBar'
 import { Api, getTokens, onTokens } from './lib/api'
 import { play } from './lib/sound'
+import { AiConsent } from './screens/AiConsent'
 import { Auth } from './screens/Auth'
 import { Generating } from './screens/Generating'
 import { Home } from './screens/Home'
@@ -64,14 +65,23 @@ function usePendingWish(loggedIn: boolean) {
   }, [loggedIn, nav, qc])
 }
 
+/** Signed in but not yet agreed to AI processing: that screen comes first (nothing shows until it is known, so the
+ * home never flashes before it). Offline, the profile fails to load and the app stays usable. */
+function useNeedsAiConsent(loggedIn: boolean) {
+  const me = useQuery({ queryKey: ['me'], queryFn: Api.me, enabled: loggedIn, staleTime: Infinity })
+  return { needed: loggedIn && me.data?.ai_consent_at === null, known: !loggedIn || me.data !== undefined || me.isError }
+}
+
 export default function App() {
   const location = useLocation()
   const loggedIn = useLoggedIn()
-  usePendingWish(loggedIn)
+  const consent = useNeedsAiConsent(loggedIn)
+  usePendingWish(loggedIn && consent.known && !consent.needed)
   return (
     <div className="app">
       <AnimatePresence mode="popLayout" initial={false}>
         <Suspense key={location.pathname} fallback={null}>
+        {consent.needed ? <AiConsent /> : !consent.known ? null : (
         <Routes location={location}>
           {!loggedIn ? (
             <>
@@ -105,9 +115,10 @@ export default function App() {
             </>
           )}
         </Routes>
+        )}
         </Suspense>
       </AnimatePresence>
-      {loggedIn && <TabBar />}
+      {loggedIn && !consent.needed && <TabBar />}
     </div>
   )
 }

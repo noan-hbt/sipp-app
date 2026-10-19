@@ -30,6 +30,13 @@ export interface SipSummary {
   created_at: string
 }
 export type LessonStatus = 'pending' | 'queued' | 'generating' | 'ready' | 'failed'
+export interface Me {
+  id: string
+  email: string
+  created_at: string
+  /** When the user agreed that requests go to AI model providers; null until then. */
+  ai_consent_at: string | null
+}
 export interface LessonBrief {
   id: string
   key: string
@@ -472,7 +479,8 @@ export const Api = {
   },
   stats: ({ signal }: { signal?: AbortSignal } = {}) => api<Stats>(`/auth/me/stats?tz=${encodeURIComponent(TZ)}`, { signal }),
   deleteAccount: (password: string) => api<void>('/auth/me', { method: 'DELETE', json: { password } }),
-  me: ({ signal }: { signal?: AbortSignal } = {}) => api<{ id: string; email: string; created_at: string }>('/auth/me', { signal }),
+  me: ({ signal }: { signal?: AbortSignal } = {}) => api<Me>('/auth/me', { signal }),
+  aiConsent: () => api<Me>('/auth/me/ai-consent', { method: 'POST' }),
   plan: ({ signal }: { signal?: AbortSignal } = {}) => api<Plan>('/auth/me/plan', { signal }),
   startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
   plans: () => api<PlanInfo[]>('/auth/plans'),

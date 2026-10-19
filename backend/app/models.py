@@ -49,6 +49,8 @@ class User(TimestampMixin, Base):
     reminded_on: Mapped[str | None] = mapped_column(String(10))  # local date of the last reminder
     # Interface language ("fr" or "en"): reminders are written in it. Unset reads as French.
     language: Mapped[str | None] = mapped_column(String(8))
+    # Agreed that requests go to AI model providers (App Store 5.1.2(i)); required to send new ones.
+    ai_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RefreshToken(Base):

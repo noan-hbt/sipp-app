@@ -34,7 +34,7 @@ from app.billing import live_subscription
 from app.concepts import sync_cards
 from app.config import get_settings
 from app.db import get_session
-from app.models import ConceptCard, Lesson, Module, Note, Sip, User
+from app.models import ConceptCard, Lesson, Module, Note, Sip, User, utcnow
 from app.paddle import PaddleClient, PaddleError, get_paddle
 from app.plans import FREE_FEATURES, plan_status, start_trial
 from app.progress import stats
@@ -87,6 +87,15 @@ async def logout(body: RefreshIn, session: AsyncSession = Depends(get_session)):
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(current_user)):
+    return user
+
+
+@router.post("/me/ai-consent", response_model=UserOut)
+async def ai_consent(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
+    """The user agrees that their requests are sent to AI model providers to write lessons."""
+    if user.ai_consent_at is None:
+        user.ai_consent_at = utcnow()
+        await session.commit()
     return user
 
 

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12" # same as the Dockerfile
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Migrations apply on an empty database
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci.db
+      - name: Tests (the LLM is faked)
+        run: pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Types and build
+        run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - name: Browser tests (dev server for screens, preview for the offline PWA)
+        run: |
+          npx vite --port 5173 --host 127.0.0.1 > /tmp/dev.log 2>&1 &
+          npx vite preview --port 4173 --host 127.0.0.1 > /tmp/preview.log 2>&1 &
+          for url in http://127.0.0.1:5173 http://127.0.0.1:4173; do
+            timeout 60 sh -c "until curl -s -o /dev/null $url; do sleep 1; done"
+          done
+          npm run test:browser
+        env:
+          SIPP_CHROME: /usr/bin/google-chrome

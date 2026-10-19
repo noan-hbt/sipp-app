@@ -141,6 +141,12 @@ Rules:
   a guardrail, never a target.
 - `estimated_lessons` per module: how many ~{lesson_minutes}-minute lessons it needs.
 - Never teach topics listed in the profile's `out_of_scope`.
+- The first lessons decide whether the learner comes back. The first module opens on
+  the heart of what they asked: its first lesson already gives a real, concrete answer
+  to their own question (what cannabis does in the brain, how a lock opens, how a loan
+  costs what it costs), with only the background needed to follow it. Foundations the
+  rest of the path needs come right after, once the learner sees why they matter. Never
+  open on generic basics, history or rules that the learner did not ask about.
 - Prefer intellectual coherence over exhaustiveness. No filler modules, no generic
   "introduction" or "conclusion" modules unless they carry real content.
 - When the path is a CHAPTER of a larger program, cover ONLY this chapter's outcome.
@@ -165,6 +171,9 @@ Rules:
   module) whose concepts this lesson directly depends on. Only real dependencies, no
   chains of everything before.
 - Do not re-teach concepts already covered by earlier lessons; build on them.
+- In the first module of a path (M1), the first lesson tackles the learner's own question
+  head-on and gives a first concrete answer, explaining just enough background inline;
+  do not open on generic basics.
 - Write in the learner's language ({language}). In French, always
   address the learner as "tu", never "vous"."""
 
@@ -318,8 +327,10 @@ Check:
 - factual accuracy (most important)
 - missing concepts relative to the lesson objective and planned concepts
 - contradictions
-- useless repetition: blocks re-explaining the previous block, or two checks testing
-  the same idea (major)
+- useless repetition: a block that adds nothing to the one before it, or two checks
+  testing exactly the same point (major). Reinforcement is not repetition: an example
+  applying a concept just defined, a question on what was just taught and a recap
+  restating the lesson are expected; never flag them
 - register: French content must use "tu", never "vous" (major)
 - recap: its points cover every part of the objective
 - concepts used before being introduced (known concepts listed in context are fine)
@@ -345,7 +356,8 @@ Check:
 Verdict:
 - "pass" if there is no major or critical issue (minor issues may be listed).
 - "revise" if at least one major or critical issue exists.
-Be strict on facts, pragmatic on style. Each issue gives an actionable `fix`.
+Be strict on facts, pragmatic on style: mark major only what a learner would notice as
+a real flaw (wrong, confusing, misleading, broken); style preferences are minor. Each issue gives an actionable `fix`.
 `block_index` is 0-based. Write issue descriptions in English."""
 
 

@@ -168,3 +168,12 @@ async def current_user(
         raise unauthorized
     sentry_sdk.set_user({"id": user.id})  # id only, never the email
     return user
+
+
+async def require_ai_consent(user: User = Depends(current_user)) -> None:
+    """New requests are sent to AI model providers: only once the user agreed to it."""
+    if user.ai_consent_at is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            {"code": "ai_consent_required", "message": "agree to AI processing first"},
+        )

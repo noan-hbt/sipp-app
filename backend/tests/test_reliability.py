@@ -10,7 +10,7 @@ from app.models import Job, Lesson, Module, Sip, utcnow
 from app.pipeline import prompts
 from app.pipeline.checks import check_lesson
 from app.pipeline.schemas import LessonDraft
-from tests.fakes import DRAFT, MAPPING, FakeClient
+from tests.fakes import DRAFT, MAPPING, FakeClient, LLMError
 from tests.test_flow import drain
 
 SWIPE = {
@@ -155,3 +155,10 @@ async def test_style_issues_left_after_the_revision_do_not_fail_the_lesson(auth_
     await drain(FakeClient({"Review": [wrong, wrong]}))
     first = await _first(sip_id)
     assert first.status == "failed" and first.error == "wrong rate"
+
+
+async def test_a_failing_answer_check_does_not_fail_the_lesson(auth_client):
+    sip_id = (await auth_client.post("/sips", json={"input": "taux"})).json()["id"]
+    await drain(FakeClient({"Solved": [LLMError("provider down")] * 3}))
+    first = await _first(sip_id)
+    assert first.status == "ready" and first.review["solve"]["disagreements"] == []
