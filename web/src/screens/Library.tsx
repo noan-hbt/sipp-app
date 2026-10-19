@@ -56,7 +56,8 @@ export function Library() {
   const all = (sips.data ?? []).filter((s) => !s.program_id)
   const progs = programs.data ?? []
   const p = plan.data
-  const kept = all.filter((s) => s.status !== 'failed').length + progs.length
+  // Failed builds never take a slot (same count as the backend's).
+  const kept = all.filter((s) => s.status !== 'failed').length + progs.filter((pr) => pr.status !== 'failed').length
   const unlimited = p ? p.slots >= 1000 : false
   const free = p ? (unlimited ? 1 : Math.max(0, Math.min(p.slots - kept, 12))) : 0
   const genLeft = p ? Math.max(0, p.sips_per_month - p.sips_this_month) : 0
