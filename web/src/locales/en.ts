@@ -325,6 +325,7 @@ export const en: Messages = {
   },
   plans: {
     names: { free: 'Free', basic: 'Essential', plus: 'Plus', max: 'Team' },
+    offers: { free: 'Free plan', basic: 'Essential plan', plus: 'Plus plan', max: 'Team plan' },
   },
   help: {
     kinds: { rephrase: 'Explain it differently', simpler: 'Simpler', example: 'An example', word: 'A word I don’t know' },
@@ -398,7 +399,6 @@ export const en: Messages = {
     seeProgress: 'See my progress',
     subscription: 'Your subscription',
     trialOf: (plan: string) => `${plan} trial`,
-    planOf: (plan: string) => `${plan} plan`,
     trialRunning: 'Your trial is on',
     trialUntil: (date: string) => `Free trial · until ${date}`,
     slots: (used: number, slots: number) => `${used} / ${slots} spots`,
@@ -626,6 +626,7 @@ export const en: Messages = {
   blocks: {
     concept: 'New concept',
     example: 'Example',
+    scenario: 'Picture this',
     analogy: 'Analogy',
     like: 'like',
     image: 'The picture',

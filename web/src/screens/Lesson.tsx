@@ -453,7 +453,7 @@ export function LessonPlayer({
               setHelpOpen(true)
             }}
             className="icon-btn"
-            style={onColor ? { background: 'rgba(255,255,255,.22)', color: '#fff' } : { background: 'var(--lavender)', color: 'var(--lavender-ink)' }}
+            style={onColor ? { background: 'rgba(255,255,255,.22)', color: '#fff' } : { background: current?.type === 'swipe' ? 'var(--surface)' : 'var(--lavender)', color: 'var(--lavender-ink)' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 9a3 3 0 115 2.2c-1.2.8-2 1.4-2 2.8" />

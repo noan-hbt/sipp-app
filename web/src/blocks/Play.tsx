@@ -2,7 +2,7 @@ import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, use
 import { useEffect, useState } from 'react'
 import { Mascot } from '../components/Mascot'
 import { CountUp } from '../components/motion'
-import { RichText } from '../components/RichText'
+import { RichText, typo } from '../components/RichText'
 import { Button, Icon } from '../components/ui'
 import type * as B from '../lib/blocks'
 import { plain } from '../lib/blocks'
@@ -20,7 +20,8 @@ const withUnit = (v: string, unit?: string | null) => (unit ? `${v} ${unit}` : 
 /** Full-bleed opening on caramel (the player paints the screen): the art, then the question word by word. */
 export function Hook({ b, title, art }: { b: B.HookBlock; title?: string; art?: string }) {
   const reduce = useReducedMotion()
-  const words = b.question.split(/\s+/)
+  // Split on plain spaces only: a number and its unit ("200 000 €") animate in as one word.
+  const words = typo(b.question).split(/[ \t\n]+/)
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 14, color: '#fff', minHeight: '100%' }}>
       <div style={{ position: 'relative', height: 250, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
@@ -55,7 +56,7 @@ export function Hook({ b, title, art }: { b: B.HookBlock; title?: string; art?: 
             transition={{ type: 'spring', stiffness: 380, damping: 22, delay: 0.35 + i * 0.045 }}
             style={{ display: 'inline-block', marginRight: '0.24em' }}
           >
-            {plain(w)}
+            {typo(plain(w))}
           </motion.span>
         ))}
       </h2>
