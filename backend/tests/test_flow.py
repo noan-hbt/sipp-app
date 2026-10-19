@@ -41,6 +41,7 @@ async def test_end_to_end(auth_client, client):
     assert sip["next_lesson_id"] == lessons[0]["id"]
 
     l1 = (await auth_client.get(f"/lessons/{lessons[0]['id']}")).json()
+    assert l1["language"] == "fr"  # the voice reading it aloud follows the content
     assert l1["blocks"][-1]["type"] == "recap"
     assert l1["next_lesson_id"] == lessons[1]["id"]
 

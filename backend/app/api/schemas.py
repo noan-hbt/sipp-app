@@ -223,6 +223,7 @@ class LessonOut(BaseModel):
     stars: int | None
     next_lesson_id: str | None
     resume: dict[str, Any] | None = None
+    language: str | None = Field(default=None, description="ISO 639-1 code of the lesson's content, e.g. to pick a voice.")
 
 
 class MatchAnswer(BaseModel):
