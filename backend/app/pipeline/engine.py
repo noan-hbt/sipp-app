@@ -133,8 +133,12 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
     if sip.profile is None:
         sip.stage = "interpretation"
         await session.commit()
+        owner = await session.get(User, sip.user_id)
         profile = await llm.generate(
-            "interpretation", prompts.INTERPRETATION, sip.input_text, LearningProfile
+            "interpretation",
+            prompts.INTERPRETATION,
+            prompts.interpretation_input(sip.input_text, owner.language if owner else None),
+            LearningProfile,
         )
         await check_claim(session)
         sip.profile = profile.model_dump()

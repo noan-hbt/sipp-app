@@ -57,7 +57,15 @@ async def test_push_subscription_and_reminder_once_a_day(auth_client, monkeypatc
         assert await push.send_due_reminders(s, at_18_paris) == 1
         assert await push.send_due_reminders(s, at_18_paris + timedelta(minutes=10)) == 0
         assert await push.send_due_reminders(s, at_18_paris - timedelta(hours=1)) == 0
-    assert len(sent) == 1
+    assert len(sent) == 1 and sent[0]["body"] in push.MESSAGES["fr"]
+    # Reminders follow the interface language.
+    assert (await auth_client.put("/auth/me/settings", json={"language": "en"})).json()["language"] == "en"
+    assert (await auth_client.put("/auth/me/settings", json={"language": "de"})).status_code == 422
+    async with SessionLocal() as s:
+        await s.execute(update(User).values(reminded_on=None))
+        await s.commit()
+        assert await push.send_due_reminders(s, at_18_paris) == 1
+    assert sent[-1]["body"] in push.MESSAGES["en"]
     # A gone subscription is dropped.
     monkeypatch.setattr(push, "_send", lambda subscription, payload: 410)
     async with SessionLocal() as s:

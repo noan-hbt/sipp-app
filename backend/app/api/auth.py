@@ -121,6 +121,7 @@ def _settings_out(user: User) -> SettingsOut:
         daily_goal=user.daily_goal,
         reminder_hour=user.reminder_hour,
         timezone=user.timezone,
+        language=user.language,
         push_enabled=user.push_subscription is not None,
         push_public_key=s.vapid_public_key or None,
     )
@@ -145,6 +146,8 @@ async def put_settings(body: SettingsIn, user: User = Depends(current_user), ses
             user.timezone = body.timezone
         except (ZoneInfoNotFoundError, ValueError) as e:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown timezone") from e
+    if body.language:
+        user.language = body.language
     await session.commit()
     return _settings_out(user)
 
@@ -171,7 +174,7 @@ async def test_push(user: User = Depends(current_user), session: AsyncSession = 
     """Sends a sample reminder right away, so the learner sees what it looks like."""
     if not push.enabled() or not user.push_subscription:
         raise HTTPException(status.HTTP_409_CONFLICT, {"code": "push_off", "message": "notifications are off"})
-    await push.send(user, {"title": "Sipp", "body": "C’est comme ça que je te rappellerai ta leçon.", "url": "/"})
+    await push.send(user, {"title": "Sipp", "body": push.sample(user), "url": "/"})
     await session.commit()
 
 

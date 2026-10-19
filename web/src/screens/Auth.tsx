@@ -8,6 +8,7 @@ import { Button, Icon } from '../components/ui'
 import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
 export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' }) {
   const nav = useNavigate()
@@ -24,21 +25,15 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
     setBusy(true)
     setError(null)
     try {
-      const t = mode === 'login' ? await Api.login(email.trim(), password) : await Api.register(email.trim(), password)
+      const tokens = mode === 'login' ? await Api.login(email.trim(), password) : await Api.register(email.trim(), password)
       play('complete')
-      setTokens(t)
+      setTokens(tokens)
       track(mode === 'login' ? 'logged_in' : 'signed_up')
     } catch (err) {
       play('wrong')
       const status = err instanceof ApiError ? err.status : 0
       setError(
-        status === 401
-          ? 'Email ou mot de passe incorrect.'
-          : status === 409
-            ? 'Ce compte existe déjà, connecte-toi.'
-            : status === 422
-              ? 'Vérifie ton email, et 8 caractères minimum pour le mot de passe.'
-              : 'Impossible de joindre Sipp. Réessaie.',
+        status === 401 ? t.auth.wrong : status === 409 ? t.auth.exists : status === 422 ? t.auth.invalid : t.auth.unreachable,
       )
       void shake.start({ x: [0, -10, 10, -6, 6, 0], transition: { duration: 0.4 } })
     } finally {
@@ -79,7 +74,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
             <Mascot mood={error ? 'oops' : 'hello'} size={112} />
           </motion.span>
           <motion.button
-            aria-label="Retour"
+            aria-label={t.common.back}
             whileTap={{ scale: 0.9 }}
             onClick={() => nav('/', { replace: true })}
             style={{ position: 'absolute', left: 16, top: 'calc(var(--safe-top) + 14px)', width: 44, height: 44, borderRadius: 22, border: 'none', background: 'rgba(255,255,255,.22)', color: '#fff', display: 'grid', placeItems: 'center' }}
@@ -90,10 +85,10 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
 
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <h1 key={mode} className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={mode === 'register' ? [{ text: 'Garde ton Sip' }, { text: 'au chaud.', color: 'var(--primary)' }] : [{ text: 'Content de' }, { text: 'te revoir !', color: 'var(--primary)' }]} />
+            <RevealLines lines={mode === 'register' ? [{ text: t.auth.registerTitle[0] }, { text: t.auth.registerTitle[1], color: 'var(--primary)' }] : [{ text: t.auth.loginTitle[0] }, { text: t.auth.loginTitle[1], color: 'var(--primary)' }]} />
           </h1>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            {mode === 'register' ? 'Crée ton compte pour retrouver ta leçon et continuer ton parcours.' : 'Connecte-toi pour reprendre là où tu en étais.'}
+            {mode === 'register' ? t.auth.registerBody : t.auth.loginBody}
           </p>
         </div>
 
@@ -126,31 +121,31 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
-              <span style={{ position: 'relative' }}>{m === 'register' ? 'Créer un compte' : 'Se connecter'}</span>
+              <span style={{ position: 'relative' }}>{m === 'register' ? t.auth.registerTab : t.auth.loginTab}</span>
             </button>
           ))}
         </div>
 
         <motion.form animate={shake} onSubmit={submit} style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" autoComplete="email" inputMode="email" placeholder="toi@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label htmlFor="email">{t.auth.email}</label>
+            <input id="email" type="email" autoComplete="email" inputMode="email" placeholder={t.auth.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="password">Mot de passe</label>
+            <label htmlFor="password">{t.auth.password}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                placeholder="8 caractères minimum"
+                placeholder={t.auth.passwordPlaceholder}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{ flex: 1, minWidth: 0 }}
               />
               <button
                 type="button"
-                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
                 aria-pressed={showPassword}
                 onClick={() => setShowPassword((v) => !v)}
                 style={{ border: 'none', background: 'none', padding: 4, margin: -4, color: 'var(--muted)', display: 'grid', placeItems: 'center' }}
@@ -163,7 +158,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
               </button>
             </div>
             {mode === 'register' && password.length > 0 && password.length < 8 && (
-              <span style={{ fontSize: 12, color: 'var(--muted)' }}>Encore {8 - password.length} caractère{8 - password.length > 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{t.auth.charsLeft(8 - password.length)}</span>
             )}
           </div>
           {error && (
@@ -172,7 +167,7 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
             </motion.p>
           )}
           <Button type="submit" disabled={busy || !email || password.length < 8} sound={null} style={{ marginTop: 6 }}>
-            {busy ? '…' : mode === 'login' ? 'Je me connecte' : 'C’est parti'}
+            {busy ? '…' : mode === 'login' ? t.auth.loginCta : t.auth.registerCta}
           </Button>
         </motion.form>
       </div>

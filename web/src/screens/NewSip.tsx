@@ -10,42 +10,19 @@ import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
 // Labels name a subject to learn, never an action ("Créer sa boîte" read as "set up a company here").
-const IDEAS = [
-  { label: 'Le sommeil', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir' },
-  { label: 'L’italien', hint: 'Les phrases du quotidien', text: 'Je veux tenir une conversation simple en italien' },
-  { label: 'L’univers', hint: 'Du Big Bang aux trous noirs', text: 'Je veux comprendre l’univers, du Big Bang aux trous noirs' },
-  { label: 'Python', hint: 'Coder pas à pas, de zéro', text: 'Je veux apprendre les bases de la programmation en Python' },
-  { label: 'La compta', hint: 'Lire un bilan : actif, passif', text: 'Je veux savoir lire le bilan comptable d’une entreprise, je pars de zéro' },
-  { label: 'L’entrepreneuriat', hint: 'Un programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise' },
-]
+const IDEAS = t.newSip.ideas
 
-/** One-tap details that help the AI aim right; each appends or removes its phrase. */
-const DETAILS = [
-  { label: 'Je pars de zéro', text: 'je pars de zéro', group: 'level' },
-  { label: 'J’ai des bases', text: 'j’ai déjà des bases', group: 'level' },
-  { label: 'Pour mon travail', text: 'c’est pour mon travail', group: 'why' },
-  { label: 'Par curiosité', text: 'c’est par curiosité', group: 'why' },
-  { label: 'Le plus concret possible', text: 'avec des exemples très concrets', group: 'style' },
-]
+/** One-tap details that help the AI aim right; each appends or removes its phrase. Same group = exclusive. */
+const DETAILS = t.newSip.details
 
-const PLACEHOLDERS = [
-  'comprendre comment marche l’inflation…',
-  'parler de vin sans me ridiculiser…',
-  'apprendre les bases de Python pour mon boulot…',
-  'comprendre la mécanique quantique, simplement…',
-]
+const PLACEHOLDERS = t.newSip.placeholders
 
-export const NEW_SIP_ERRORS: Record<string, string> = {
-  daily_budget_reached: 'J’ai assez réfléchi pour aujourd’hui. On reprend demain ?',
-  too_many_active_builds: 'Je construis déjà plusieurs parcours. Attends qu’ils soient prêts.',
-  no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',
-  monthly_limit: 'Tu as utilisé tes générations du mois. Reviens le mois prochain, ou passe à l’abonnement.',
-  llm_unavailable: 'Je n’arrive pas à réfléchir pour l’instant. Réessaie dans un instant.',
-}
+export const NEW_SIP_ERRORS: Record<string, string> = t.newSip.errors
 
-const remaining = (n: number) => (n > 1 ? `${n} créations restantes` : n === 1 ? '1 création restante' : 'Plus de création ce mois-ci')
+const remaining = t.newSip.remaining
 
 export const WISH_KEY = 'sipp.wish'
 
@@ -59,8 +36,8 @@ function toggleDetail(text: string, d: string) {
       .replace(new RegExp(`[,.]?\\s*${d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'), '')
       .trim()
   }
-  const t = text.trim().replace(/[.,]$/, '')
-  return t ? `${t}, ${d}` : d.charAt(0).toUpperCase() + d.slice(1)
+  const base = text.trim().replace(/[.,]$/, '')
+  return base ? `${base}, ${d}` : d.charAt(0).toUpperCase() + d.slice(1)
 }
 
 /** `guest`: visitor not signed up yet; the wish is kept and the Sip is created right after sign-up. */
@@ -79,8 +56,8 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
   })
   const [ph, setPh] = useState(0)
   useEffect(() => {
-    const t = setInterval(() => setPh((i) => (i + 1) % PLACEHOLDERS.length), 3200)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setPh((i) => (i + 1) % PLACEHOLDERS.length), 3200)
+    return () => clearInterval(timer)
   }, [])
 
   const plan = useQuery({ queryKey: ['plan'], queryFn: Api.plan, enabled: !guest })
@@ -103,12 +80,12 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
     onError: () => play('wrong'),
   })
   const paywall = create.error instanceof ApiError && create.error.status === 402
-  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
+  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
   const ready = text.trim().length >= 3
 
-  function pick(t: string) {
+  function pick(wish: string) {
     play('pop')
-    setText(t)
+    setText(wish)
     create.reset()
     input.current?.focus()
   }
@@ -129,7 +106,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
   return (
     <Screen>
       <header className="topbar" style={{ justifyContent: 'space-between' }}>
-        <IconButton label="Fermer" onClick={() => nav(-1)}>
+        <IconButton label={t.common.close} onClick={() => nav(-1)}>
           {Icon.close}
         </IconButton>
         {!guest && plan.data && plan.data.sips_per_month < 1000 && (
@@ -143,10 +120,10 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
       <div className="scroll" style={{ padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 4px' }}>
           <h1 className="display" style={{ fontSize: 42, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: 'Qu’est-ce' }, { text: 'qu’on apprend ?', color: 'var(--primary)' }]} />
+            <RevealLines lines={[{ text: t.newSip.title[0] }, { text: t.newSip.title[1], color: 'var(--primary)' }]} />
           </h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            N’importe quel sujet. Dis-moi ce que tu veux apprendre, ton niveau et pourquoi : j’écris ton parcours de leçons sur mesure.
+            {t.newSip.body}
           </motion.p>
         </div>
 
@@ -158,7 +135,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
           style={{ borderRadius: 28, padding: 18, display: 'flex', flexDirection: 'column', gap: 12, background: 'var(--dock)', color: 'var(--dock-ink)' }}
         >
           <label htmlFor="wish" className="kicker" style={{ color: 'var(--dock-kicker)' }}>
-            Je veux…
+            {t.newSip.iWant}
           </label>
           <div style={{ position: 'relative' }}>
             <span className="display" style={{ fontSize: 23, lineHeight: 1.2, color: 'var(--dock-muted)', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} aria-hidden="true">
@@ -173,7 +150,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
             <textarea
               id="wish"
               ref={input}
-              aria-label="Ce que tu veux apprendre"
+              aria-label={t.newSip.inputLabel}
               rows={3}
               maxLength={4000}
               autoFocus
@@ -196,9 +173,9 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
                   onClick={() => {
                     play('tap')
                     // Details of the same group are exclusive (e.g. "from zero" vs "some bases").
-                    setText((t) =>
+                    setText((current) =>
                       toggleDetail(
-                        DETAILS.filter((o) => o.group === d.group && o !== d && hasDetail(t, o.text)).reduce((acc, o) => toggleDetail(acc, o.text), t),
+                        DETAILS.filter((o) => o.group === d.group && o !== d && hasDetail(current, o.text)).reduce((acc, o) => toggleDetail(acc, o.text), current),
                         d.text,
                       ),
                     )
@@ -243,7 +220,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 10, rowGap: 16 }}>
           <h2 className="display" style={{ gridColumn: '1 / -1', fontSize: 20, margin: '4px 4px 0' }}>
-            Des idées de sujets
+            {t.newSip.ideasTitle}
           </h2>
           {IDEAS.map((idea, i) => {
             const pal = sipPalette(idea.text)
@@ -269,22 +246,22 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
       <div className="bottom-bar">
         {paywall && plan.data?.trial_available ? (
           <Button variant="peach" disabled={trial.isPending} onClick={() => trial.mutate()} sound="pop">
-            {trial.isPending ? <Mascot mood="think" size={36} /> : `Essayer gratuitement ${plan.data.trial_days} jours`}
+            {trial.isPending ? <Mascot mood="think" size={36} /> : t.newSip.trial(plan.data.trial_days)}
           </Button>
         ) : (
           <Button disabled={!ready || create.isPending} onClick={submit} sound="pop">
             {create.isPending ? (
               <>
-                <Mascot mood="think" size={32} /> Je lis ta demande…
+                <Mascot mood="think" size={32} /> {t.newSip.reading}
               </>
             ) : (
-              'Construis mon parcours'
+              t.newSip.build
             )}
           </Button>
         )}
         {!guest && plan.data?.lite && !paywall && (
           <p className="muted" style={{ fontSize: 13, textAlign: 'center', marginTop: 10 }}>
-            Offre gratuite : un parcours court, préparé avec un modèle plus léger.
+            {t.newSip.lite}
           </p>
         )}
       </div>

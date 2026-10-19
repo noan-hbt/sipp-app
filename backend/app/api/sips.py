@@ -90,6 +90,9 @@ async def create_sip(
     body: SipCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)
 ):
     user = await lock_user(session, user)
+    if body.language:
+        # Remembered for reminders, and as a hint when the request alone does not tell its language.
+        user.language = body.language
     await check_active_builds(session, user)
     await check_cost(session, user)
     plan = await check_plan(session, user)

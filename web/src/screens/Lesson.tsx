@@ -18,9 +18,10 @@ import { speak, speechSupported, stopSpeaking } from '../lib/speech'
 import { useLessonResume } from '../lib/resume'
 import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
-const PRAISE = ['Bien vu !', 'Exactement !', 'Parfait !', 'Bravo !', 'Tout juste !']
-const ALMOST = ['Presque !', 'Pas tout à fait…', 'Bien tenté !']
+const PRAISE = t.lesson.praise
+const ALMOST = t.lesson.almost
 
 const HELP_HINT_KEY = 'sipp.help-hint'
 const KEEP_HINT_KEY = 'sipp.keep-hint'
@@ -64,7 +65,7 @@ export function Lesson() {
     networkMode: 'always',
     mutationFn: async ({ answers, correct, total }: Finished) => {
       await resume.queue.pause()
-      if (getSessionId() !== session) throw new DOMException('Session terminée', 'AbortError')
+      if (getSessionId() !== session) throw new DOMException('Session ended', 'AbortError')
       const r = await Api.complete(lessonId, {
         answers: toList(answers),
         score: { correct, total },
@@ -98,10 +99,10 @@ export function Lesson() {
       resume={data.completed_at ? null : resume.queue.resume ?? data.resume}
       onSave={(step, answers) => resume.queue.save({ step, answers: toList(answers) })}
       saveNotice={resume.state.status === 'error' ? (
-        <ErrorNotice message={resume.state.durable ? 'Ta progression reste sur cet appareil. Réessaie de la synchroniser.' : 'Ta progression n’est pas enregistrée. Garde cette page ouverte.'} retry={() => void resume.queue.retry()} />
+        <ErrorNotice message={resume.state.durable ? t.lesson.syncLocal : t.lesson.syncLost} retry={() => void resume.queue.retry()} />
       ) : resume.queue.resume ? (
         // Saving is silent when it works: a permanent "saved" line only takes room above the lesson.
-        <p role="status" className="sr-only">{resume.state.status === 'saving' ? 'Synchronisation de ta progression…' : 'Progression enregistrée'}</p>
+        <p role="status" className="sr-only">{resume.state.status === 'saving' ? t.lesson.syncing : t.lesson.synced}</p>
       ) : null}
       onClose={() => nav(`/sips/${data.sip_id}`, { replace: true })}
       onFinish={(f) => {
@@ -110,7 +111,7 @@ export function Lesson() {
         complete.mutate(f)
       }}
       finishing={complete.isPending}
-      finishError={complete.isError ? apiErrorMessage(complete.error, 'Ta leçon n’a pas été enregistrée. Réessaie.') : undefined}
+      finishError={complete.isError ? apiErrorMessage(complete.error, t.lesson.saveFailed) : undefined}
       onHelp={(block, kind, question) => (track('help_asked', { kind }), Api.help(lessonId, { block, kind, question }).then((r) => r.answer))}
       kept={new Set(kept.keys())}
       onKeep={(block, quote) =>
@@ -170,7 +171,7 @@ export function LessonPlayer({
   finishing,
   finishError,
   onHelp,
-  finishLabel = 'Terminer la leçon',
+  finishLabel = t.lesson.finish,
   kept,
   onKeep,
   onLockedAudio,
@@ -378,7 +379,7 @@ export function LessonPlayer({
             const was = !!kept?.has(i)
             dismissKeepHint()
             onKeep(i, blockText(current)).then(
-              () => setToast(was ? 'Retiré de ton carnet' : 'Gardé dans ton carnet'),
+              () => setToast(was ? t.lesson.removed : t.lesson.kept),
               () => {},
             )
           }}
@@ -395,11 +396,11 @@ export function LessonPlayer({
     <Screen kind="modal">
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: pageBg, transition: 'background .45s ease' }} />
       <header className="topbar" style={{ position: 'relative', gap: 8 }}>
-        <IconButton label="Quitter la leçon" onClick={onClose} style={chrome}>
+        <IconButton label={t.lesson.quit} onClick={onClose} style={chrome}>
           {Icon.close}
         </IconButton>
         {segments ? (
-          <div role="progressbar" aria-label="Avancement de la leçon" aria-valuemin={0} aria-valuemax={blocks.length} aria-valuenow={view} style={{ flex: 1, display: 'flex', gap: 4 }}>
+          <div role="progressbar" aria-label={t.lesson.progress} aria-valuemin={0} aria-valuemax={blocks.length} aria-valuenow={view} style={{ flex: 1, display: 'flex', gap: 4 }}>
             {blocks.map((_, k) => (
               <span key={k} style={{ flex: 1, height: 6, borderRadius: 3, overflow: 'hidden', background: onColor ? 'rgba(255,255,255,.3)' : 'var(--track)' }}>
                 <motion.span
@@ -416,7 +417,7 @@ export function LessonPlayer({
         )}
         {speechSupported() && (
           <motion.button
-            aria-label={listening ? 'Arrêter la lecture' : 'Écouter la leçon'}
+            aria-label={listening ? t.lesson.stopListening : t.lesson.listen}
             aria-pressed={listening}
             whileTap={{ scale: 0.9 }}
             onClick={() => {
@@ -444,7 +445,7 @@ export function LessonPlayer({
         )}
         {onHelp && (
           <motion.button
-            aria-label="Je n’ai pas compris"
+            aria-label={t.lesson.didntGetIt}
             whileTap={{ scale: 0.9 }}
             onClick={() => {
               play('tap')
@@ -471,7 +472,7 @@ export function LessonPlayer({
               onClick={dismissHint}
               style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, zIndex: 5, maxWidth: 220, padding: '10px 12px', borderRadius: '16px 4px 16px 16px', border: 'none', background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 13, fontWeight: 600, lineHeight: 1.35, textAlign: 'left', boxShadow: '0 8px 24px rgba(0,0,0,.18)' }}
             >
-              {'Un passage pas clair ? Touche « ? » : je réexplique autrement.'}
+              {t.lesson.helpHint}
             </motion.button>
           )}
         </AnimatePresence>
@@ -514,7 +515,7 @@ export function LessonPlayer({
             {view > 1 && (
               <motion.button
                 type="button"
-                aria-label="Écran précédent"
+                aria-label={t.lesson.previous}
                 whileTap={{ scale: 0.9 }}
                 onClick={back}
                 style={{ width: 56, height: 56, borderRadius: 28, border: 'none', flexShrink: 0, background: 'var(--surface)', color: 'var(--ink)', display: 'grid', placeItems: 'center' }}
@@ -527,7 +528,7 @@ export function LessonPlayer({
                 <ErrorNotice message={finishError} retry={next} busy={finishing} />
               ) : (
                 <Button onClick={next} disabled={finishing} sound={null} style={onColor ? { background: '#fff', color: '#d9622b' } : undefined}>
-                  {finishing ? <Mascot mood="think" size={36} /> : isLast ? finishLabel : current?.type === 'hook' ? 'Je veux savoir' : 'Continuer'}
+                  {finishing ? <Mascot mood="think" size={36} /> : isLast ? finishLabel : current?.type === 'hook' ? t.lesson.wantToKnow : t.home.continue}
                 </Button>
               )}
             </div>
@@ -574,7 +575,7 @@ export function LessonPlayer({
                 className="display"
                 style={{ flex: 1, fontSize: 30, lineHeight: 1, letterSpacing: '-0.04em' }}
               >
-                {tone === 'good' ? PRAISE[view % PRAISE.length] : tone === 'bad' ? ALMOST[view % ALMOST.length] : 'Voilà ce que j’attendais'}
+                {tone === 'good' ? PRAISE[view % PRAISE.length] : tone === 'bad' ? ALMOST[view % ALMOST.length] : t.lesson.expected}
               </motion.span>
               {tone === 'good' && combo >= 2 && (
                 <motion.span
@@ -584,7 +585,7 @@ export function LessonPlayer({
                   style={{ height: 34, padding: '0 12px', borderRadius: 17, background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: 14, flexShrink: 0 }}
                 >
                   <Flame size={14} />
-                  {combo} d’affilée
+                  {t.lesson.combo(combo)}
                 </motion.span>
               )}
             </div>
@@ -597,7 +598,7 @@ export function LessonPlayer({
               <RichText text={fb.explanation} />
             </p>
             <Button onClick={next} disabled={finishing} style={{ marginTop: 4, background: '#fff', color: sheet.ink }}>
-              {isLast ? finishLabel : tone === 'bad' ? 'Compris' : 'Continuer'}
+              {isLast ? finishLabel : tone === 'bad' ? t.lesson.understood : t.home.continue}
             </Button>
           </motion.section>
         )}
@@ -613,8 +614,8 @@ export function LessonPlayer({
             onClick={dismissKeepHint}
             style={{ position: 'absolute', left: '50%', bottom: 'calc(var(--safe-bottom) + 104px)', zIndex: 20, maxWidth: 'calc(100% - 48px)', width: 'max-content', padding: '10px 14px', borderRadius: 16, background: 'var(--ink)', color: 'var(--on-ink)', fontSize: 14, fontWeight: 600, lineHeight: 1.35, textAlign: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
           >
-            <Bookmark size={14} filled={!!toast && toast.startsWith('Gardé')} />
-            {toast ?? 'Astuce : appuie longuement sur un passage pour le garder dans ton carnet.'}
+            <Bookmark size={14} filled={toast === t.lesson.kept} />
+            {toast ?? t.lesson.keepHint}
           </motion.div>
         )}
       </AnimatePresence>
@@ -654,7 +655,7 @@ function ComboBadge({ combo }: { combo: number }) {
           style={{ position: 'absolute', left: '50%', top: 'calc(100% + 4px)', zIndex: 6, height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--ink)', color: 'var(--on-ink)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', boxShadow: '0 10px 24px rgba(0,0,0,.18)' }}
         >
           <Flame size={15} />
-          {shown} d’affilée !
+          {t.lesson.comboShout(shown)}
         </motion.span>
       )}
     </AnimatePresence>
@@ -747,7 +748,7 @@ function Keepable({ kept, onToggle, children }: { kept: boolean; onToggle: () =>
       <button
         type="button"
         aria-pressed={kept}
-        aria-label={kept ? 'Retirer ce passage de mon carnet' : 'Garder ce passage dans mon carnet'}
+        aria-label={kept ? t.lesson.unkeepLabel : t.lesson.keepLabel}
         onClick={onToggle}
         className={kept ? undefined : 'sr-only'}
         style={kept ? { position: 'absolute', top: -6, right: 10, width: 26, height: 32, border: 'none', padding: 0, borderRadius: '0 0 6px 6px', background: 'var(--sun)', color: 'var(--butter-ink)', display: 'grid', placeItems: 'center', clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%)' } : undefined}
@@ -762,7 +763,7 @@ function Preparing({ failed, title, error, onClose, onRetry, busy }: { failed: b
   return (
     <Screen kind="modal">
       <header className="topbar">
-        <IconButton label="Fermer" onClick={onClose}>
+        <IconButton label={t.common.close} onClick={onClose}>
           {Icon.close}
         </IconButton>
       </header>
@@ -770,7 +771,7 @@ function Preparing({ failed, title, error, onClose, onRetry, busy }: { failed: b
         <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
           <Mascot mood={failed ? 'oops' : 'think'} size={104} />
         </div>
-        <h1 className="title-l">{failed ? 'Cette leçon m’a résisté' : 'Je prépare ta leçon…'}</h1>
+        <h1 className="title-l">{failed ? t.lesson.failed : t.lesson.preparing}</h1>
         {title && (
           <p className="muted" style={{ fontSize: 16 }}>
             {title}
@@ -787,7 +788,7 @@ function Preparing({ failed, title, error, onClose, onRetry, busy }: { failed: b
             </motion.div>
           </div>
         )}
-        {failed && <ErrorNotice message={apiErrorMessage(error, 'Ta leçon n’a pas pu se charger. Réessaie.')} retry={onRetry} busy={busy} />}
+        {failed && <ErrorNotice message={apiErrorMessage(error, t.lesson.loadFailed)} retry={onRetry} busy={busy} />}
       </div>
     </Screen>
   )

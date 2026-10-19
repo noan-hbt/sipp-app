@@ -12,10 +12,11 @@ import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type Concept } from '../lib/api'
 import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
 function ago(iso: string) {
   const days = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000))
-  return days === 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `il y a ${days} jours`
+  return t.review.ago(days)
 }
 
 /** Two other notions' definitions next to the right one, same Sip first. Stable for a card. */
@@ -94,13 +95,13 @@ export function Review() {
     return (
       <Screen kind="modal">
         <header className="topbar">
-          <IconButton label="Quitter la révision" onClick={close}>{Icon.close}</IconButton>
+          <IconButton label={t.review.quit} onClick={close}>{Icon.close}</IconButton>
         </header>
         <div style={{ flex: 1, display: 'grid', alignContent: 'center', justifyItems: 'center', gap: 18, padding: '0 24px' }}>
           <Mascot mood={session.isError || session.isPaused ? 'oops' : 'think'} size={104} />
           {session.isError || session.isPaused || !session.isPending ? (
-            <ErrorNotice message={apiErrorMessage(session.error, session.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Tes cartes n’ont pas pu se charger. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />
-          ) : <p className="muted">Je charge tes cartes…</p>}
+            <ErrorNotice message={apiErrorMessage(session.error, session.isPaused ? t.generating.offline : t.review.loadFailed)} retry={() => void session.refetch()} busy={session.isFetching} />
+          ) : <p className="muted">{t.review.loading}</p>}
         </div>
       </Screen>
     )
@@ -136,18 +137,18 @@ export function Review() {
               ))}
             </div>
           )}
-          <h1 className="title-xl">{empty ? (noNotions ? 'Pas encore de notions' : 'Rien à réviser') : 'Révision finie !'}</h1>
+          <h1 className="title-xl">{empty ? (noNotions ? t.review.noNotions : t.review.nothing) : t.review.done}</h1>
           <p className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
             {empty
               ? noNotions
-                ? 'Termine ta première leçon : je garderai ses notions clés et te les ferai réviser au bon moment.'
-                : 'Tes notions sont encore fraîches. Je te les ressortirai au bon moment.'
-              : `${knew} sur ${cards.length} déjà bien en tête. ${left > 0 ? `Encore ${left} à revoir quand tu veux.` : 'Les autres reviendront demain.'}`}
+                ? t.review.noNotionsBody
+                : t.review.nothingBody
+              : t.review.doneBody(knew, cards.length, left)}
           </p>
         </div>
         <div className="bottom-bar">
           <Button onClick={close} sound="pop">
-            {empty ? 'Retour' : 'Terminer'}
+            {empty ? t.common.back : t.review.finish}
           </Button>
         </div>
       </Screen>
@@ -157,19 +158,19 @@ export function Review() {
   return (
     <Screen kind="modal" bg="var(--lavender)">
       <header className="topbar">
-        <IconButton label="Quitter la révision" onClick={close}>
+        <IconButton label={t.review.quit} onClick={close}>
           {Icon.close}
         </IconButton>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
           <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>
-            Révision · {i + 1} sur {cards.length}
+            {t.review.counter(i + 1, cards.length)}
           </span>
           <span style={{ display: 'flex' }}>
-            <LiquidBar value={i / cards.length} height={8} color="var(--lavender-ink)" track="var(--frost)" delay={0} label="Avancement de la révision" />
+            <LiquidBar value={i / cards.length} height={8} color="var(--lavender-ink)" track="var(--frost)" delay={0} label={t.review.progress} />
           </span>
         </div>
       </header>
-      {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, 'Tes cartes n’ont pas pu être actualisées. Réessaie.')} retry={() => void session.refetch()} busy={session.isFetching} />}
+      {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, t.review.refreshFailed)} retry={() => void session.refetch()} busy={session.isFetching} />}
 
       <div style={{ flex: 1, padding: '30px 22px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ position: 'relative', flex: 1, maxHeight: 520, perspective: 1400 }}>
@@ -196,15 +197,15 @@ export function Review() {
       </div>
 
       <div style={{ padding: '30px 16px calc(var(--safe-bottom) + 24px)' }}>
-        {answer.isError && <ErrorNotice message={apiErrorMessage(answer.error, 'Ta réponse n’a pas été enregistrée. Réessaie.')} retry={() => rate(answer.variables!.k)} busy={answer.isPending} />}
+        {answer.isError && <ErrorNotice message={apiErrorMessage(answer.error, t.review.answerFailed)} retry={() => rate(answer.variables!.k)} busy={answer.isPending} />}
         {choices ? (
           picked && picked !== card.id ? (
             <Button variant="soft" onClick={() => rate(false)} disabled={answer.isPending} style={{ background: 'var(--rose)', color: 'var(--rose-ink)', boxShadow: 'none' }}>
-              Compris, je la reverrai
+              {t.review.gotIt}
             </Button>
           ) : (
             <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)', minHeight: 56, display: 'grid', placeItems: 'center' }}>
-              {picked ? 'Bien vu !' : 'Touche la bonne définition.'}
+              {picked ? t.review.right : t.review.tapRight}
             </p>
           )
         ) : shown ? (
@@ -213,15 +214,15 @@ export function Review() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" />
               </svg>
-              À revoir
+              {t.notebook.due}
             </Button>
             <Button variant="mint" onClick={() => rate(true)} disabled={answer.isPending || leaving !== null} style={{ height: 62, borderRadius: 31 }}>
-              {Icon.check(18)} Je savais
+              {Icon.check(18)} {t.review.knew}
             </Button>
           </div>
         ) : (
           <Button onClick={flip} style={{ height: 62, borderRadius: 31 }}>
-            Retourner la carte
+            {t.review.flip}
           </Button>
         )}
       </div>
@@ -263,7 +264,7 @@ function FlashCard({ card, choices, shown, leaving, picked, onFlip, onPick, onRa
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <img src={topicArt(card.sip_title)} alt="" width={30} height={30} style={{ flexShrink: 0 }} />
       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', lineHeight: 1.3 }}>
-        {card.sip_title} · vue {ago(card.last_reviewed_at ?? card.learned_at)}
+        {card.sip_title} · {t.review.seen(ago(card.last_reviewed_at ?? card.learned_at))}
       </span>
     </div>
   )
@@ -298,11 +299,11 @@ function FlashCard({ card, choices, shown, leaving, picked, onFlip, onPick, onRa
         {choices ? (
           <article className="scroll" style={face}>
             {meta}
-            <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Quelle définition ?</span>
+            <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>{t.review.which}</span>
             <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
               <RichText text={card.name} />
             </h1>
-            <div role="radiogroup" aria-label="Choisis la bonne définition" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div role="radiogroup" aria-label={t.review.pick} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {choices.map((o) => {
                 const right = o.id === card.id
                 const state = !picked ? 'idle' : right ? 'right' : o.id === picked ? 'wrong' : 'idle'
@@ -343,17 +344,17 @@ function FlashCard({ card, choices, shown, leaving, picked, onFlip, onPick, onRa
                   animate={reduce ? {} : { y: [0, -6, 0] }}
                   transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Tu te souviens ?</span>
+                <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>{t.review.remember}</span>
                 <h1 className="display" style={{ fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em' }}>
                   <RichText text={card.name} />
                 </h1>
               </div>
-              <span style={{ fontSize: 14, color: 'var(--faint)', textAlign: 'center' }}>Dis-la avec tes mots dans ta tête, puis retourne la carte.</span>
+              <span style={{ fontSize: 14, color: 'var(--faint)', textAlign: 'center' }}>{t.review.sayIt}</span>
             </article>
             <article aria-hidden={!shown} className="scroll" style={{ ...face, transform: 'rotateY(180deg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', minHeight: 34 }}>
-                <motion.span style={{ ...stamp, opacity: no, rotate: -10, background: 'var(--rose)', color: 'var(--rose-ink)' }}>À REVOIR</motion.span>
-                <motion.span style={{ ...stamp, opacity: yes, rotate: 10, background: 'var(--mint)', color: 'var(--mint-ink)' }}>JE SAVAIS</motion.span>
+                <motion.span style={{ ...stamp, opacity: no, rotate: -10, background: 'var(--rose)', color: 'var(--rose-ink)' }}>{t.review.stampNo}</motion.span>
+                <motion.span style={{ ...stamp, opacity: yes, rotate: 10, background: 'var(--mint)', color: 'var(--mint-ink)' }}>{t.review.stampYes}</motion.span>
               </div>
               <h2 className="display" style={{ fontSize: 26, lineHeight: 1.05, letterSpacing: '-0.035em' }}>
                 <RichText text={card.name} />
@@ -366,7 +367,7 @@ function FlashCard({ card, choices, shown, leaving, picked, onFlip, onPick, onRa
                   <RichText text={card.explanation} />
                 </p>
               )}
-              <span style={{ marginTop: 'auto', fontSize: 13, color: 'var(--faint)', textAlign: 'center' }}>Glisse à droite si tu savais, à gauche pour la revoir.</span>
+              <span style={{ marginTop: 'auto', fontSize: 13, color: 'var(--faint)', textAlign: 'center' }}>{t.review.swipeHint}</span>
             </article>
           </>
         )}

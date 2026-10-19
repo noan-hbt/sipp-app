@@ -10,14 +10,9 @@ import { Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type SipDetail } from '../lib/api'
 import { duration } from '../lib/format'
 import { play } from '../lib/sound'
+import { t } from '../lib/i18n'
 
-const LEVEL: Record<string, string> = {
-  none: 'grand débutant',
-  beginner: 'débutant',
-  intermediate: 'intermédiaire',
-  advanced: 'à l’aise',
-  expert: 'expert',
-}
+const LEVEL: Record<string, string> = t.generating.levels
 const MODULE_COLORS = [
   ['var(--peach-soft)', 'var(--peach-ink)'],
   ['var(--lavender)', 'var(--lavender-ink)'],
@@ -46,14 +41,7 @@ function progressOf(sip: SipDetail | undefined): { phase: Phase; from: number; t
   return { phase: 'read', from: 0.02, to: 0.15, mapped: 0 }
 }
 
-const TITLES: Record<Phase, string> = {
-  read: 'Je lis ta demande…',
-  program: 'C’est un grand projet ! Je le découpe en chapitres…',
-  plan: 'Je trace le chemin…',
-  cut: 'Je découpe en leçons…',
-  first: 'Je prépare ta première leçon…',
-  done: 'Ton parcours est prêt !',
-}
+const TITLES: Record<Phase, string> = t.generating.phases
 
 export function Generating() {
   const { sipId = '' } = useParams()
@@ -111,8 +99,8 @@ export function Generating() {
   const facts = profile
     ? [
         ...(profile.level_details.length
-          ? profile.level_details.slice(0, 2).map((d) => `${d.area} : ${LEVEL[d.level] ?? d.level}`)
-          : [`Niveau ${LEVEL[profile.current_level] ?? profile.current_level}`]),
+          ? profile.level_details.slice(0, 2).map((d) => t.speech.pair(d.area, LEVEL[d.level] ?? d.level))
+          : [t.generating.level(LEVEL[profile.current_level] ?? profile.current_level)]),
         profile.goals[0],
       ].filter(Boolean)
     : []
@@ -120,13 +108,13 @@ export function Generating() {
   const level = useBrewLevel(from, to)
   const pct = useTransform(level, (v) => Math.round(Math.min(1, v) * 100))
   const bad = failed || readError
-  const heading = sip.data?.chapter ? `Chapitre ${sip.data.chapter} · ${sip.data.title}` : (profile?.title ?? clip(sip.data?.input_text ?? '…', 90))
+  const heading = sip.data?.chapter ? t.generating.chapter(sip.data.chapter, sip.data.title ?? '') : (profile?.title ?? clip(sip.data?.input_text ?? '…', 90))
 
   return (
     <Screen kind="fade">
       <Liquid level={level} failed={bad} />
       <header className="topbar" style={{ position: 'relative' }}>
-        <IconButton label="Fermer" onClick={() => nav('/', { replace: true })}>
+        <IconButton label={t.common.close} onClick={() => nav('/', { replace: true })}>
           {Icon.close}
         </IconButton>
       </header>
@@ -134,7 +122,7 @@ export function Generating() {
       <div className="scroll" style={{ position: 'relative', padding: '0 20px calc(var(--safe-bottom) + 28px)', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span className="kicker" style={{ color: bad ? 'var(--rose-ink)' : 'var(--primary)' }}>
-            {bad ? 'Petit souci' : phase === 'done' ? 'C’est prêt' : 'Ton Sip infuse'}
+            {bad ? t.generating.kickerBad : phase === 'done' ? t.generating.kickerDone : t.generating.kicker}
           </span>
           <motion.h1 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="display" style={{ fontSize: 34, lineHeight: 1, letterSpacing: '-0.045em', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {heading}
@@ -182,19 +170,19 @@ export function Generating() {
             className="display"
             style={{ fontSize: 21, lineHeight: 1.15 }}
           >
-            {firstFailed ? 'Ta première leçon m’a résisté' : failed ? 'Oups, j’ai buggé' : readError ? 'Ton parcours ne se charge pas' : sip.data?.chapter && phase === 'read' ? 'Je prépare ce chapitre…' : TITLES[phase]}
+            {firstFailed ? t.generating.firstFailed : failed ? t.generating.failed : readError ? t.generating.readError : sip.data?.chapter && phase === 'read' ? t.generating.chapterRead : TITLES[phase]}
           </motion.h2>
         </AnimatePresence>
         </div>
 
-        {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? 'Tu es hors ligne. Réessaie quand tu es connecté.' : 'Ton parcours n’a pas pu se charger. Réessaie.')} retry={() => void sip.refetch()} busy={sip.isFetching} />}
+        {readError && !failed && <ErrorNotice message={apiErrorMessage(sip.error, sip.isPaused ? t.generating.offline : t.generating.loadFailed)} retry={() => void sip.refetch()} busy={sip.isFetching} />}
         {failed ? (
-          <ErrorNotice message={apiErrorMessage(retry.error, firstFailed ? 'Relance ta première leçon pour continuer.' : 'Relance ton parcours pour continuer.')} retry={() => retry.mutate()} busy={retry.isPending} />
+          <ErrorNotice message={apiErrorMessage(retry.error, firstFailed ? t.generating.retryFirst : t.generating.retryPath)} retry={() => retry.mutate()} busy={retry.isPending} />
         ) : (
           <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {lessons > 0 && (
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)', marginLeft: 4 }}>
-                {outline.length} modules · {lessons} leçons · {duration(lessons)}
+                {t.generating.meta(outline.length, lessons, duration(lessons))}
               </span>
             )}
             {outline.length === 0
@@ -205,7 +193,7 @@ export function Generating() {
 
         {!bad && (
           <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--peach-ink)' }}>
-            Tu peux fermer l’app, je continue sans toi.
+            {t.generating.closeOk}
           </p>
         )}
       </div>

@@ -2,15 +2,16 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { haptic } from '../lib/sound'
 import { Icon } from './ui'
+import { t } from '../lib/i18n'
 
 export const TABS = [
-  { path: '/', label: 'Aujourd’hui', icon: Icon.today },
-  { path: '/library', label: 'Bibliothèque', icon: Icon.library },
-  { path: '/profile', label: 'Moi', icon: Icon.user },
+  { path: '/', label: t.tabs.today, icon: Icon.today },
+  { path: '/library', label: t.tabs.library, icon: Icon.library },
+  { path: '/profile', label: t.tabs.me, icon: Icon.user },
 ] as const
 
 export function isTabPath(path: string) {
-  return TABS.some((t) => t.path === path)
+  return TABS.some((tab) => tab.path === path)
 }
 
 const SPRING = { type: 'spring', stiffness: 520, damping: 40 } as const
@@ -37,7 +38,7 @@ export function TabBar() {
       }}
     >
       <nav
-        aria-label="Navigation principale"
+        aria-label={t.tabs.nav}
         style={{
           flex: 1,
           height: 64,
@@ -49,20 +50,20 @@ export function TabBar() {
           boxShadow: 'var(--nav-shadow), inset 0 0 0 1px var(--nav-line)',
         }}
       >
-        {TABS.map((t) => {
-          const active = pathname === t.path
+        {TABS.map((tab) => {
+          const active = pathname === tab.path
           return (
             <motion.button
-              key={t.path}
+              key={tab.path}
               layout
               transition={SPRING}
-              aria-label={t.label}
+              aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
               whileTap={{ scale: 0.92 }}
               onClick={() => {
                 if (active) return
                 haptic()
-                nav(t.path, { replace: true })
+                nav(tab.path, { replace: true })
               }}
               style={{
                 flex: active ? '1.9 1 0' : '1 1 0',
@@ -82,7 +83,7 @@ export function TabBar() {
             >
               {active && <motion.span layoutId="tab-pill" style={{ position: 'absolute', inset: 0, borderRadius: 25, background: 'var(--nav-pill)' }} transition={SPRING} />}
               <motion.span layout="position" style={{ position: 'relative', display: 'grid' }}>
-                {t.icon}
+                {tab.icon}
               </motion.span>
               <AnimatePresence initial={false}>
                 {active && (
@@ -94,7 +95,7 @@ export function TabBar() {
                     style={{ position: 'relative', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                     aria-hidden="true"
                   >
-                    {t.label}
+                    {tab.label}
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -103,7 +104,7 @@ export function TabBar() {
         })}
       </nav>
       <motion.button
-        aria-label="Apprendre quelque chose de nouveau"
+        aria-label={t.tabs.newSip}
         onClick={() => {
           haptic()
           nav('/new')

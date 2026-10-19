@@ -47,7 +47,9 @@ function setup() {
   }
   globalThis.fetch = async () => { throw new TypeError('offline') }
   const api = {}
-  new Function('exports', code)(api)
+  // api.ts only needs the error texts and the language from i18n.
+  const i18n = { lang: 'fr', t: { errors: { unreachable: 'Impossible de joindre Sipp.', codes: {} } } }
+  new Function('exports', 'require', code)(api, (name) => (name === './i18n' ? i18n : createRequire(import.meta.url)(name)))
   return { ...api, stores, storage, events }
 }
 

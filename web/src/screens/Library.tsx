@@ -13,23 +13,23 @@ import { play } from '../lib/sound'
 import { chapterState, nextChapter } from './ProgramView'
 import { HScroll } from '../components/HScroll'
 import { RevealLines } from '../components/motion'
+import { t, locale, plural } from '../lib/i18n'
 
 const Notebook = lazy(() => import('./Notebook').then((m) => ({ default: m.Notebook })))
 const Notes = lazy(() => import('./Notes').then((m) => ({ default: m.Notes })))
 
-const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
-
+/** "1er juillet" / "July 1": when the monthly creations come back. */
 function nextMonth() {
   const d = new Date()
-  return `1er ${MONTHS[(d.getMonth() + 1) % 12]}`
+  return t.library.firstOf(new Date(d.getFullYear(), d.getMonth() + 1, 1).toLocaleDateString(locale, { month: 'long' }))
 }
 
 type Filter = 'all' | 'progress' | 'programs' | 'done'
 const FILTERS: [Filter, string][] = [
-  ['all', 'Tout'],
-  ['progress', 'En cours'],
-  ['programs', 'Programmes'],
-  ['done', 'Terminés'],
+  ['all', t.library.filters.all],
+  ['progress', t.library.filters.progress],
+  ['programs', t.library.filters.programs],
+  ['done', t.library.filters.done],
 ]
 
 const sipDone = (s: SipSummary) => s.progress.total > 0 && s.progress.completed >= s.progress.total
@@ -72,15 +72,15 @@ export function Library() {
     <Screen kind="fade">
       <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 4px' }}>
         <h1 className="display" style={{ fontSize: 40, lineHeight: 0.98, letterSpacing: '-0.045em' }}>
-          <RevealLines lines={[{ text: 'Ta bibliothèque' }]} />
+          <RevealLines lines={[{ text: t.library.title }]} />
         </h1>
       </header>
-      <div role="tablist" aria-label="Bibliothèque" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
+      <div role="tablist" aria-label={t.tabs.library} style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
         {(
           [
-            ['sips', 'Mes Sips'],
-            ['notions', 'Notions'],
-            ['notes', 'Notes'],
+            ['sips', t.library.tabs.sips],
+            ['notions', t.library.tabs.notions],
+            ['notes', t.library.tabs.notes],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -109,13 +109,13 @@ export function Library() {
         </Suspense>
       ) : (
         <div className="scroll" style={{ padding: '10px 16px 130px' }}>
-          {(offline || failed) && <ErrorNotice message={offline ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ta bibliothèque.' : 'Impossible d’actualiser ta bibliothèque. Réessaie.'} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
-          {loading && <p className="muted" role="status" style={{ margin: '12px 0' }}>Chargement de ta bibliothèque…</p>}
+          {(offline || failed) && <ErrorNotice message={offline ? t.library.offline : t.library.failed} retry={() => { queries.forEach((q) => { void q.refetch() }) }} busy={queries.some((q) => q.isFetching)} />}
+          {loading && <p className="muted" role="status" style={{ margin: '12px 0' }}>{t.library.loading}</p>}
           {p && loaded && (
             <div style={{ borderRadius: 22, background: 'var(--lavender)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 600, color: 'var(--lavender-ink)' }}>
-                <span>{unlimited ? `${kept} Sips gardés` : `${kept} place${kept > 1 ? 's' : ''} prise${kept > 1 ? 's' : ''} sur ${p.slots}`}</span>
-                <span style={{ fontWeight: 500 }}>{p.sips_per_month >= 1000 ? 'Créations illimitées' : `${genLeft} création${genLeft > 1 ? 's' : ''} restante${genLeft > 1 ? 's' : ''} ce mois`}</span>
+                <span>{unlimited ? t.library.kept(kept) : t.library.slotsUsed(kept, p.slots)}</span>
+                <span style={{ fontWeight: 500 }}>{p.sips_per_month >= 1000 ? t.library.unlimited : t.library.creationsLeft(genLeft)}</span>
               </div>
               {!unlimited && (
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(p.slots, 15)}, minmax(0, 1fr))`, gap: 5 }}>
@@ -170,7 +170,7 @@ export function Library() {
               <motion.div variants={item} style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '24px 0', textAlign: 'center' }}>
                 <img src={illustration('scene-empty')} alt="" width={150} height={150} />
                 <span className="muted" style={{ fontSize: 15 }}>
-                  Rien ici pour l’instant.
+                  {t.library.nothing}
                 </span>
               </motion.div>
             )}
@@ -188,7 +188,7 @@ function ProgramTile({ program: p, index, onOpen }: { program: Program; index: n
   const done = p.chapters.filter((c) => chapterState(c, next) === 'done').length
   const current = p.chapters.find((c) => chapterState(c, next) !== 'done')
   const generating = p.status === 'generating'
-  const name = p.title ?? 'Programme'
+  const name = p.title ?? t.library.program
   const pal = sipPalette(name, p.theme)
   return (
     <Tile
@@ -200,7 +200,7 @@ function ProgramTile({ program: p, index, onOpen }: { program: Program; index: n
       ink={pal.ink}
       metaColor={generating ? 'var(--muted)' : undefined}
       art={generating ? <Mascot mood="think" size={80} /> : <img src={topicArt(name, p.theme)} alt="" width={98} height={98} draggable={false} />}
-      meta={generating ? 'Je dessine la suite…' : current ? `Chapitre ${current.position} sur ${p.chapters.length}` : 'Programme terminé'}
+      meta={generating ? t.library.drawing : current ? t.library.chapterOf(current.position, p.chapters.length) : t.library.programDone}
       progress={generating ? null : done / Math.max(1, p.chapters.length)}
     />
   )
@@ -237,9 +237,9 @@ function EmptySlot({ free, canGenerate, compact, onClick }: { free: number; canG
         {Icon.plus}
       </span>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? 'Nouveau Sip' : free > 1 ? 'Places libres' : 'Place libre'}</span>
+        <span style={{ fontSize: 16, fontWeight: 600, color: canGenerate ? 'var(--ink)' : 'var(--muted)' }}>{canGenerate ? t.library.newSip : plural(free, t.library.freeSlot, t.library.freeSlots)}</span>
         <span style={{ fontSize: 13 }}>
-          {canGenerate ? (free > 1 ? `${free} places t’attendent` : 'Une place t’attend') : `Nouvelle création le ${nextMonth()}`}
+          {canGenerate ? t.library.slotsWaiting(free) : t.library.nextCreation(nextMonth())}
         </span>
       </div>
     </motion.button>
@@ -257,8 +257,8 @@ function UpsellSlot({ plan, onClick }: { plan: Plan; onClick: () => void }) {
     >
       <img src={illustration('scene-full')} alt="" width={56} height={56} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={{ fontSize: 16, fontWeight: 600 }}>Plus de places</span>
-        <span style={{ fontSize: 13 }}>{plan.trial_available ? `Essai gratuit de ${plan.trial_days} jours` : 'Avec un abonnement'}</span>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>{t.library.moreSlots}</span>
+        <span style={{ fontSize: 13 }}>{plan.trial_available ? t.library.trial(plan.trial_days) : t.library.withSub}</span>
       </div>
     </motion.button>
   )

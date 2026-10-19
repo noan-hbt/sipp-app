@@ -54,7 +54,9 @@ async def interpret(
     if plan["lite"]:
         llm = dataclasses.replace(llm, lite=True)
     try:
-        profile = await llm.generate("interpretation", prompts.INTERPRETATION, body.input.strip(), LearningProfile)
+        profile = await llm.generate(
+            "interpretation", prompts.INTERPRETATION, prompts.interpretation_input(body.input.strip(), body.language), LearningProfile
+        )
     except LLMError as e:
         raise _unavailable() from e
     lo, hi = s.lite_lesson_budget if plan["lite"] else s.lesson_budget.get(profile.scope, s.lesson_budget["standard"])

@@ -14,6 +14,7 @@ import { LESSON_MINUTES } from '../lib/format'
 import { shareSip } from '../lib/share'
 import { haptic, play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
 type DoneState = CompleteOut & {
   correct: number
@@ -86,7 +87,7 @@ export function Takeaways({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: mastered ? 'var(--mint-ink)' : 'var(--muted)' }}>
-          {mastered ? <>{Icon.check(14)} Objectif atteint</> : 'Objectif de la leçon'}
+          {mastered ? <>{Icon.check(14)} {t.home.goalReached}</> : t.done.objective}
         </span>
         <p style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>
           <RichText text={objective} />
@@ -94,7 +95,7 @@ export function Takeaways({
       </div>
       {points.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>À retenir</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>{t.speech.remember}</span>
           {points.map((p) => (
             <p key={p} style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--ink-soft)', paddingLeft: 14, position: 'relative' }}>
               <span style={{ position: 'absolute', left: 0, top: 9, width: 6, height: 6, borderRadius: 3, background: 'var(--primary)' }} />
@@ -105,7 +106,7 @@ export function Takeaways({
       )}
       {action && (
         <div style={{ borderRadius: 18, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--lavender)' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>À essayer aujourd’hui</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>{t.done.tryToday}</span>
           <p style={{ fontSize: 15, lineHeight: 1.45 }}>
             <RichText text={action} />
           </p>
@@ -115,7 +116,7 @@ export function Takeaways({
   )
 }
 
-const FEELINGS: [Feeling, string][] = [['easy', 'Trop facile'], ['ok', 'Parfait'], ['hard', 'Trop dur']]
+const FEELINGS: [Feeling, string][] = [['easy', t.done.feelings.easy], ['ok', t.done.feelings.ok], ['hard', t.done.feelings.hard]]
 
 /** How the lesson felt: too easy / too hard tunes the next lessons of the Sip. */
 function FeelingCard({ lessonId, delay }: { lessonId: string; delay: number }) {
@@ -126,7 +127,7 @@ function FeelingCard({ lessonId, delay }: { lessonId: string; delay: number }) {
   })
   return (
     <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className="card" style={{ borderRadius: 22, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <span style={{ fontSize: 14, fontWeight: 600 }}>Cette leçon, c’était…</span>
+      <span style={{ fontSize: 14, fontWeight: 600 }}>{t.done.feelingTitle}</span>
       <div role="radiogroup" aria-label="Ton ressenti" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {FEELINGS.map(([k, label]) => {
           const on = picked === k
@@ -152,12 +153,12 @@ function FeelingCard({ lessonId, delay }: { lessonId: string; delay: number }) {
       {picked && (
         <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="status" style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.4 }}>
           {send.isError
-            ? 'Ton avis n’a pas pu être envoyé.'
+            ? t.done.feelingFailed
             : picked === 'easy'
-              ? 'Noté : je corse un peu les prochaines leçons.'
+              ? t.done.feelingEasy
               : picked === 'hard'
-                ? 'Noté : j’y vais plus doucement pour la suite.'
-                : 'Merci ! On garde ce rythme.'}
+                ? t.done.feelingHard
+                : t.done.feelingOk}
         </motion.span>
       )}
     </motion.section>
@@ -181,7 +182,7 @@ function ModuleChest({ bonus }: { bonus: number }) {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 380, damping: 15, delay: 1.1 }}
       whileTap={open ? undefined : { scale: 0.96 }}
-      aria-label={open ? `Module terminé : ${bonus} étoiles bonus` : 'Module terminé : ouvrir ton cadeau'}
+      aria-label={open ? t.done.giftOpen(bonus) : t.done.giftClosed}
       style={{ position: 'relative', border: 'none', borderRadius: 24, background: 'var(--butter)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', color: 'var(--ink)', overflow: 'visible' }}
     >
       <span style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
@@ -220,13 +221,13 @@ function ModuleChest({ bonus }: { bonus: number }) {
         })}
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <span className="display" style={{ fontSize: 18 }}>Module terminé !</span>
+        <span className="display" style={{ fontSize: 18 }}>{t.done.moduleDone}</span>
         {open ? (
           <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: 15, fontWeight: 700, color: 'var(--butter-ink)' }}>
-            +<CountUp value={bonus} delay={0.2} /> étoiles bonus
+            +<CountUp value={bonus} delay={0.2} /> {t.done.bonusStars}
           </motion.span>
         ) : (
-          <span style={{ fontSize: 14, color: 'var(--butter-ink)', fontWeight: 600 }}>Touche ton cadeau pour l’ouvrir</span>
+          <span style={{ fontSize: 14, color: 'var(--butter-ink)', fontWeight: 600 }}>{t.done.tapGift}</span>
         )}
       </span>
     </motion.button>
@@ -254,7 +255,7 @@ function ShareButton({ sipId, title }: { sipId: string; title: string }) {
         }
       }}
     >
-      {state === 'downloaded' ? 'Image enregistrée' : state === 'busy' ? 'Préparation…' : 'Partager ma réussite'}
+      {state === 'downloaded' ? t.done.imageSaved : state === 'busy' ? t.done.preparing : t.done.share}
     </Button>
   )
 }
@@ -290,7 +291,7 @@ export function LessonDone() {
             animate={{ scale: 1, rotate: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 13, delay: 0.1 }}
           />
-          <div aria-label={`${s.stars} étoiles sur 3`} style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52, marginTop: -8 }}>
+          <div aria-label={t.quiz.starsLabel(s.stars)} style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 52, marginTop: -8 }}>
             <span style={{ transform: 'rotate(-12deg)' }}>
               <Star size={34} filled={s.stars >= 1} animate delay={0.35} />
             </span>
@@ -302,7 +303,7 @@ export function LessonDone() {
             </span>
           </div>
           <h1 className="display" style={{ fontSize: 46, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: s.stars === 3 ? 'Sans faute !' : s.stars === 2 ? 'Bien joué !' : 'Gorgée bue !' }]} delay={0.3} />
+            <RevealLines lines={[{ text: s.stars === 3 ? t.done.perfect : s.stars === 2 ? t.done.wellPlayed : t.done.sipDone }]} delay={0.3} />
           </h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} style={{ fontSize: 16, color: 'rgba(255,255,255,.85)' }}>
             {s.title}
@@ -318,9 +319,9 @@ export function LessonDone() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
             {(
               [
-                [s.total ? <><CountUp value={s.correct} delay={0.9} />/{s.total}</> : Icon.check(22), s.total ? 'bonnes réponses' : 'leçon lue', 'var(--mint)'],
-                [<><CountUp value={s.streak_days} delay={1} /> j</>, 'de série', 'var(--peach-soft)'],
-                [<><CountUp value={pct} delay={1.1} /> %</>, 'du parcours', 'var(--lavender)'],
+                [s.total ? <><CountUp value={s.correct} delay={0.9} />/{s.total}</> : Icon.check(22), s.total ? t.done.rightAnswers : t.done.lessonRead, 'var(--mint)'],
+                [<><CountUp value={s.streak_days} delay={1} /> {t.done.dayShort}</>, t.done.streak, 'var(--peach-soft)'],
+                [<><CountUp value={pct} delay={1.1} /> %</>, t.done.ofPath, 'var(--lavender)'],
               ] as const
             ).map(([v, l, bg], i) => (
               <motion.div
@@ -350,8 +351,8 @@ export function LessonDone() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <img src={illustration('scene-quiz')} alt="" width={60} height={60} style={{ flexShrink: 0, margin: '-6px 0' }} />
                 <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span className="display" style={{ fontSize: 18 }}>Quiz du module</span>
-                  <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>5 questions pour tout ancrer · jusqu’à 3 étoiles</span>
+                  <span className="display" style={{ fontSize: 18 }}>{t.quiz.kicker}</span>
+                  <span style={{ fontSize: 14, color: 'var(--lavender-ink)' }}>{t.done.quizBody}</span>
                 </span>
               </div>
               <Button
@@ -359,7 +360,7 @@ export function LessonDone() {
                 onClick={() => (features.quiz ? nav(`/modules/${s.module_id}/quiz`, { state: { sipId: s.sipId } }) : setUpsell('quiz'))}
                 style={{ height: 50, fontSize: 16, background: 'var(--lavender-ink)', color: 'var(--lavender)', boxShadow: 'none' }}
               >
-                {features.quiz ? 'Lancer le quiz' : 'Débloquer le quiz'}
+                {features.quiz ? t.done.startQuiz : t.done.unlockQuiz}
               </Button>
             </motion.section>
           )}
@@ -368,7 +369,7 @@ export function LessonDone() {
 
           {s.concepts.length > 0 && (
             <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1 }} className="card" style={{ borderRadius: 22, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>Dans ta poche</span>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{t.done.pocket}</span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {s.concepts.map((c, i) => (
                   <motion.span
@@ -395,19 +396,19 @@ export function LessonDone() {
             style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 6 }}
           >
             <Button sound="pop" onClick={() => nav(`/sips/${s.sipId}`, { replace: true, state: { completed: lessonId } })}>
-              {s.next_lesson_id ? 'Leçon suivante' : 'Voir mon parcours'}
+              {s.next_lesson_id ? t.done.nextLesson : t.done.seePath}
             </Button>
             {s.progress.total > 0 && s.progress.completed >= s.progress.total && <ShareButton sipId={s.sipId} title={s.title} />}
             {!mastered(s.correct, s.total) && (
               <Button variant="soft" onClick={() => nav(`/lessons/${lessonId}`, { replace: true })}>
-                Refaire la leçon
+                {t.done.redo}
               </Button>
             )}
             <Button variant="ghost" style={{ height: 44, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
-              J’arrête là pour aujourd’hui
+              {t.done.stop}
             </Button>
             <button type="button" onClick={() => setReport(true)} style={{ alignSelf: 'center', border: 'none', background: 'none', padding: 8, fontSize: 14, fontWeight: 500, color: 'var(--muted)', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-              Signaler un problème dans cette leçon
+              {t.done.report}
             </button>
           </motion.div>
           <UpsellSheet feature={upsell} onClose={() => setUpsell(null)} />

@@ -42,6 +42,37 @@ async def test_interpret_then_create_with_edited_profile(auth_client):
     assert len(fake.calls) == 1
 
 
+class Recording(FakeClient):
+    """Also keeps the user message of each call."""
+
+    def __init__(self):
+        super().__init__()
+        self.inputs: list[str] = []
+
+    async def complete(self, model, messages, schema_name, schema):
+        self.inputs.append(messages[-1]["content"])
+        return await super().complete(model, messages, schema_name, schema)
+
+
+async def test_app_language_is_a_hint_for_short_requests(auth_client):
+    fake = use(Recording())
+    try:
+        assert (await auth_client.post("/sips/interpret", json={"input": "Python", "language": "en"})).status_code == 200
+        assert (await auth_client.post("/sips/interpret", json={"input": "Python"})).status_code == 200
+    finally:
+        app.dependency_overrides.clear()
+    assert fake.inputs[0].startswith("Python") and "in English" in fake.inputs[0]
+    assert fake.inputs[1] == "Python"
+    # Created straight from the request (after sign-up): the language is kept for the background interpretation.
+    r = await auth_client.post("/sips", json={"input": "Python", "language": "en"})
+    assert r.status_code == 202
+    async with SessionLocal() as s:
+        assert (await s.execute(select(User))).scalar_one().language == "en"
+    worker = Recording()
+    await drain(worker)
+    assert any("in English" in m for m in worker.inputs)
+
+
 async def test_create_rejects_invalid_profile(auth_client):
     r = await auth_client.post("/sips", json={"input": "taux", "profile": {"topic": "x"}})
     assert r.status_code == 422

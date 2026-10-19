@@ -6,6 +6,7 @@ import { Mascot } from './Mascot'
 import { LiquidBar } from './motion'
 import { sipPalette, topicArt } from './SipIcon'
 import { Icon } from './ui'
+import { t } from '../lib/i18n'
 
 export const listVariants = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
 export const itemVariants = {
@@ -91,17 +92,17 @@ export function SipTile({ sip, index, onOpen }: { sip: SipSummary; index?: numbe
       art={building ? <Mascot mood="think" size={80} /> : failed ? <Mascot mood="oops" size={80} /> : <img src={topicArt(name, sip.theme)} alt="" width={98} height={98} draggable={false} />}
       meta={
         building ? (
-          'Je prépare ton parcours…'
+          t.sipCard.building
         ) : failed ? (
-          'Raté, touche pour réessayer'
+          t.sipCard.failed
         ) : done ? (
           <>
-            {Icon.check(14)} Terminé · {sip.progress.total} leçons
+            {Icon.check(14)} {t.sipCard.done(sip.progress.total)}
           </>
         ) : sip.chapter ? (
-          `Chapitre ${sip.chapter} · ${sip.progress.completed}/${sip.progress.total}`
+          t.sipCard.chapter(sip.chapter, sip.progress.completed, sip.progress.total)
         ) : (
-          `${sip.progress.completed}/${sip.progress.total} leçons${sip.lite ? ' · découverte' : ''}`
+          t.sipCard.progress(sip.progress.completed, sip.progress.total, sip.lite)
         )
       }
       progress={building || failed ? null : sip.progress.completed / Math.max(1, sip.progress.total)}

@@ -17,7 +17,7 @@ const deferred = () => {
 const card = (id) => ({ id, name: `Notion ${id}`, definition: 'Une définition', explanation: null, sip_id: 'sip', sip_title: 'Mon Sip', lesson_id: 'lesson', lesson_title: 'Ma leçon', mastery: 1, due: true, learned_at: '2026-10-01T12:00:00Z', last_reviewed_at: null })
 
 async function pageFor(t, handler) {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'fr-FR' })
   t.after(() => context.close())
   await context.addInitScript(() => {
     localStorage.setItem('sipp.tokens', JSON.stringify({ access_token: `e30.${btoa(JSON.stringify({ sub: 'browser-test' }))}.sig`, refresh_token: 'test', expires_in: 900 }))

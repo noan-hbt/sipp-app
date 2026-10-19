@@ -10,6 +10,7 @@ import { DEMO_LESSON, DEMO_PATH } from '../demo/demoLesson'
 import { play } from '../lib/sound'
 import { doneInfo, LessonPlayer, type Finished } from './Lesson'
 import { mastered, Takeaways } from './LessonDone'
+import { t } from '../lib/i18n'
 
 const THEME = 'sleep'
 
@@ -45,27 +46,27 @@ export function Demo() {
           <motion.div initial={{ scale: 0, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 300, damping: 12 }}>
             <Mascot mood="bravo" size={96} />
           </motion.div>
-          <h1 className="title-xl">Premier Sip bu !</h1>
+          <h1 className="title-xl">{t.demo.doneTitle}</h1>
           {done.total > 0 && (
             <p className="muted" style={{ fontSize: 15, fontWeight: 500 }}>
-              {done.correct} bonne{done.correct > 1 ? 's' : ''} réponse{done.correct > 1 ? 's' : ''} sur {done.total}
+              {t.demo.score(done.correct, done.total)}
             </p>
           )}
         </div>
         <Takeaways objective={info.objective} points={info.points} action={info.action} mastered={mastered(done.correct, done.total)} delay={0.3} />
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} style={{ display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'center' }}>
-          <p style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4 }}>À toi : tu veux apprendre quoi ?</p>
+          <p style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.4 }}>{t.demo.yourTurn}</p>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            Cette leçon répondait à une demande sur le café. Dis-moi ton sujet, n’importe lequel : j’écris ton parcours, gratuitement.
+            {t.demo.yourTurnBody}
           </p>
         </motion.div>
       </div>
       <div className="bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <Button onClick={() => nav('/start', { replace: true })} sound="pop">
-          Choisir mon sujet
+          {t.welcome.start}
         </Button>
         <Button variant="ghost" style={{ height: 48, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>
-          Plus tard
+          {t.demo.later}
         </Button>
       </div>
     </Screen>
@@ -78,15 +79,15 @@ function Intro({ onClose, onStart }: { onClose: () => void; onStart: () => void 
   return (
     <Screen kind="fade">
       <header className="topbar">
-        <IconButton label="Fermer" onClick={onClose}>
+        <IconButton label={t.common.close} onClick={onClose}>
           {Icon.close}
         </IconButton>
       </header>
       <div className="scroll" style={{ padding: '4px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="kicker" style={{ color: 'var(--muted)' }}>Un exemple</span>
+          <span className="kicker" style={{ color: 'var(--muted)' }}>{t.demo.kicker}</span>
           <h1 className="display" style={{ fontSize: 36, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: 'Quelqu’un a écrit' }, { text: 'à Sipp :', color: 'var(--primary)' }]} />
+            <RevealLines lines={[{ text: t.demo.title[0] }, { text: t.demo.title[1], color: 'var(--primary)' }]} />
           </h1>
         </div>
 
@@ -97,11 +98,11 @@ function Intro({ onClose, onStart }: { onClose: () => void; onStart: () => void 
           className="display"
           style={{ margin: 0, borderRadius: 24, padding: '16px 18px', background: 'var(--dock)', color: 'var(--dock-ink)', fontSize: 20, lineHeight: 1.25 }}
         >
-          « {DEMO_PATH.wish} »
+          {t.demo.quote(DEMO_PATH.wish)}
         </motion.blockquote>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>
-          Sipp lui a écrit ce parcours :
+          {t.demo.wrote}
         </motion.p>
 
         <motion.div
@@ -115,7 +116,7 @@ function Intro({ onClose, onStart }: { onClose: () => void; onStart: () => void 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span className="display" style={{ fontSize: 19, lineHeight: 1.1 }}>{DEMO_LESSON.sip_title}</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: pal.ink }}>
-                {DEMO_PATH.modules.length} modules · {DEMO_PATH.lessons} leçons de 5 min
+                {t.welcome.pathMeta(DEMO_PATH.modules.length, DEMO_PATH.lessons)}
               </span>
             </div>
           </div>
@@ -133,7 +134,7 @@ function Intro({ onClose, onStart }: { onClose: () => void; onStart: () => void 
                     style={{ marginLeft: 30, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, fontWeight: here ? 700 : 500, color: here ? 'var(--ink)' : 'var(--muted)' }}
                   >
                     {l}
-                    {here && <span style={{ padding: '3px 9px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700 }}>Tu vas jouer celle-ci</span>}
+                    {here && <span style={{ padding: '3px 9px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontSize: 12, fontWeight: 700 }}>{t.demo.thisOne}</span>}
                   </span>
                 )
               })}
@@ -142,12 +143,12 @@ function Intro({ onClose, onStart }: { onClose: () => void; onStart: () => void 
         </motion.div>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-          Le café, c’était son sujet. Après, ce sera le tien : n’importe lequel.
+          {t.demo.yours}
         </motion.p>
       </div>
       <div className="bottom-bar">
         <Button onClick={onStart} sound="pop">
-          Jouer la leçon · 5 min
+          {t.demo.play}
         </Button>
       </div>
     </Screen>

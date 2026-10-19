@@ -5,14 +5,16 @@ import { RevealLines } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
 import { Button } from '../components/ui'
+import { t } from '../lib/i18n'
 
 /** What Sipp does, played out: a wish gets typed, a path of modules comes back. Light tones stay light in dark mode (the caramel band is the same in both). */
-const EXAMPLES = [
-  { wish: 'comprendre comment marche le sommeil', title: 'Le sommeil, mode d’emploi', art: 'topic-sleep', bg: '#ece8ff', ink: '#2e2660', lessons: 11, modules: ['Les cycles de la nuit', 'L’horloge interne', 'Mieux dormir, concrètement'] },
-  { wish: 'tenir une conversation simple en italien', title: 'L’italien du quotidien', art: 'topic-language', bg: '#ffe6d4', ink: '#8a3d16', lessons: 14, modules: ['Se présenter', 'Commander au café', 'Raconter sa journée'] },
-  { wish: 'comprendre les trous noirs, sans équations', title: 'Les trous noirs, simplement', art: 'topic-space', bg: '#dceffc', ink: '#15334a', lessons: 9, modules: ['La gravité selon Einstein', 'Naissance d’un trou noir', 'Ce qu’on a vraiment observé'] },
-  { wish: 'savoir lire le bilan d’une entreprise', title: 'Lire un bilan', art: 'topic-finance', bg: '#d9f3e4', ink: '#173a2a', lessons: 10, modules: ['Actif et passif', 'Le compte de résultat', 'Repérer une entreprise fragile'] },
+const LOOKS = [
+  { art: 'topic-sleep', bg: '#ece8ff', ink: '#2e2660', lessons: 11 },
+  { art: 'topic-language', bg: '#ffe6d4', ink: '#8a3d16', lessons: 14 },
+  { art: 'topic-space', bg: '#dceffc', ink: '#15334a', lessons: 9 },
+  { art: 'topic-finance', bg: '#d9f3e4', ink: '#173a2a', lessons: 10 },
 ] as const
+const EXAMPLES = t.welcome.examples.map((ex, i) => ({ ...ex, ...LOOKS[i % LOOKS.length] }))
 
 const TYPE_MS = 42
 const HOLD_MS = 3600
@@ -27,22 +29,22 @@ function Showcase() {
 
   useEffect(() => {
     if (!done) {
-      const t = setTimeout(() => setTyped((n) => n + 1), typed === 0 ? 500 : TYPE_MS)
-      return () => clearTimeout(t)
+      const timer = setTimeout(() => setTyped((n) => n + 1), typed === 0 ? 500 : TYPE_MS)
+      return () => clearTimeout(timer)
     }
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setTyped(0)
       setI((n) => (n + 1) % EXAMPLES.length)
     }, HOLD_MS + (reduce ? 1500 : 0))
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [done, typed, reduce])
 
   return (
     <div style={{ position: 'absolute', left: 16, right: 16, bottom: 22, maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ borderRadius: 22, padding: '12px 16px 14px', background: '#fff', color: '#1d1a17', boxShadow: '0 14px 30px rgba(90,30,8,.25)', minHeight: 88 }}>
-        <span className="kicker" style={{ color: '#b8471a' }}>Tu écris</span>
+        <span className="kicker" style={{ color: '#b8471a' }}>{t.welcome.youWrite}</span>
         <p className="display" style={{ fontSize: 19, lineHeight: 1.2, marginTop: 4 }}>
-          Je veux {ex.wish.slice(0, reduce ? undefined : typed)}
+          {t.welcome.iWant} {ex.wish.slice(0, reduce ? undefined : typed)}
           {!done && <span style={{ display: 'inline-block', width: 2, height: '1em', marginLeft: 1, verticalAlign: '-0.12em', background: '#d9622b' }} />}
         </p>
       </div>
@@ -51,7 +53,7 @@ function Showcase() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 4v14M6 12l6 6 6-6" />
         </svg>
-        Sipp écrit ton cours
+        {t.welcome.sippWrites}
       </span>
 
       <div style={{ height: 196, position: 'relative' }}>
@@ -70,7 +72,7 @@ function Showcase() {
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                   <span className="display" style={{ fontSize: 17, lineHeight: 1.1 }}>{ex.title}</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: ex.ink }}>
-                    {ex.modules.length} modules · {ex.lessons} leçons de 5 min
+                    {t.welcome.pathMeta(ex.modules.length, ex.lessons)}
                   </span>
                 </div>
               </div>
@@ -106,10 +108,10 @@ export function Welcome() {
         </div>
         <div style={{ padding: '24px 24px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <h1 className="display" style={{ fontSize: 36, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: 'Tu choisis le sujet.' }, { text: 'Sipp écrit ton cours.', color: 'var(--primary)' }]} delay={0.3} />
+            <RevealLines lines={[{ text: t.welcome.title[0] }, { text: t.welcome.title[1], color: 'var(--primary)' }]} delay={0.3} />
           </h1>
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
-            N’importe quel sujet, de la cuisine aux trous noirs. L’IA te prépare un parcours de leçons de 5 minutes, à ton niveau.
+            {t.welcome.body}
           </motion.p>
         </div>
       </div>
@@ -121,16 +123,16 @@ export function Welcome() {
         style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 12 }}
       >
         <Button onClick={() => nav('/start')} sound="pop">
-          Choisir mon sujet
+          {t.welcome.start}
         </Button>
         <Button variant="soft" onClick={() => nav('/demo')}>
           <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M7 4.5v15l13-7.5z" fill="var(--primary)" />
           </svg>
-          Voir un exemple de leçon
+          {t.welcome.demo}
         </Button>
         <button onClick={() => nav('/login')} style={{ border: 'none', background: 'none', height: 44, fontSize: 15, fontWeight: 700, color: 'var(--primary)' }}>
-          J’ai déjà un compte
+          {t.welcome.login}
         </button>
       </motion.div>
     </Screen>

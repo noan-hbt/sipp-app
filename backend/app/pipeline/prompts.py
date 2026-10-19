@@ -36,6 +36,17 @@ Rules:
 - `theme`: the closest visual theme to the subject itself (e.g. a mortgage is finance, Ancient
   Rome is history, learning Japanese is language), not to the learner's goal."""
 
+_APP_LANGUAGES = {"fr": "French", "en": "English"}
+
+
+def interpretation_input(text: str, app_language: str | None) -> str:
+    """The learner's message, plus the app's language as a tie-breaker for messages too short to tell."""
+    name = _APP_LANGUAGES.get(app_language or "")
+    if not name:
+        return text
+    return f"{text}\n\n(The learner uses Sipp in {name}. Teach in {name} only if the message above does not make its own language clear.)"
+
+
 ROADMAP = """\
 You are the program architect of Sipp, a micro-learning app. The learner's goal is too
 big for one path, so you split it into CHAPTERS. Each chapter will later become its own

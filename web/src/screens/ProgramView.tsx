@@ -12,6 +12,7 @@ import { Button, Icon, IconButton } from '../components/ui'
 import { Api, apiErrorMessage, type Chapter, type Program } from '../lib/api'
 import { duration } from '../lib/format'
 import { play } from '../lib/sound'
+import { t } from '../lib/i18n'
 
 export type ChapterState = 'done' | 'current' | 'building' | 'next' | 'later'
 
@@ -65,23 +66,23 @@ export function ProgramView() {
     return (
       <Screen>
         <header className="topbar">
-          <IconButton label="Retour" onClick={() => nav(-1)}>
+          <IconButton label={t.common.back} onClick={() => nav(-1)}>
             {Icon.back}
           </IconButton>
         </header>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
           {(program.isError || program.isPaused) && (
-            <ErrorNotice message={program.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour charger ton programme.' : apiErrorMessage(program.error, 'Impossible de charger ton programme. Réessaie.')} retry={() => void program.refetch()} busy={program.isFetching} />
+            <ErrorNotice message={program.isPaused ? t.program.offlineLoad : apiErrorMessage(program.error, t.program.loadFailed)} retry={() => void program.refetch()} busy={program.isFetching} />
           )}
           {(p || (!program.isError && !program.isPaused)) && (
             <>
               <div style={{ width: 150, height: 150, borderRadius: 75, display: 'grid', placeItems: 'center', background: 'var(--peach-soft)' }}>
                 <Mascot mood={p?.status === 'failed' ? 'oops' : 'think'} size={104} />
               </div>
-              <h1 className="title-l">{p?.status === 'failed' ? 'La suite m’a résisté' : p ? 'Je dessine la suite…' : ''}</h1>
+              <h1 className="title-l">{p?.status === 'failed' ? t.program.failed : p ? t.library.drawing : ''}</h1>
               {p?.status === 'generating' && (
                 <p className="muted" style={{ fontSize: 15 }}>
-                  Je cherche les prochaines étapes à partir de ce que tu as appris.
+                  {t.program.generating}
                 </p>
               )}
             </>
@@ -98,7 +99,7 @@ export function ProgramView() {
   const ratio = Math.min(1, lessonsDone / Math.max(1, totalLessons))
   const core = p.chapters.filter((c) => c.level === 'core')
   const advanced = p.chapters.filter((c) => c.level !== 'core')
-  const err = start.error ? apiErrorMessage(start.error, 'Impossible de préparer ce chapitre. Réessaie.') : null
+  const err = start.error ? apiErrorMessage(start.error, t.program.startFailed) : null
 
   const section = (title: string, chapters: Chapter[]) =>
     chapters.length > 0 && (
@@ -133,7 +134,7 @@ export function ProgramView() {
           <motion.div variants={item} style={{ position: 'relative', borderRadius: '0 0 40px 40px', background: pal.bg, padding: 'calc(var(--safe-top) + 14px) 18px 22px', overflow: 'hidden' }}>
             <Confetti />
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
-              <IconButton label="Retour" onClick={() => nav('/library', { replace: true })}>
+              <IconButton label={t.common.back} onClick={() => nav('/library', { replace: true })}>
                 {Icon.back}
               </IconButton>
             </div>
@@ -149,7 +150,7 @@ export function ProgramView() {
             <div style={{ position: 'relative', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div
                 role="progressbar"
-                aria-label="Avancement du programme"
+                aria-label={t.program.progress}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Math.round(ratio * 100)}
@@ -158,23 +159,23 @@ export function ProgramView() {
                 <motion.div initial={{ width: 0 }} animate={{ width: `${ratio * 100}%` }} transition={{ type: 'spring', stiffness: 80, damping: 18, delay: 0.3 }} style={{ height: '100%', borderRadius: 5, background: 'var(--primary)' }} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: pal.ink, textAlign: 'center' }}>
-                {lessonsDone === 0 ? 'Ton programme commence ici' : `${Math.round(ratio * 100)} % du programme · ${lessonsDone} leçon${lessonsDone > 1 ? 's' : ''} bue${lessonsDone > 1 ? 's' : ''}`}
+                {lessonsDone === 0 ? t.program.startsHere : t.program.ratio(Math.round(ratio * 100), lessonsDone)}
               </span>
             </div>
           </motion.div>
 
           <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {(program.isError || program.isPaused) && (
-              <ErrorNotice message={program.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton programme.' : apiErrorMessage(program.error, 'Impossible d’actualiser ton programme. Réessaie.')} retry={() => void program.refetch()} busy={program.isFetching} />
+              <ErrorNotice message={program.isPaused ? t.program.offlineRefresh : apiErrorMessage(program.error, t.program.refreshFailed)} retry={() => void program.refetch()} busy={program.isFetching} />
             )}
             {remove.isError && (
-              <ErrorNotice message={apiErrorMessage(remove.error, 'Impossible de supprimer ton programme. Réessaie.')} retry={() => remove.mutate()} busy={remove.isPending} />
+              <ErrorNotice message={apiErrorMessage(remove.error, t.program.deleteFailed)} retry={() => remove.mutate()} busy={remove.isPending} />
             )}
             <motion.div variants={item} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
               {[
-                [`${done}/${p.chapters.length}`, 'chapitres faits', 'var(--butter)'],
-                [String(p.chapters.length), 'chapitres', 'var(--peach-soft)'],
-                [duration(totalLessons), 'au total', 'var(--mint)'],
+                [`${done}/${p.chapters.length}`, t.program.chaptersDone, 'var(--butter)'],
+                [String(p.chapters.length), t.program.chapters, 'var(--peach-soft)'],
+                [duration(totalLessons), t.program.total, 'var(--mint)'],
               ].map(([v, l, bg]) => (
                 <div key={l} style={{ borderRadius: 20, background: bg, padding: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span className="display" style={{ fontSize: 20 }}>
@@ -187,9 +188,9 @@ export function ProgramView() {
 
             {current?.sip && (
               <motion.div variants={item}>
-                <Button onClick={() => nav(`/sips/${current.sip!.id}`)}>Reprendre le chapitre {current.position}</Button>
+                <Button onClick={() => nav(`/sips/${current.sip!.id}`)}>{t.program.resume(current.position)}</Button>
                 {current.sip.next_lesson_title && (
-                  <p className="muted" style={{ fontSize: 14, textAlign: 'center', marginTop: 8 }}>Prochaine leçon : {current.sip.next_lesson_title}</p>
+                  <p className="muted" style={{ fontSize: 14, textAlign: 'center', marginTop: 8 }}>{t.program.nextLesson(current.sip.next_lesson_title)}</p>
                 )}
               </motion.div>
             )}
@@ -197,14 +198,14 @@ export function ProgramView() {
             {p.status === 'adjusting' ? (
               <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)' }}>
                 <Mascot mood="think" size={44} />
-                <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>J’ajuste la suite de ton programme selon ce que tu viens d’apprendre…</p>
+                <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>{t.program.adjusting}</p>
               </motion.div>
             ) : (
               p.note && (
                 <motion.div variants={item} style={{ borderRadius: 22, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lavender)' }}>
                   <Mascot mood="hello" size={44} />
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>Programme ajusté</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--lavender-ink)' }}>{t.program.adjusted}</span>
                     <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink)' }}>{p.note}</p>
                   </div>
                 </motion.div>
@@ -215,9 +216,9 @@ export function ProgramView() {
               <ErrorNotice message={err} retry={() => { if (start.variables !== undefined) start.mutate(start.variables) }} busy={start.isPending} />
             )}
 
-            {section(advanced.length ? 'Les bases' : 'Le parcours', core)}
-            {section('Pour aller plus loin', advanced)}
-            <DeleteButton label="Supprimer ce programme" confirm="Tous ses chapitres et ta progression seront perdus. Ça libère une place." busy={remove.isPending} failed={remove.isError} onConfirm={() => remove.mutate()} />
+            {section(advanced.length ? t.program.basics : t.program.path, core)}
+            {section(t.program.advanced, advanced)}
+            <DeleteButton label={t.program.delete} confirm={t.program.deleteBody} busy={remove.isPending} failed={remove.isError} onConfirm={() => remove.mutate()} />
           </div>
         </motion.div>
       </div>
@@ -270,7 +271,7 @@ export function DeleteButton({ label, confirm, busy, failed, onConfirm }: { labe
       >
         {label}
       </button>
-      <ConfirmSheet open={open} title={`${label} ?`} message={confirm} confirmLabel="Supprimer" busy={busy} onConfirm={onConfirm} onClose={() => setOpen(false)} />
+      <ConfirmSheet open={open} title={t.program.confirmTitle(label)} message={confirm} confirmLabel={t.program.deleteCta} busy={busy} onConfirm={onConfirm} onClose={() => setOpen(false)} />
     </>
   )
 }
@@ -306,7 +307,7 @@ function ChapterCard({
   return (
     <Card
       type={tappable ? 'button' : undefined}
-      aria-label={tappable ? `Ouvrir le chapitre ${c.position} : ${c.title}` : undefined}
+      aria-label={tappable ? t.program.open(c.position, c.title) : undefined}
       whileTap={tappable ? { scale: 0.98 } : undefined}
       onClick={() => {
         if (!tappable) return
@@ -348,7 +349,7 @@ function ChapterCard({
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         {(state === 'next' || state === 'current') && (
           <span style={{ alignSelf: 'flex-start', fontSize: 11, fontWeight: 700, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--primary)' }}>
-            {state === 'current' ? 'Tu es ici' : 'Prochaine étape'}
+            {state === 'current' ? t.pathMap.here : t.program.nextStep}
           </span>
         )}
         <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25, color: state === 'later' ? 'var(--muted)' : 'var(--ink)' }}>{c.title}</span>
@@ -363,16 +364,16 @@ function ChapterCard({
             </span>
           </div>
         ) : state === 'building' ? (
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary-ink)' }}>{s?.status === 'failed' ? 'Raté, touche pour réessayer' : 'En préparation…'}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--primary-ink)' }}>{s?.status === 'failed' ? t.sipCard.failed : t.program.building}</span>
         ) : (
           <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--faint)' }}>
-            {c.estimated_lessons} leçons · {duration(c.estimated_lessons)}
+            {t.program.lessons(c.estimated_lessons, duration(c.estimated_lessons))}
           </span>
         )}
         {state === 'next' && !tappable && (
           <div style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
             <Button onClick={onStart} disabled={starting || adjusting} sound="pop" style={{ height: 50, fontSize: 16 }}>
-              {starting || adjusting ? <Mascot mood="think" size={30} /> : 'Préparer ce chapitre'}
+              {starting || adjusting ? <Mascot mood="think" size={30} /> : t.program.prepare}
             </Button>
           </div>
         )}

@@ -9,9 +9,10 @@ import { plain } from '../lib/blocks'
 import { haptic, play } from '../lib/sound'
 import type { Answer } from './Blocks'
 import { Kicker } from './Kicker'
+import { t, locale } from '../lib/i18n'
 
-const fmt = (v: number) => v.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
-const compact = (v: number) => v.toLocaleString('fr-FR', { notation: 'compact', maximumFractionDigits: 1 })
+const fmt = (v: number) => v.toLocaleString(locale, { maximumFractionDigits: 2 })
+const compact = (v: number) => v.toLocaleString(locale, { notation: 'compact', maximumFractionDigits: 1 })
 const withUnit = (v: string, unit?: string | null) => (unit ? `${v} ${unit}` : v)
 
 // --- Hook: the question the lesson answers ------------------------------------------
@@ -81,7 +82,7 @@ export function HookSolved({ b }: { b: B.HookBlock }) {
     >
       <span className="kicker" style={{ color: '#fff0c2', display: 'flex', alignItems: 'center', gap: 6 }}>
         {Icon.check(13, '#fff0c2')}
-        Question du début : résolue
+        {t.play.hookSolved}
       </span>
       <span style={{ fontSize: 14, color: 'rgba(255,255,255,.8)' }}>
         <RichText text={b.question} />
@@ -103,12 +104,12 @@ function PredictHeader({ b }: { b: B.PredictBlock }) {
   return (
     <>
       <Kicker icon="question" tone="lavender">
-        À ton avis ?
+        {t.play.guess}
       </Kicker>
       <h2 className="display" style={{ fontSize: 26, lineHeight: 1.1, letterSpacing: '-0.035em' }}>
         <RichText text={b.prompt} />
       </h2>
-      <p className="lx-small">Pas de mauvaise réponse : on compare juste avec ton intuition.</p>
+      <p className="lx-small">{t.play.noWrong}</p>
     </>
   )
 }
@@ -147,7 +148,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
         <AnimatePresence mode="wait" initial={false}>
           {answered ? (
             <motion.div key="truth" initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 16 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>La vraie réponse</span>
+              <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>{t.play.realAnswer}</span>
               <span className="display" style={{ fontSize: 50, lineHeight: 1, letterSpacing: '-0.05em', color: 'var(--ink)' }}>
                 <CountUp value={truth} duration={1.1} format={(n) => withUnit(fmt(snap(n)), b.unit)} />
               </span>
@@ -179,7 +180,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
           {!answered && (
             <input
               type="range"
-              aria-label="Ton estimation"
+              aria-label={t.play.yourGuess}
               min={min}
               max={max}
               step={step}
@@ -204,7 +205,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
             transition={{ delay: 0.9 }}
             style={{ height: 32, padding: '0 14px', borderRadius: 16, background: 'var(--surface)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 700, color: close ? 'var(--mint-ink)' : 'var(--lavender-ink)' }}
           >
-            {close ? `Pile dans le mille avec ${withUnit(fmt(bet), b.unit)} !` : `Ton estimation : ${withUnit(fmt(bet), b.unit)} · écart de ${withUnit(fmt(snap(gap + min) - min), b.unit)}`}
+            {close ? t.play.bullseye(withUnit(fmt(bet), b.unit)) : t.play.off(withUnit(fmt(bet), b.unit), withUnit(fmt(snap(gap + min) - min), b.unit))}
           </motion.span>
         )}
       </div>
@@ -256,7 +257,7 @@ function PredictChoice({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
                 <RichText text={o.text} />
               </span>
               {picked && truth && <span style={{ width: 28, height: 28, borderRadius: 14, background: 'var(--mint-strong)', display: 'grid', placeItems: 'center' }}>{Icon.check(14, '#fff')}</span>}
-              {picked && mine && !truth && <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>Ton choix</span>}
+              {picked && mine && !truth && <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>{t.play.yourPick}</span>}
             </motion.button>
           )
         })}
@@ -297,10 +298,10 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
     return (
       <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Kicker icon="myth" tone="lavender">
-          Vrai ou faux
+          {t.speech.trueOrFalse}
         </Kicker>
         <h2 className="display" style={{ fontSize: 30, letterSpacing: '-0.04em' }}>
-          {right === b.cards.length ? 'Sans faute !' : `${right} sur ${b.cards.length}`}
+          {right === b.cards.length ? t.done.perfect : t.play.score(right, b.cards.length)}
         </h2>
         {b.cards.map((c, i) => {
           const ok = picks[i] === c.is_true
@@ -317,7 +318,7 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={{ fontSize: 15, fontWeight: 600 }}>
-                  <RichText text={c.statement} /> <b style={{ color: c.is_true ? 'var(--mint-ink)' : 'var(--rose-ink)' }}>{c.is_true ? 'Vrai' : 'Faux'}</b>
+                  <RichText text={c.statement} /> <b style={{ color: c.is_true ? 'var(--mint-ink)' : 'var(--rose-ink)' }}>{c.is_true ? t.blocks.true : t.blocks.false}</b>
                 </span>
                 <span className="lx-small">
                   <RichText text={c.why} />
@@ -334,7 +335,7 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
     <section style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Kicker icon="myth" tone="lavender">
-          {b.prompt ?? 'Vrai ou faux ? Swipe'}
+          {b.prompt ?? t.play.swipePrompt}
         </Kicker>
         <span className="kicker" style={{ color: 'var(--lavender-ink)' }}>
           {Math.min(picks.length + (showing === null ? 1 : 0), b.cards.length)} / {b.cards.length}
@@ -378,13 +379,13 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
             style={{ borderRadius: 22, padding: '14px 16px', background: showing === card.is_true ? '#23875a' : '#c8452f', color: '#fff', display: 'flex', flexDirection: 'column', gap: 10 }}
           >
             <span className="display" style={{ fontSize: 20 }}>
-              {showing === card.is_true ? 'Bien vu !' : card.is_true ? 'Eh non, c’est vrai' : 'Eh non, c’est faux'}
+              {showing === card.is_true ? t.review.right : card.is_true ? t.play.actuallyTrue : t.play.actuallyFalse}
             </span>
             <span style={{ fontSize: 15, lineHeight: 1.45, color: 'rgba(255,255,255,.9)' }}>
               <RichText text={card.why} />
             </span>
             <Button onClick={nextCard} style={{ background: '#fff', color: showing === card.is_true ? '#1a6a46' : '#9b2f1d' }}>
-              {picks.length >= b.cards.length ? 'Voir le bilan' : 'Carte suivante'}
+              {picks.length >= b.cards.length ? t.play.seeSummary : t.play.nextCard}
             </Button>
           </motion.div>
         ) : (
@@ -393,7 +394,7 @@ export function Swipe({ b, answer, onAnswer, onCheck }: { b: B.SwipeBlock; answe
               <motion.button
                 key={String(v)}
                 type="button"
-                aria-label={v ? 'Vrai' : 'Faux'}
+                aria-label={v ? t.blocks.true : t.blocks.false}
                 whileTap={{ scale: 0.86 }}
                 whileHover={{ scale: 1.06 }}
                 onClick={() => decide(v)}
@@ -444,13 +445,13 @@ function SwipeCard({ card, result, onDecide }: { card: B.SwipeBlock['cards'][num
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <motion.span style={{ opacity: no, rotate: -10, height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--rose)', color: 'var(--rose-ink)', display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 14 }}>FAUX</motion.span>
-        <motion.span style={{ opacity: yes, rotate: 10, height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--mint)', color: 'var(--mint-ink)', display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 14 }}>VRAI</motion.span>
+        <motion.span style={{ opacity: no, rotate: -10, height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--rose)', color: 'var(--rose-ink)', display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 14 }}>{t.play.stampFalse}</motion.span>
+        <motion.span style={{ opacity: yes, rotate: 10, height: 34, padding: '0 14px', borderRadius: 17, background: 'var(--mint)', color: 'var(--mint-ink)', display: 'flex', alignItems: 'center', fontWeight: 800, fontSize: 14 }}>{t.play.stampTrue}</motion.span>
       </div>
       <span className="display" style={{ fontSize: 25, lineHeight: 1.12, letterSpacing: '-0.03em' }}>
         <RichText text={card.statement} />
       </span>
-      <span style={{ fontSize: 13, color: 'var(--faint)' }}>Glisse à gauche si c’est faux, à droite si c’est vrai.</span>
+      <span style={{ fontSize: 13, color: 'var(--faint)' }}>{t.play.swipeHint}</span>
     </motion.div>
   )
 }
@@ -471,7 +472,7 @@ export function Simulate({ b }: { b: B.SimulateBlock }) {
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Kicker icon="estimate" tone="mint">
-        Joue avec
+        {t.play.playWith}
       </Kicker>
       <h2 className="display" style={{ fontSize: 26, lineHeight: 1.1, letterSpacing: '-0.035em' }}>
         <RichText text={b.prompt} />
@@ -553,7 +554,7 @@ export function Simulate({ b }: { b: B.SimulateBlock }) {
           </motion.div>
         )}
       </AnimatePresence>
-      {!moved && !late && <p className="lx-small" style={{ textAlign: 'center' }}>Fais glisser pour voir ce qui change.</p>}
+      {!moved && !late && <p className="lx-small" style={{ textAlign: 'center' }}>{t.play.drag}</p>}
     </section>
   )
 }

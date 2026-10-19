@@ -6,6 +6,7 @@ import type * as B from '../lib/blocks'
 import { haptic, play } from '../lib/sound'
 import type { Answer } from './Blocks'
 import { Kicker, type Tone } from './Kicker'
+import { t, locale } from '../lib/i18n'
 
 // Deterministic shuffle so a block always looks the same across re-renders/reloads.
 function shuffled<T>(items: T[], seed: string): T[] {
@@ -62,7 +63,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Header icon="fill" tone="butter" tag="Complète la phrase" />
+      <Header icon="fill" tone="butter" tag={t.practice.fill} />
       <p className="lx-p" style={{ fontSize: 18, lineHeight: 2.1, color: 'var(--ink)' }}>
         {parts.map((part, i) => {
           if (i % 2 === 0) return <RichText key={i} text={part} />
@@ -105,7 +106,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
       {answered ? (
         b.blanks.some((x, i) => !same(values[i], x.answer)) && (
           <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} style={{ fontSize: 15, fontWeight: 600, color: 'var(--mint-ink)' }}>
-            Réponse : {b.blanks.map((x) => x.answer).join(' · ')}
+            {t.practice.answer(b.blanks.map((x) => x.answer).join(' · '))}
           </motion.p>
         )
       ) : (
@@ -146,7 +147,7 @@ export function FillBlanks({ b, answer, onAnswer }: { b: B.FillBlanksBlock; answ
               onAnswer({ correct: ok, value: vals })
             }}
           >
-            Valider
+            {t.blocks.submit}
           </Button>
         </>
       )}
@@ -253,7 +254,7 @@ export function Match({ b, answer, onAnswer }: { b: B.MatchBlock; answer?: Answe
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <Header icon="match" tone="sky" tag="Associe les paires">
+      <Header icon="match" tone="sky" tag={t.practice.match}>
         <RichText text={b.prompt} />
       </Header>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
@@ -295,7 +296,7 @@ function FragmentRow({ children, delay }: { children: ReactNode[]; delay: number
 
 // --- Estimate --------------------------------------------------------------------
 
-const fmt = (v: number) => v.toLocaleString('fr-FR', { maximumSignificantDigits: 15 })
+const fmt = (v: number) => v.toLocaleString(locale, { maximumSignificantDigits: 15 })
 
 export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?: Answer; onAnswer: (a: Answer) => void }) {
   // Start away from the answer (at 20% or 80% of the range), so validating untouched is a real guess.
@@ -314,7 +315,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <Header icon="estimate" tone="peach" tag="Estime">
+      <Header icon="estimate" tone="peach" tag={t.practice.estimate}>
         <RichText text={b.prompt} />
       </Header>
       <motion.div
@@ -374,7 +375,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
         {!answered && (
           <input
             type="range"
-            aria-label="Ton estimation"
+            aria-label={t.play.yourGuess}
             min={b.min}
             max={b.max}
             step={b.step}
@@ -401,7 +402,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
 
       {answered ? (
         <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={{ fontSize: 15, fontWeight: 600, color: 'var(--mint-ink)', textAlign: 'center' }}>
-          Réponse : {fmt(b.answer)}
+          {t.practice.answer(fmt(b.answer))}
           {unit}
         </motion.p>
       ) : (
@@ -412,7 +413,7 @@ export function Estimate({ b, answer, onAnswer }: { b: B.EstimateBlock; answer?:
             onAnswer({ correct: good, value })
           }}
         >
-          Valider
+          {t.blocks.submit}
         </Button>
       )}
     </section>

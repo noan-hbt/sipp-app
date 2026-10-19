@@ -11,37 +11,35 @@ import { Api, apiErrorMessage, type Plan, type PlanInfo } from '../lib/api'
 import { openCheckout } from '../lib/paddle'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { t, locale } from '../lib/i18n'
 
-const NAMES: Record<Plan['plan'], string> = { free: 'Gratuit', basic: 'Essentiel', plus: 'Plus', max: 'Équipe' }
+const NAMES: Record<Plan['plan'], string> = t.plans.names
 type Interval = 'month' | 'year'
 type Paid = 'basic' | 'plus'
 
 const euros = (cents: number) =>
-  (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: cents % 100 ? 2 : 0 })
-const hours = (h: number) => (h < 1 ? `~${Math.round(h * 60)} min` : `~${Math.round(h)} h`)
+  (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: cents % 100 ? 2 : 0 })
+const hours = (h: number) => `~${t.time.minutes(h < 1 ? Math.round(h * 60) : Math.round(h) * 60)}`
 
-const TAGLINES: Partial<Record<Plan['plan'], string>> = {
-  basic: 'Pour apprendre un peu chaque jour',
-  plus: 'Pour les curieux insatiables',
-}
+const TAGLINES: Partial<Record<Plan['plan'], string>> = t.offers.taglines
 
 /** The three strongest reasons to pick a paid plan, shown on its card. */
 const highlights = (p: PlanInfo) => [
-  `${p.sips_per_month} nouveaux Sips complets par mois`,
-  `${hours(p.hours_per_month)} de cours par mois`,
-  p.features?.audio ? 'Leçons lues à voix haute, quiz de module' : `${p.slots} Sips en même temps`,
+  t.offers.highlights.sips(p.sips_per_month),
+  t.offers.highlights.hours(hours(p.hours_per_month)),
+  p.features?.audio ? t.offers.highlights.audio : t.offers.highlights.slots(p.slots),
 ]
 
 /** Side by side comparison rows: label, then one cell per plan. */
 const ROWS: [string, (p: PlanInfo) => string | boolean][] = [
-  ['Nouveaux Sips / mois', (p) => String(p.sips_per_month)],
-  ['Cours par mois', (p) => hours(p.hours_per_month).replace('~', '')],
-  ['Sips en même temps', (p) => String(p.slots)],
-  ['Parcours complets', (p) => !p.lite],
-  ['Écoute audio', (p) => !!p.features?.audio],
-  ['Quiz de module', (p) => !!p.features?.quiz],
-  ['Carnet de notes', (p) => (p.features?.notes ? String(p.features.notes) : '∞')],
-  ['Réexplications / jour', (p) => String(p.features?.help_per_day ?? '')],
+  [t.offers.rows.sips, (p) => String(p.sips_per_month)],
+  [t.offers.rows.hours, (p) => hours(p.hours_per_month).replace('~', '')],
+  [t.offers.rows.slots, (p) => String(p.slots)],
+  [t.offers.rows.full, (p) => !p.lite],
+  [t.offers.rows.audio, (p) => !!p.features?.audio],
+  [t.offers.rows.quiz, (p) => !!p.features?.quiz],
+  [t.offers.rows.notes, (p) => (p.features?.notes ? String(p.features.notes) : '∞')],
+  [t.offers.rows.help, (p) => String(p.features?.help_per_day ?? '')],
 ]
 
 const check = (
@@ -132,7 +130,7 @@ export function Offers() {
             style={{ position: 'absolute', right: -4, top: 'calc(var(--safe-top) + 64px)' }}
           />
           <motion.button
-            aria-label="Fermer"
+            aria-label={t.common.close}
             whileTap={{ scale: 0.9 }}
             onClick={() => nav(-1)}
             style={{ position: 'relative', width: 44, height: 44, borderRadius: 22, border: 'none', background: 'rgba(255,255,255,.22)', color: '#fff', display: 'grid', placeItems: 'center' }}
@@ -140,18 +138,18 @@ export function Offers() {
             {Icon.close}
           </motion.button>
           <h1 className="display" style={{ position: 'relative', marginTop: 12, maxWidth: 210, fontSize: 40, lineHeight: 0.96, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: 'Apprends' }, { text: 'sans' }, { text: 'compter.', color: '#fff0c2' }]} delay={0.1} />
+            <RevealLines lines={[{ text: t.offers.title[0] }, { text: t.offers.title[1] }, { text: t.offers.title[2], color: '#fff0c2' }]} delay={0.1} />
           </h1>
           <p style={{ position: 'relative', maxWidth: 200, fontSize: 15, lineHeight: 1.4, color: 'rgba(255,255,255,.86)' }}>
             {mine.data?.on_trial && mine.data.plan_expires_at
-              ? `Ton essai court jusqu’au ${new Date(mine.data.plan_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`
-              : 'Des parcours complets sur tout ce qui t’intrigue, 5 minutes à la fois.'}
+              ? t.offers.trialUntil(new Date(mine.data.plan_expires_at).toLocaleDateString(locale, { day: 'numeric', month: 'long' }))
+              : t.offers.body}
           </p>
         </div>
 
         <div style={{ padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {selling && (
-            <div role="radiogroup" aria-label="Fréquence de paiement" style={{ alignSelf: 'center', display: 'flex', gap: 2, padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
+            <div role="radiogroup" aria-label={t.offers.interval} style={{ alignSelf: 'center', display: 'flex', gap: 2, padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
               {(['month', 'year'] as const).map((i) => (
                 <button
                   key={i}
@@ -162,8 +160,8 @@ export function Offers() {
                   style={{ position: 'relative', border: 'none', borderRadius: 20, minHeight: 40, padding: i === 'year' ? '0 8px 0 16px' : '0 16px', fontSize: 14, fontWeight: 700, background: 'transparent', color: interval === i ? 'var(--ink)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 8 }}
                 >
                   {interval === i && <motion.span layoutId="interval-pill" transition={{ type: 'spring', stiffness: 500, damping: 36 }} style={{ position: 'absolute', inset: 0, borderRadius: 20, background: 'var(--surface)' }} />}
-                  <span style={{ position: 'relative' }}>{i === 'month' ? 'Mensuel' : 'Annuel'}</span>
-                  {i === 'year' && <span style={{ position: 'relative', height: 24, padding: '0 8px', borderRadius: 12, background: 'var(--mint-lip)', color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center' }}>2 mois offerts</span>}
+                  <span style={{ position: 'relative' }}>{i === 'month' ? t.offers.monthly : t.offers.yearly}</span>
+                  {i === 'year' && <span style={{ position: 'relative', height: 24, padding: '0 8px', borderRadius: 12, background: 'var(--mint-lip)', color: '#fff', fontSize: 11, display: 'grid', placeItems: 'center' }}>{t.offers.twoMonths}</span>}
                 </button>
               ))}
             </div>
@@ -176,7 +174,7 @@ export function Offers() {
             const big = price(p)
             const yearly = p.prices.year
             const day = perDay(p)
-            const badge = p.name === 'basic' ? (canTry ? `Recommandé · ${trialDays} jours offerts` : 'Recommandé') : null
+            const badge = p.name === 'basic' ? (canTry ? t.offers.recommendedTrial(trialDays) : t.offers.recommended) : null
             return (
               <motion.section
                 key={p.name}
@@ -185,7 +183,7 @@ export function Offers() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 whileTap={pickable ? { scale: 0.98 } : undefined}
                 transition={{ type: 'spring', stiffness: 280, damping: 24, delay: 0.15 + i * 0.07 }}
-                aria-label={`Offre ${NAMES[p.name]}`}
+                aria-label={t.profile.planOf(NAMES[p.name])}
                 role={pickable ? 'radio' : undefined}
                 aria-checked={pickable ? p.name === chosen : undefined}
                 tabIndex={pickable ? 0 : undefined}
@@ -213,13 +211,13 @@ export function Offers() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                     <span className="display" style={{ fontSize: featured ? 26 : 22 }}>{NAMES[p.name]}</span>
-                    <span style={{ fontSize: 13, color: 'var(--muted)' }}>{isMine ? (mine.data?.on_trial ? 'Ton essai en cours' : 'Ton offre actuelle') : TAGLINES[p.name]}</span>
+                    <span style={{ fontSize: 13, color: 'var(--muted)' }}>{isMine ? (mine.data?.on_trial ? t.offers.yourTrial : t.offers.yourPlan) : TAGLINES[p.name]}</span>
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <span className="display" style={{ fontSize: featured ? 34 : 24, lineHeight: 1 }}>{big == null ? 'Bientôt' : euros(big)}</span>
+                    <span className="display" style={{ fontSize: featured ? 34 : 24, lineHeight: 1 }}>{big == null ? t.offers.soon : euros(big)}</span>
                     {big != null && (
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        /mois{interval === 'year' && yearly != null ? ` · ${euros(yearly)} par an` : ''}
+                        {t.offers.perMonth}{interval === 'year' && yearly != null ? t.offers.perYearNote(euros(yearly)) : ''}
                       </span>
                     )}
                   </span>
@@ -228,14 +226,14 @@ export function Offers() {
                   <>
                     {day != null && big != null && (
                       <span style={{ alignSelf: 'flex-start', height: 28, padding: '0 12px', borderRadius: 14, background: 'var(--butter)', color: 'var(--butter-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 700 }}>
-                        Moins de {euros(day)} par jour
+                        {t.offers.perDay(euros(day))}
                       </span>
                     )}
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {highlights(p).map((t) => (
-                        <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600 }}>
+                      {highlights(p).map((line) => (
+                        <li key={line} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600 }}>
                           <span style={{ width: 24, height: 24, borderRadius: 12, background: 'var(--mint)', color: 'var(--mint-ink)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{check}</span>
-                          {t}
+                          {line}
                         </li>
                       ))}
                     </ul>
@@ -250,7 +248,7 @@ export function Offers() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
-              aria-label="Comparer les offres"
+              aria-label={t.offers.compare}
               style={{ borderRadius: 24, background: 'var(--surface)', padding: '12px 16px 6px' }}
             >
               <div style={{ display: 'grid', gridTemplateColumns: `1.5fr repeat(${table.length}, 1fr)`, alignItems: 'end', paddingBottom: 8 }}>
@@ -268,9 +266,9 @@ export function Offers() {
                     return (
                       <span key={p.name} style={{ display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 700, color: on ? 'var(--primary)' : 'var(--ink)' }}>
                         {v === true ? (
-                          <span style={{ color: 'var(--mint-lip)', display: 'grid' }} aria-label="oui">{check}</span>
+                          <span style={{ color: 'var(--mint-lip)', display: 'grid' }} aria-label={t.offers.yes}>{check}</span>
                         ) : v === false ? (
-                          <span aria-label="non" style={{ width: 12, height: 3, borderRadius: 2, background: 'var(--line-strong)' }} />
+                          <span aria-label={t.offers.no} style={{ width: 12, height: 3, borderRadius: 2, background: 'var(--line-strong)' }} />
                         ) : (
                           v
                         )}
@@ -284,7 +282,7 @@ export function Offers() {
 
           {trial.isError && (
             <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>
-              Ton essai n’a pas pu démarrer. Réessaie dans un instant.
+              {t.upsell.trialFailed}
             </p>
           )}
         </div>
@@ -294,7 +292,7 @@ export function Offers() {
         {subscribed ? (
           <>
             <Button disabled={portal.isPending} onClick={() => portal.mutate()}>
-              {portal.isPending ? <Mascot mood="think" size={36} /> : 'Gérer mon abonnement'}
+              {portal.isPending ? <Mascot mood="think" size={36} /> : t.offers.manage}
             </Button>
             {portal.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(portal.error)}</p>}
           </>
@@ -308,46 +306,46 @@ export function Offers() {
                 style={{ width: 20, height: 20, marginTop: 1, flexShrink: 0, accentColor: 'var(--primary)' }}
               />
               <span>
-                Je veux accéder tout de suite à mon abonnement et j’accepte qu’il commence avant la fin du délai de rétractation de 14 jours.
+                {t.offers.consent}
               </span>
             </label>
             <Button disabled={!consent || subscribe.isPending || chosenPrice == null} onClick={() => subscribe.mutate()} sound="pop">
               {subscribe.isPending
                 ? <Mascot mood="think" size={36} />
-                : `S’abonner à ${NAMES[chosen]}${chosenPrice != null ? ` · ${euros(chosenPrice)}${interval === 'month' ? '/mois' : '/an'}` : ''}`}
+                : t.offers.subscribe(NAMES[chosen], chosenPrice != null ? `${euros(chosenPrice)}${interval === 'month' ? t.offers.perMonth : t.offers.perYear}` : null)}
             </Button>
             {subscribe.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(subscribe.error)}</p>}
             {canTry && (
               <button type="button" onClick={() => setDirect(false)} style={{ border: 'none', background: 'none', height: 40, fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
-                Plutôt essayer {trialDays} jours gratuitement
+                {t.offers.ratherTry(trialDays)}
               </button>
             )}
             <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>
-              Paiement sécurisé par Paddle, notre revendeur. Résiliable à tout moment depuis ton profil.
+              {t.offers.paddle}
             </p>
           </>
         ) : canTry ? (
           <>
             <Button disabled={trial.isPending} onClick={() => trial.mutate()} sound="pop">
-              {trial.isPending ? <Mascot mood="think" size={36} /> : `Essayer ${trialDays} jours gratuitement`}
+              {trial.isPending ? <Mascot mood="think" size={36} /> : t.offers.tryFree(trialDays)}
             </Button>
             <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>
-              Essentiel, sans carte bancaire. Tu repasses en Gratuit à la fin, sans rien payer.
+              {t.offers.trialNote}
             </p>
             {selling && (
               <button type="button" onClick={() => setDirect(true)} style={{ border: 'none', background: 'none', height: 40, fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
-                S’abonner directement à {NAMES[chosen]}
+                {t.offers.subscribeDirect(NAMES[chosen])}
               </button>
             )}
           </>
         ) : (
           <>
             <Button variant="soft" onClick={() => nav(-1)}>
-              Retour
+              {t.common.back}
             </Button>
             {!mine.data?.billing_enabled && (
               <p className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-                Les abonnements arrivent bientôt.
+                {t.offers.comingSoon}
               </p>
             )}
           </>
