@@ -11,6 +11,7 @@ import { Api, apiErrorMessage, type Plan, type PlanInfo } from '../lib/api'
 import { openCheckout } from '../lib/paddle'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
+import { LegalLinks } from './Legal'
 import { t, locale } from '../lib/i18n'
 
 const NAMES: Record<Plan['plan'], string> = t.plans.names
@@ -323,6 +324,7 @@ export function Offers() {
             <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>
               {t.offers.paddle}
             </p>
+            <LegalLinks except="mentions" style={{ fontSize: 12 }} />
           </>
         ) : canTry ? (
           <>

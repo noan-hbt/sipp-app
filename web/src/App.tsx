@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'motion/react'
 import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ConsentBanner } from './components/ConsentBanner'
 import { TabBar } from './components/TabBar'
 import { Api, getTokens, onTokens } from './lib/api'
 import { play } from './lib/sound'
@@ -26,6 +27,7 @@ const LessonDone = lazy(() => import('./screens/LessonDone').then((m) => ({ defa
 const Review = lazy(() => import('./screens/Review').then((m) => ({ default: m.Review })))
 const ModuleQuiz = lazy(() => import('./screens/ModuleQuiz').then((m) => ({ default: m.ModuleQuiz })))
 const Demo = lazy(() => import('./screens/Demo').then((m) => ({ default: m.Demo })))
+const Legal = lazy(() => import('./screens/Legal').then((m) => ({ default: m.Legal })))
 const BlockGallery = lazy(() => import('./screens/BlockGallery').then((m) => ({ default: m.BlockGallery })))
 
 function useLoggedIn() {
@@ -80,6 +82,7 @@ export default function App() {
               <Route path="/demo" element={<Demo />} />
               <Route path="/signup" element={<Auth initial="register" />} />
               <Route path="/login" element={<Auth initial="login" />} />
+              <Route path="/legal/:page" element={<Legal />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </>
           ) : (
@@ -90,6 +93,7 @@ export default function App() {
               <Route path="/new" element={<NewSip />} />
               <Route path="/new/confirm" element={<Understood />} />
               <Route path="/demo" element={<Demo signedIn />} />
+              <Route path="/legal/:page" element={<Legal />} />
               <Route path="/review" element={<Review />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/offers" element={<Offers />} />
@@ -108,6 +112,7 @@ export default function App() {
         </Suspense>
       </AnimatePresence>
       {loggedIn && <TabBar />}
+      <ConsentBanner />
     </div>
   )
 }

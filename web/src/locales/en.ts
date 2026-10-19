@@ -768,7 +768,28 @@ export const en: Messages = {
     help: 'If you’re going through a hard time, please reach out to a local helpline or your emergency number. You’re not alone.',
     other: 'You can try another topic, or another angle on this one.',
     otherTopic: 'Pick another topic',
-    age: 'By creating your account, you confirm you are at least 15.',
+  },
+  legal: {
+    links: { mentions: 'Legal notice', privacy: 'Privacy', terms: 'Terms' },
+    nav: 'Legal information',
+    updated: (date: string) => `Updated on ${date}`,
+    missing: '[to fill in]',
+    signup: {
+      before: 'By creating your account, you accept the ',
+      terms: 'terms of use',
+      mid: ' and the ',
+      privacy: 'privacy policy',
+      after: ', and confirm you are at least 15.',
+    },
+    consent: {
+      label: 'Usage statistics',
+      text: 'We’d like to measure how Sipp is used (screens viewed, main actions, never your answers) to improve it. Is that OK?',
+      more: 'Learn more',
+      accept: 'Accept',
+      refuse: 'Decline',
+    },
+    analytics: 'Usage statistics',
+    analyticsHint: 'Screens viewed and main actions, never your answers.',
   },
   // @end
 }
