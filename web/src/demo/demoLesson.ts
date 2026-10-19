@@ -110,3 +110,14 @@ export const DEMO_LESSON: {
     },
   ],
 }
+
+/** The request this lesson answers and the path Sipp built from it, shown before the demo so the lesson reads as one example, not the app's topic. */
+export const DEMO_PATH = {
+  wish: 'Je bois trois cafés par jour. Je veux comprendre ce que ça fait à mon cerveau.',
+  modules: [
+    { title: 'Ce que fait la caféine', lessons: ['Pourquoi le café nous réveille', 'Pourquoi il en faut toujours plus'] },
+    { title: 'Café et sommeil', lessons: [] },
+    { title: 'Doser sans se priver', lessons: [] },
+  ],
+  lessons: 8,
+}
