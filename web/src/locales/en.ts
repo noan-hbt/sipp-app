@@ -74,6 +74,8 @@ export const en: Messages = {
     registerTitle: ['Keep your Sip', 'safe.'],
     loginTitle: ['Good to', 'see you again!'],
     registerBody: 'Create your account to keep your lesson and continue your path.',
+    wishTitle: ['One last step,', 'and I’ll write.'],
+    wishBody: 'Create your account: I’ll start your path right away, and you’ll find it wherever you are.',
     loginBody: 'Log in to pick up where you left off.',
     registerTab: 'Sign up',
     loginTab: 'Log in',

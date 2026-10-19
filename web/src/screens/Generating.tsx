@@ -117,7 +117,7 @@ export function Generating() {
   const level = useBrewLevel(from, to)
   const pct = useTransform(level, (v) => Math.round(Math.min(1, v) * 100))
   const bad = failed || readError
-  const heading = sip.data?.chapter ? t.generating.chapter(sip.data.chapter, sip.data.title ?? '') : (profile?.title ?? clip(sip.data?.input_text ?? '…', 90))
+  const heading = sip.data?.chapter ? t.generating.chapter(sip.data.chapter, sip.data.title ?? '') : (profile?.title ?? capitalize(clip(sip.data?.input_text ?? '…', 90)))
 
   return (
     <Screen kind="fade">
@@ -235,6 +235,11 @@ export function Generating() {
       </AnimatePresence>
     </Screen>
   )
+}
+
+/** The raw request stands in as the title until Sipp has named the path: "comprendre…" → "Comprendre…". */
+function capitalize(s: string) {
+  return s.charAt(0).toLocaleUpperCase() + s.slice(1)
 }
 
 function clip(s: string, n: number) {
