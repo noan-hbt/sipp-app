@@ -49,7 +49,9 @@ class AnswerBodyLimit:
         await self.app(scope, replay, send)
 
 
-app = FastAPI(title="Sipp API", version="0.1.0")
+# The interactive API docs list every route and schema: handy in dev, nothing to show the public in prod.
+_docs = {} if settings.env == "dev" else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+app = FastAPI(title="Sipp API", version="0.1.0", **_docs)
 app.add_middleware(AnswerBodyLimit)
 app.add_middleware(
     CORSMiddleware,
