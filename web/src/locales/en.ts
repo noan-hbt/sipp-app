@@ -148,6 +148,7 @@ export const en: Messages = {
       no_free_slot: 'Your library is full. Free up a spot or upgrade.',
       monthly_limit: 'You’ve used this month’s creations. Come back next month, or upgrade.',
       llm_unavailable: 'I can’t think right now. Try again in a moment.',
+      ai_consent_required: 'I first need your OK to use AI.',
     },
     remaining: (n: number) => (n > 1 ? `${n} creations left` : n === 1 ? '1 creation left' : 'No creations left this month'),
     oops: 'Oops, try again in a moment.',
