@@ -36,6 +36,7 @@ class ChatClient(Protocol):
         messages: list[dict[str, str]],
         schema_name: str,
         schema: dict[str, Any],
+        options: dict[str, Any] | None = None,
     ) -> Completion: ...
 
 
@@ -53,7 +54,7 @@ class OpenRouterClient:
             },
         )
 
-    async def complete(self, model, messages, schema_name, schema) -> Completion:
+    async def complete(self, model, messages, schema_name, schema, options=None) -> Completion:
         if self._s.llm_response_format == "json_schema":
             response_format = {
                 "type": "json_schema",
@@ -66,6 +67,7 @@ class OpenRouterClient:
             "messages": messages,
             "response_format": response_format,
             "usage": {"include": True},
+            **(options or {}),
         }
         for attempt in range(3):
             try:
@@ -137,6 +139,16 @@ class StructuredLLM:
     settings: Any = field(default_factory=get_settings)
     lite: bool = False  # free plan: one small model, no escalation
     reserver: Reserver | None = None
+    used: dict[str, str] = field(default_factory=dict)  # stage -> model that answered
+
+    def options(self, stage: str) -> dict[str, Any]:
+        s = self.settings
+        out: dict[str, Any] = {}
+        if stage in s.llm_max_tokens:
+            out["max_tokens"] = s.llm_max_tokens[stage]
+        if stage in s.llm_reasoning:
+            out["reasoning"] = {"effort": s.llm_reasoning[stage]}
+        return out
 
     async def generate(
         self,
@@ -169,7 +181,9 @@ class StructuredLLM:
                 t0 = time.monotonic()
                 try:
                     async with asyncio.timeout(self.settings.llm_timeout_seconds * 3 + 10):
-                        completion = await self.client.complete(model, messages, out.__name__, schema)
+                        completion = await self.client.complete(
+                            model, messages, out.__name__, schema, self.options(stage)
+                        )
                 except (LLMError, TimeoutError) as e:
                     await self._record(stage, model, t0, None, str(e) or "provider timeout", reservation_id)
                     last_error = e
@@ -193,6 +207,7 @@ class StructuredLLM:
                     ]
                     continue
                 await self._record(stage, model, t0, completion, None, reservation_id)
+                self.used[stage] = model
                 return result
             log.warning("stage %s failed on %s, escalating", stage, model)
         raise LLMError(f"stage '{stage}' failed: {last_error}")

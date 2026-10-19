@@ -204,6 +204,9 @@ export const en: Messages = {
     retryPath: 'Restart your path to continue.',
     meta: (modules: number, lessons: number, time: string) => `${modules} modules · ${lessons} lessons · ${time}`,
     closeOk: 'You can close the app, I’ll keep going without you.',
+    firstReady: 'Your first lesson is ready',
+    firstReadyBody: 'Start it now, I’ll finish the rest of the path meanwhile.',
+    firstStart: 'Start the lesson',
   },
   home: {
     headline: {

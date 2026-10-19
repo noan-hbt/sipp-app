@@ -119,6 +119,8 @@ class Sip(TimestampMixin, Base):
     adjustment_queued: Mapped[bool] = mapped_column(default=False, server_default=false())
     # Learner feedback on difficulty: -2 (much easier) .. +2 (much harder), for lessons not written yet.
     difficulty: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # path built
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # prompt version and models that built it
 
     modules: Mapped[list["Module"]] = relationship(
         back_populates="sip", cascade="all, delete-orphan", order_by="Module.position"
@@ -175,6 +177,8 @@ class Lesson(TimestampMixin, Base):
     review: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     revisions: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+    generated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # prompt version and models that wrote it
 
     answers: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON)
     stars: Mapped[int | None] = mapped_column(Integer)  # best result, 1-3

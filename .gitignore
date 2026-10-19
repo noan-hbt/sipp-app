@@ -8,3 +8,4 @@ real*.db
 backend/run*.json
 backend/run*.txt
 design/
+backend/evals/runs/

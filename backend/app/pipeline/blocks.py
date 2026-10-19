@@ -360,6 +360,11 @@ class SimulateBlock(_Block):
     output: Str = Field(description="What changes, e.g. 'Intérêts payés'.")
     output_unit: str | None = Field(default=None, description="e.g. '€'.")
     points: list[SimulatePoint] = Field(min_length=3, max_length=6, description="Strictly increasing x, exact y.")
+    formula: str | None = Field(
+        default=None,
+        description="y as an arithmetic expression of x when there is one, e.g. '10000 * 1.05 ** x - 10000' "
+        "(numbers, x, + - * / ** and sqrt/log/exp/min/max only). Every point's y is checked against it.",
+    )
     start: int = Field(default=0, ge=0, description="Index of the point shown first.")
     takeaway: Str = Field(description="What the learner should notice, one or two sentences.")
 

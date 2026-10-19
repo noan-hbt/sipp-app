@@ -118,7 +118,7 @@ async def test_validation_retry_cannot_exceed_reserved_budget(monkeypatch):
     class Invalid:
         calls = 0
 
-        async def complete(self, model, messages, schema_name, schema):
+        async def complete(self, model, messages, schema_name, schema, options=None):
             self.calls += 1
             return Completion("invalid JSON", model, cost=0.03)
 
@@ -150,7 +150,7 @@ async def test_cancellation_releases_help_and_concurrency_but_preserves_unknown_
     started = asyncio.Event()
 
     class Waiting:
-        async def complete(self, *args):
+        async def complete(self, *args, **kwargs):
             started.set()
             await asyncio.Event().wait()
 

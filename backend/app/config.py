@@ -37,6 +37,14 @@ class Settings(BaseSettings):
     # "json_schema" (structured outputs) or "json_object" (schema in prompt only)
     llm_response_format: str = "json_schema"
     llm_validation_retries: int = 1
+    # Output ceiling per stage (reasoning included): a runaway answer stops there instead of
+    # costing minutes and dollars. Generous: the longest real outputs are ~5x below.
+    llm_max_tokens: dict[str, int] = {
+        "interpretation": 8000, "roadmap": 16000, "curriculum": 16000, "mapping": 12000,
+        "planning": 12000, "writing": 24000, "review": 12000, "solve": 8000, "help": 6000,
+    }
+    # Reasoning effort per stage ("low", "medium", "high"); a stage left out uses the model default.
+    llm_reasoning: dict[str, str] = {}
 
     # Models per pipeline stage (OpenRouter slugs)
     model_interpretation: str = "openai/gpt-6-luna"
@@ -48,6 +56,9 @@ class Settings(BaseSettings):
     model_review: str = "openai/gpt-6-luna"
     model_escalation: str = "openai/gpt-6.1-sol"
     model_help: str = "openai/gpt-6-luna"
+    # Answers each lesson's graded items without their key (pipeline/solve.py).
+    model_solve: str = "openai/gpt-6-luna"
+    solve_enabled: bool = True
 
     # Guardrails (limits, never targets)
     max_modules: int = 12

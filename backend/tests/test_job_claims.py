@@ -145,7 +145,7 @@ async def test_reclaimed_worker_cannot_publish_llm_result(auth_client):
     started, resume = asyncio.Event(), asyncio.Event()
 
     class SlowClient(FakeClient):
-        async def complete(self, model, messages, schema_name, schema):
+        async def complete(self, model, messages, schema_name, schema, options=None):
             if schema_name == "LearningProfile":
                 started.set()
                 await resume.wait()

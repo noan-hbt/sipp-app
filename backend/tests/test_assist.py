@@ -49,7 +49,7 @@ class Recording(FakeClient):
         super().__init__()
         self.inputs: list[str] = []
 
-    async def complete(self, model, messages, schema_name, schema):
+    async def complete(self, model, messages, schema_name, schema, options=None):
         self.inputs.append(messages[-1]["content"])
         return await super().complete(model, messages, schema_name, schema)
 

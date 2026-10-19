@@ -79,6 +79,12 @@ export function Generating() {
   const { phase, from, to, mapped } = progressOf(sip.data)
   const lastPhase = useRef(phase)
   const done = phase === 'done'
+  // The first lesson is written while later modules are still being cut: no need to wait for them.
+  const first = sip.data?.modules[0]?.lessons[0]
+  const early = !!sip.data && (sip.data.status === 'queued' || sip.data.status === 'generating') && first?.status === 'ready' && !first.completed
+  useEffect(() => {
+    if (early) play('unlock')
+  }, [early])
 
   useEffect(() => {
     if (phase !== lastPhase.current) play(phase === 'done' ? 'complete' : 'unlock')
@@ -201,12 +207,32 @@ export function Generating() {
           </section>
         )}
 
-        {!bad && (
+        {!bad && !early && (
           <p style={{ marginTop: 'auto', textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--peach-ink)' }}>
             {t.generating.closeOk}
           </p>
         )}
       </div>
+      <AnimatePresence>
+        {early && first && (
+          <motion.div
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            className="bottom-bar"
+            style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg)', borderRadius: '28px 28px 0 0' }}
+          >
+            <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 2, textAlign: 'center' }}>
+              <span className="display" style={{ fontSize: 19 }}>{t.generating.firstReady}</span>
+              <span className="muted" style={{ fontSize: 14, lineHeight: 1.4 }}>{t.generating.firstReadyBody}</span>
+            </div>
+            <Button onClick={() => nav(`/lessons/${first.id}`)} sound="pop">
+              {t.generating.firstStart}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Screen>
   )
 }
