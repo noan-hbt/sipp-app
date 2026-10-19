@@ -277,12 +277,21 @@ export function SipMap() {
                   <span
                     style={{ fontSize: 13, fontWeight: 600, color: pal.ink }}
                   >
-                    Chapitre {sip.data.chapter}
+                    {t.sipMap.chapter(sip.data.chapter)}
                   </span>
                 )}
                 <h1
                   className="display"
-                  style={{ fontSize: 34, lineHeight: 1, letterSpacing: "-0.045em" }}
+                  style={{
+                    // Long titles shrink instead of filling half the screen.
+                    fontSize: name.length > 60 ? 24 : name.length > 36 ? 28 : 34,
+                    lineHeight: 1.02,
+                    letterSpacing: "-0.045em",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 4,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
                 >
                   {name}
                 </h1>
