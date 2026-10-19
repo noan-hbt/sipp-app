@@ -95,6 +95,7 @@ export function Lesson() {
     <LessonPlayer
       key={data.id}
       title={data.title}
+      language={data.language}
       blocks={data.blocks ?? []}
       resume={data.completed_at ? null : resume.queue.resume ?? data.resume}
       onSave={(step, answers) => resume.queue.save({ step, answers: toList(answers) })}
@@ -177,6 +178,7 @@ export function LessonPlayer({
   onLockedAudio,
   art,
   extra,
+  language,
 }: {
   title: string
   blocks: Block[]
@@ -199,6 +201,8 @@ export function LessonPlayer({
   art?: string
   /** Rendered at the end of the screen (sheets). */
   extra?: ReactNode
+  /** Language of the blocks (ISO 639-1), for the read-aloud voice. */
+  language?: string | null
 }) {
   // One block per screen. `revealed` is the furthest screen reached, `view` the one shown
   // (the learner can step back to re-read).
@@ -259,7 +263,7 @@ export function LessonPlayer({
   const [listening, setListening] = useState(false)
   useEffect(() => {
     if (!listening || !blocks[view - 1]) return
-    speak(blockText(blocks[view - 1]))
+    speak(blockText(blocks[view - 1]), undefined, language ?? undefined)
     return () => stopSpeaking()
   }, [listening, view]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => stopSpeaking(), [])

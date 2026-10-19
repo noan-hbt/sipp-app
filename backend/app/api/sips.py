@@ -225,6 +225,7 @@ async def retry_sip(
 
 async def _lesson_out(session: AsyncSession, lesson: Lesson) -> LessonOut:
     nxt = await engine.next_lesson(session, lesson)
+    sip = await session.get(Sip, lesson.sip_id)
     return LessonOut(
         id=lesson.id,
         sip_id=lesson.sip_id,
@@ -242,6 +243,7 @@ async def _lesson_out(session: AsyncSession, lesson: Lesson) -> LessonOut:
         stars=lesson.stars,
         next_lesson_id=nxt.id if nxt else None,
         resume=None if lesson.completed_at else lesson.resume,
+        language=(sip.profile or {}).get("language") if sip else None,
     )
 
 

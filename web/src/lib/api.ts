@@ -116,6 +116,8 @@ export interface LessonOut {
   stars: number | null
   next_lesson_id: string | null
   resume?: { step: number; answers: unknown[] } | null
+  /** Language of the content (ISO 639-1), to read it with a matching voice. */
+  language?: string | null
 }
 export interface CompleteOut {
   lesson_id: string
