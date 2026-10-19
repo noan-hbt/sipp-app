@@ -220,7 +220,7 @@ function PredictNumber({ b, answer, onAnswer }: { b: B.PredictBlock; answer?: An
             onAnswer({ correct: null, value })
           }}
         >
-          Je dirais {withUnit(fmt(value), b.unit)}
+          {t.play.bet(withUnit(fmt(value), b.unit))}
         </Button>
       )}
     </section>
