@@ -147,6 +147,7 @@ export const fr = {
       no_free_slot: 'Ta bibliothèque est pleine. Libère un emplacement ou passe à l’abonnement.',
       monthly_limit: 'Tu as utilisé tes générations du mois. Reviens le mois prochain, ou passe à l’abonnement.',
       llm_unavailable: 'Je n’arrive pas à réfléchir pour l’instant. Réessaie dans un instant.',
+      ai_consent_required: 'Il me faut d’abord ton accord pour utiliser l’IA.',
     } as Record<string, string>,
     remaining: (n: number) => (n > 1 ? `${n} créations restantes` : n === 1 ? '1 création restante' : 'Plus de création ce mois-ci'),
     oops: 'Oups, réessaie dans un instant.',

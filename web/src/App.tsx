@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'motion/react'
-import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { TabBar } from './components/TabBar'
-import { Api, getTokens, onTokens } from './lib/api'
+import { Api, getTokens, onConsentRequired, onTokens } from './lib/api'
 import { play } from './lib/sound'
 import { AiConsent } from './screens/AiConsent'
 import { Auth } from './screens/Auth'
@@ -20,6 +20,7 @@ import { SipMap } from './screens/SipMap'
 import { Understood } from './screens/Understood'
 import { Welcome } from './screens/Welcome'
 import { track } from './lib/telemetry'
+import { updateOnNavigation } from './lib/update'
 
 // The lesson player carries the block renderers and code highlighting: loaded on first use.
 const Lesson = lazy(() => import('./screens/Lesson').then((m) => ({ default: m.Lesson })))
@@ -66,16 +67,27 @@ function usePendingWish(loggedIn: boolean) {
 }
 
 /** Signed in but not yet agreed to AI processing: that screen comes first (nothing shows until it is known, so the
- * home never flashes before it). Offline, the profile fails to load and the app stays usable. */
+ * home never flashes before it). Offline, the profile fails to load and the app stays usable. A request the server
+ * refuses for want of consent brings the screen up too, even if the profile in memory is stale. */
 function useNeedsAiConsent(loggedIn: boolean) {
   const me = useQuery({ queryKey: ['me'], queryFn: Api.me, enabled: loggedIn, staleTime: Infinity })
-  return { needed: loggedIn && me.data?.ai_consent_at === null, known: !loggedIn || me.data !== undefined || me.isError }
+  const [refused, setRefused] = useState(false)
+  useEffect(() => onConsentRequired(() => setRefused(true)), [])
+  const agreed = Boolean(me.data?.ai_consent_at)
+  useEffect(() => {
+    if (agreed) setRefused(false)
+  }, [agreed, me.dataUpdatedAt])
+  return {
+    needed: loggedIn && (me.data?.ai_consent_at === null || refused),
+    known: !loggedIn || me.data !== undefined || me.isError,
+  }
 }
 
 export default function App() {
   const location = useLocation()
   const loggedIn = useLoggedIn()
   const consent = useNeedsAiConsent(loggedIn)
+  useEffect(() => updateOnNavigation(location.pathname), [location.pathname])
   usePendingWish(loggedIn && consent.known && !consent.needed)
   return (
     <div className="app">

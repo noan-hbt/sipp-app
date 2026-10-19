@@ -326,6 +326,15 @@ export function setTokens(t: Tokens | null) {
   sessionListeners.forEach((l) => l())
   storeTokens(t)
 }
+const consentListeners = new Set<() => void>()
+/** The server refused a request until the account agrees to AI processing (whatever the cached profile said). */
+export function onConsentRequired(l: () => void) {
+  consentListeners.add(l)
+  return () => {
+    consentListeners.delete(l)
+  }
+}
+
 export function onTokens(l: () => void) {
   listeners.add(l)
   return () => listeners.delete(l)
@@ -447,7 +456,9 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     } catch {
       detail = undefined
     }
-    throw new ApiError(r.status, detail)
+    const error = new ApiError(r.status, detail)
+    if (error.status === 403 && error.code === 'ai_consent_required') consentListeners.forEach((l) => l())
+    throw error
   }
   if (cacheable && r.status === 200 && typeof caches !== 'undefined') {
     const cachedHeaders = new Headers(r.headers)
