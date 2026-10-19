@@ -141,7 +141,7 @@ export function Profile() {
               initial={{ scale: 0.3 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 120, damping: 16, delay: 0.2 }}
-              style={{ position: 'absolute', right: -40, top: -40, width: 132, height: 132, borderRadius: 66, background: 'var(--plan-accent)' }}
+              style={{ position: 'absolute', right: -40, top: -46, width: 118, height: 118, borderRadius: 59, background: 'var(--plan-accent)' }}
             />
             <img src={illustration('scene-premium')} alt="" width={84} height={84} style={{ position: 'absolute', right: 0, top: 0 }} />
             {subscription ? (
