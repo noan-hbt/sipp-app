@@ -49,7 +49,16 @@ const H = ({ children }: { children: string }) => (
 // --- Content blocks ---------------------------------------------------------------
 
 function Text({ b }: { b: B.TextBlock }) {
-  return <P>{b.content}</P>
+  const paragraphs = b.content.split(/\n\s*\n/).filter((p) => p.trim())
+  return paragraphs.length > 1 ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {paragraphs.map((p, i) => (
+        <P key={i}>{p.trim()}</P>
+      ))}
+    </div>
+  ) : (
+    <P>{b.content}</P>
+  )
 }
 
 function Concept({ b }: { b: B.ConceptBlock }) {
@@ -96,7 +105,7 @@ function Scenario({ b }: { b: B.ScenarioBlock }) {
   return (
     <article style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Kicker icon="scenario" tone="rose">
-        {short ? <RichText text={b.setting} /> : 'Mise en situation'}
+        {short ? <RichText text={b.setting} /> : t.blocks.scenario}
       </Kicker>
       <motion.div
         initial={{ scale: 0.9, originX: 0, originY: 0 }}

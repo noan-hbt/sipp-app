@@ -183,7 +183,7 @@ export function Offers() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 whileTap={pickable ? { scale: 0.98 } : undefined}
                 transition={{ type: 'spring', stiffness: 280, damping: 24, delay: 0.15 + i * 0.07 }}
-                aria-label={t.profile.planOf(NAMES[p.name])}
+                aria-label={t.plans.offers[p.name]}
                 role={pickable ? 'radio' : undefined}
                 aria-checked={pickable ? p.name === chosen : undefined}
                 tabIndex={pickable ? 0 : undefined}

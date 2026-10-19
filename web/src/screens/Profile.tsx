@@ -148,7 +148,7 @@ export function Profile() {
               <>
                 <div style={{ position: 'relative', paddingRight: 92 }}>
                   <span className="kicker" style={{ color: 'var(--plan-kicker)' }}>
-                    {subscription.on_trial ? t.profile.trialOf(planNames[subscription.plan]) : t.profile.planOf(planNames[subscription.plan])}
+                    {subscription.on_trial ? t.profile.trialOf(planNames[subscription.plan]) : t.plans.offers[subscription.plan]}
                   </span>
                   <h2 className="title-m" style={{ marginTop: 6 }}>{subscription.on_trial ? t.profile.trialRunning : planNames[subscription.plan]}</h2>
                   {subscription.on_trial && subscription.plan_expires_at && (

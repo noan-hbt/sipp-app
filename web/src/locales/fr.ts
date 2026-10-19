@@ -326,6 +326,7 @@ export const fr = {
   },
   plans: {
     names: { free: 'Gratuit', basic: 'Essentiel', plus: 'Plus', max: 'Équipe' },
+    offers: { free: 'Offre gratuite', basic: 'Offre Essentiel', plus: 'Offre Plus', max: 'Offre Équipe' },
   },
   help: {
     kinds: { rephrase: 'Explique autrement', simpler: 'Plus simple', example: 'Un exemple', word: 'Un mot inconnu' },
@@ -399,7 +400,6 @@ export const fr = {
     seeProgress: 'Voir mes progrès',
     subscription: 'Ton abonnement',
     trialOf: (plan: string) => `Essai ${plan}`,
-    planOf: (plan: string) => `Offre ${plan}`,
     trialRunning: 'Ton essai est en cours',
     trialUntil: (date: string) => `Essai gratuit · jusqu’au ${date}`,
     slots: (used: number, slots: number) => `${used} / ${slots} places`,
@@ -627,6 +627,7 @@ export const fr = {
   blocks: {
     concept: 'Nouvelle notion',
     example: 'Exemple',
+    scenario: 'Mise en situation',
     analogy: 'Analogie',
     like: 'comme',
     image: 'L’image',
@@ -651,8 +652,8 @@ export const fr = {
     true: 'Vrai',
     false: 'Faux',
     myth: 'Idée reçue ?',
-    quoteOpen: '« ',
-    quoteClose: ' »',
+    quoteOpen: '«\u00a0',
+    quoteClose: '\u00a0»',
     apply: 'À toi de jouer',
     optional: 'Facultatif, juste pour toi',
     notePlaceholder: 'Note une idée…',

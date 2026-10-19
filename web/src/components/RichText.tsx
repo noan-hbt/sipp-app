@@ -39,8 +39,16 @@ function parse(src: string): Part[] {
   return parts
 }
 
-/** French typography: « ? ! : ; » never start a line alone (non-breaking space before them). */
-export const typo = (s: string) => s.replace(/ ([?!:;»])/g, ' $1').replace(/« /g, '« ')
+/**
+ * Typography: « ? ! : ; » never start a line alone (non-breaking space before them), and a number
+ * stays whole with its unit ("200 000 €", "35 %", "5 h" never break across lines).
+ */
+export const typo = (s: string) =>
+  s
+    .replace(/ ([?!:;»])/g, '\u00a0$1')
+    .replace(/« /g, '«\u00a0')
+    .replace(/(\d) (?=\d{3}(?!\d))/g, '$1\u202f')
+    .replace(/(\d) (?=[€%$£]|(?:h|min|s|ans?|mois|jours?|mg|g|kg|km|m|cm|ml|L|°C?)(?![\p{L}\d]))/gu, '$1\u00a0')
 
 export function RichText({ text }: { text: string }) {
   const parts = useMemo(() => parse(text), [text])
