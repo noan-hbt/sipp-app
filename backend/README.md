@@ -3,8 +3,9 @@
 FastAPI + Postgres + a worker that runs the generation pipeline through OpenRouter.
 
 ```
-POST /sips ──► job build_sip:      interpretation → curriculum → mapping   (roadmap)
-                └► job generate_lesson(L1, chain) : planning → writing → checks + review → ≤1 revision
+POST /sips ──► job build_sip:      interpretation → curriculum → mapping, one module at a time
+                └► as soon as M1 is mapped, job generate_lesson(L1, chain), while later modules are mapped:
+                     planning → writing → checks + review + blind answer check → ≤1 revision
                      └► prefetch L2 (no cascade)
 GET /lessons/{id}           queues generation if needed; poll until status == "ready"
 POST /lessons/{id}/complete marks done, keeps the next lesson(s) warm
@@ -20,6 +21,28 @@ uvicorn app.main:app --reload     # API, docs at /docs
 python -m app.jobs.worker         # worker (separate terminal)
 pytest                            # LLM is faked in tests
 ```
+
+## Lesson quality and activation
+
+- `pipeline/checks.py` checks structure in code; a `simulate` block that gives a `formula`
+  has every value recomputed (`pipeline/calc.py`).
+- `pipeline/solve.py`: a second call answers the lesson's graded items without the key;
+  where it is sure and disagrees, the item is revised, then dropped if still disputed.
+- After the revision, a lesson fails only on what is wrong (critical issues, major factual,
+  contradiction, misleading example); style issues are worth a revision, not a retry.
+- Paths and lessons store `meta` (prompt version, model per stage) and `ready_at` /
+  `generated_at`. `LLM_MAX_TOKENS` caps each stage; `LLM_REASONING` sets reasoning effort.
+
+```sh
+python -m scripts.eval --name before-my-change   # 20 real requests (evals/requests.json), ~$2
+python -m scripts.eval --name after-my-change --only cafeine,sql
+python scripts/funnel.py --db "$DATABASE_PUBLIC_URL"   # sign-up → first lesson → coming back, read-only
+python scripts/costs.py --db "$DATABASE_PUBLIC_URL"    # cost per stage, build and lesson, read-only
+```
+
+Run the eval before and after changing a prompt or a model, and compare the two
+`evals/runs/<name>/report.md`: safety decisions, lessons ready, solver disagreements, time to
+first lesson and cost.
 
 ## Railway
 

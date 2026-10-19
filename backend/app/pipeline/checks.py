@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from app.pipeline.blocks import (
+    SimulateBlock,
     CodeBlock,
     ConceptBlock,
     MathBlock,
@@ -15,6 +16,7 @@ from app.pipeline.blocks import (
     RecapBlock,
     SwipeBlock,
 )
+from app.pipeline.calc import FormulaError, close, evaluate
 from app.pipeline.schemas import LessonDraft, ModuleMapping
 
 WORDS_PER_MINUTE = 200
@@ -214,6 +216,21 @@ def check_lesson(
                 res.errors.append(f"block {i} (math) has unbalanced braces in latex")
             if b.latex.strip().startswith("$"):
                 res.errors.append(f"block {i} (math) latex must not include $ delimiters")
+    # simulate: numbers are recomputed here from the stated formula, never trusted
+    for i, b in enumerate(blocks):
+        if isinstance(b, SimulateBlock) and b.formula:
+            try:
+                wrong = [(p.x, p.y, evaluate(b.formula, p.x)) for p in b.points]
+            except FormulaError as e:
+                res.errors.append(f"block {i} (simulate) formula '{b.formula}' cannot be computed: {e}")
+                continue
+            wrong = [(x, y, v) for x, y, v in wrong if not close(y, v)]
+            if wrong:
+                res.errors.append(
+                    f"block {i} (simulate) values disagree with its formula '{b.formula}': "
+                    + "; ".join(f"at x={x:g} y is {y:g}, the formula gives {v:.4g}" for x, y, v in wrong)
+                    + ". Fix the values (and any number quoted in the text), or the formula if it is the wrong one"
+                )
     for i, b in enumerate(blocks):
         if inline_math_unbalanced(b):
             res.errors.append(f"block {i} has an odd number of '$' (unclosed inline math)")

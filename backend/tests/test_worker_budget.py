@@ -23,7 +23,7 @@ async def test_worker_checks_budget_before_paid_call(auth_client):
 
 async def test_worker_publishes_lesson_when_prefetch_budget_refused(auth_client, monkeypatch):
     class ExpensiveReview(FakeClient):
-        async def complete(self, model, messages, schema_name, schema):
+        async def complete(self, model, messages, schema_name, schema, options=None):
             result = await super().complete(model, messages, schema_name, schema)
             if schema_name == "Review":
                 result.cost = 0.25

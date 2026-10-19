@@ -43,7 +43,7 @@ async def test_lesson_generation_has_one_owner(auth_client):
     entered, proceed = asyncio.Event(), asyncio.Event()
 
     class Paused(FakeClient):
-        async def complete(self, model, messages, schema_name, schema):
+        async def complete(self, model, messages, schema_name, schema, options=None):
             if schema_name == "LessonPlan":
                 entered.set()
                 await proceed.wait()
@@ -113,7 +113,7 @@ async def test_mapping_uses_remaining_global_budget(auth_client, monkeypatch):
             super().__init__({"LearningProfile": [{**PROFILE, "scope": "focused"}], "Curriculum": [curriculum]})
             self.limits = []
 
-        async def complete(self, model, messages, schema_name, schema):
+        async def complete(self, model, messages, schema_name, schema, options=None):
             if schema_name == "ModuleMapping":
                 limit = schema["properties"]["lessons"]["maxItems"]
                 self.limits.append(limit)

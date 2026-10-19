@@ -60,6 +60,7 @@ DEFAULTS = {
     "LessonPlan": PLAN,
     "LessonDraft": DRAFT,
     "Review": REVIEW_PASS,
+    "Solved": {"items": []},
     "HelpAnswer": {"answer": "Autrement dit : le taux, c'est le **loyer** de l'argent."},
 }
 
@@ -70,9 +71,13 @@ class FakeClient:
     def __init__(self, queue: dict[str, list] | None = None):
         self.queue = {k: list(v) for k, v in (queue or {}).items()}
         self.calls: list[tuple[str, str]] = []
+        self.sent: list[tuple[str, str, list]] = []  # schema, model, messages
+        self.options: list[tuple[str, dict]] = []
 
-    async def complete(self, model, messages, schema_name, schema):
+    async def complete(self, model, messages, schema_name, schema, options=None):
         self.calls.append((schema_name, model))
+        self.sent.append((schema_name, model, messages))
+        self.options.append((schema_name, options or {}))
         q = self.queue.get(schema_name)
         value = q.pop(0) if q else DEFAULTS[schema_name]
         if isinstance(value, Exception):

@@ -28,7 +28,7 @@ from app.config import Settings, get_settings  # noqa: E402
 
 
 BUILD_STAGES = {"interpretation", "roadmap", "curriculum", "mapping"}
-LESSON_STAGES = {"planning", "writing", "review", "revision", "revisions"}
+LESSON_STAGES = {"planning", "writing", "review", "solve", "revision", "revisions"}
 FIELDS = {
     "llm_calls": (
         "id", "stage", "model", "sip_id", "lesson_id", "prompt_tokens",
@@ -39,12 +39,12 @@ FIELDS = {
 }
 
 
-def read_snapshot(connection):
+def read_snapshot(connection, fields=None):
     """Select only available columns: no ORM, schema creation, or migrations."""
     schema = inspect(connection)
     tables = set(schema.get_table_names())
     data, notes = {}, []
-    for table, wanted in FIELDS.items():
+    for table, wanted in (fields or FIELDS).items():
         if table not in tables:
             data[table] = []
             notes.append(f"Missing table {table}; related metrics unavailable.")
@@ -77,17 +77,17 @@ def sqlite_engine(filename):
     return create_engine("sqlite://", creator=connect)
 
 
-def read_sqlite(filename):
+def read_sqlite(filename, fields=None):
     engine = sqlite_engine(filename)
     try:
         with engine.connect() as connection:
             connection.exec_driver_sql("BEGIN")
-            return read_snapshot(connection)
+            return read_snapshot(connection, fields)
     finally:
         engine.dispose()
 
 
-async def read_postgres(url):
+async def read_postgres(url, fields=None):
     # asyncpg supports read-only transactions with SERIALIZABLE isolation.
     query = dict(url.query)
     if "sslmode" in query:
@@ -99,20 +99,20 @@ async def read_postgres(url):
     )
     try:
         async with engine.connect() as connection:
-            return await connection.run_sync(read_snapshot)
+            return await connection.run_sync(read_snapshot, fields)
     finally:
         await engine.dispose()
 
 
-def read_url(raw):
+def read_url(raw, fields=None):
     url = make_url(Settings._async_driver(raw))
     if url.get_backend_name() == "sqlite":
         if not url.database or url.database == ":memory:":
             raise ValueError("Supply an existing SQLite file, not an in-memory URL.")
-        return read_sqlite(url.database), "Local SQLite file: " + url.database
+        return read_sqlite(url.database, fields), "Local SQLite file: " + url.database
     if url.drivername != "postgresql+asyncpg":
         raise ValueError("Supported URLs: sqlite[+driver], postgres, postgresql[+asyncpg].")
-    return asyncio.run(read_postgres(url)), "PostgreSQL (explicit --db source)"
+    return asyncio.run(read_postgres(url, fields)), "PostgreSQL (explicit --db source)"
 
 
 def merge_snapshots(snapshots):

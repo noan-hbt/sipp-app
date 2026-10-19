@@ -4,6 +4,7 @@ build_sip:        interpretation -> curriculum -> mapping   (roadmap, once per S
 generate_lesson:  planning -> writing -> checks + review -> (one revision)   (per lesson)
 """
 
+import asyncio
 import dataclasses
 import json
 import logging
@@ -17,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.jobs.queue import check_claim, enqueue
 from app.llm.client import StructuredLLM
-from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus, User
-from app.pipeline import programs, prompts
+from app.models import Lesson, LessonStatus, Module, Program, Sip, SipStatus, User, utcnow
+from app.pipeline import programs, prompts, solve
 from app.pipeline.checks import check_lesson, clean_mapping, normalize
 from app.pipeline.schemas import (
     Curriculum,
@@ -30,11 +31,24 @@ from app.pipeline.schemas import (
     ModuleMapping,
     Review,
 )
+from app.pipeline.solve import Solved
 from app.quota import check_cost
 
 log = logging.getLogger(__name__)
 
 RECENT_SUMMARIES = 8
+
+# After the revisions, a lesson still reaches the learner unless it is wrong: a remaining
+# critical issue, or a major one in these categories. Style issues (repetition, density...)
+# are worth one revision, not a failed lesson the learner has to retry.
+BLOCKING = {"factual", "contradiction", "misleading_example"}
+
+
+def blocking(review: Review) -> list:
+    return [
+        i for i in review.issues
+        if i.severity == "critical" or (i.severity == "major" and i.category in BLOCKING)
+    ]
 
 JOB_BUILD_SIP = "build_sip"
 JOB_GENERATE_LESSON = "generate_lesson"
@@ -194,17 +208,33 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
         sip.summary = curriculum.summary
     curriculum = Curriculum.model_validate(sip.curriculum)
 
-    # 3. Mapping (restart from scratch on retry: modules are cheap compared to coherence)
+    # 3. Mapping, one module at a time. Each module is saved as soon as it is mapped, so the
+    # first lesson starts being written while later modules are still mapped, and a retry
+    # resumes after the last saved module.
     await check_claim(session)
-    await session.execute(delete(Module).where(Module.sip_id == sip.id))
     overview = "\n".join(
         f"M{i}. {m.title} — {m.role}" for i, m in enumerate(curriculum.modules, start=1)
     )
-    mapped: list[tuple[CurriculumModule, ModuleMapping]] = []
-    known_keys: list[str] = []
-    previous_lines: list[str] = []
-    remaining = budget_max
+    saved = (
+        (await session.execute(select(Module).where(Module.sip_id == sip.id).order_by(Module.position)))
+        .scalars()
+        .all()
+    )
+    saved_lessons = (
+        (await session.execute(select(Lesson).where(Lesson.sip_id == sip.id).order_by(Lesson.global_index)))
+        .scalars()
+        .all()
+    )
+    if [m.position for m in saved] != list(range(1, len(saved) + 1)) or len(saved) > len(curriculum.modules):
+        await session.execute(delete(Module).where(Module.sip_id == sip.id))
+        saved, saved_lessons = [], []
+    known_keys = [l.key for l in saved_lessons]
+    previous_lines = [f"{l.key}: {l.title} — concepts: {', '.join(l.concepts)}" for l in saved_lessons]
+    remaining = budget_max - len(saved_lessons)
+    gi = len(saved_lessons)
     for mi, cm in enumerate(curriculum.modules, start=1):
+        if mi <= len(saved):
+            continue
         await check_claim(session)
         sip.stage = f"mapping:{mi}/{len(curriculum.modules)}"
         await session.commit()
@@ -251,45 +281,57 @@ async def build_sip(session: AsyncSession, llm: StructuredLLM, sip_id: str) -> N
             raise ValueError("; ".join(res.errors))
         for w in res.warnings:
             log.info("sip %s mapping: %s", sip.id, w)
-        for li, ml in enumerate(mapping.lessons, start=1):
-            key = f"M{mi}L{li}"
-            known_keys.append(key)
-            previous_lines.append(f"{key}: {ml.title} — concepts: {', '.join(ml.concepts)}")
-        mapped.append((cm, mapping))
-        remaining -= len(mapping.lessons)
 
-    if sum(len(mapping.lessons) for _, mapping in mapped) > budget_max:
-        raise ValueError("mapping exceeds the total lesson budget")
-    await check_claim(session)
-    gi = 0
-    first: Lesson | None = None
-    for mi, (cm, mapping) in enumerate(mapped, start=1):
+        await check_claim(session)
         module = Module(
             sip_id=sip.id, position=mi, title=cm.title, role=cm.role, objectives=cm.objectives
         )
         session.add(module)
         await session.flush()
         for li, ml in enumerate(mapping.lessons, start=1):
-            lesson = Lesson(
+            key = f"M{mi}L{li}"
+            known_keys.append(key)
+            previous_lines.append(f"{key}: {ml.title} — concepts: {', '.join(ml.concepts)}")
+            session.add(Lesson(
                 sip_id=sip.id,
                 module_id=module.id,
                 position=li,
                 global_index=gi,
-                key=f"M{mi}L{li}",
+                key=key,
                 title=ml.title,
                 objective=ml.objective,
                 prerequisites=ml.prerequisites,
                 concepts=ml.concepts,
-            )
-            session.add(lesson)
-            first = first or lesson
+            ))
             gi += 1
-    await session.flush()
+        remaining -= len(mapping.lessons)
+        await session.flush()
+        if mi == 1:
+            # The learner waits for this one: start writing it now.
+            await request_lesson(session, await _first_lesson(session, sip.id), chain=True, optional=True)
+        await session.commit()
 
-    sip.status, sip.stage = SipStatus.READY, None
+    if gi > budget_max:
+        raise ValueError("mapping exceeds the total lesson budget")
+    await check_claim(session)
+    sip.status, sip.stage, sip.ready_at = SipStatus.READY, None, utcnow()
+    sip.meta = {"prompts": prompts.VERSION, "models": dict(llm.used)}
+    first = await _first_lesson(session, sip.id)
     if first is not None:
-        await request_lesson(session, first, chain=True, optional=True)
+        if first.status == LessonStatus.READY:
+            # Written before the last module was mapped: its prefetch found no next lesson yet.
+            nxt = await next_lesson(session, first)
+            if nxt is not None:
+                await request_lesson(session, nxt, chain=False, optional=True)
+        else:
+            await request_lesson(session, first, chain=True, optional=True)
     await session.commit()
+
+
+async def _first_lesson(session: AsyncSession, sip_id: str) -> Lesson | None:
+    return (
+        await session.execute(select(Lesson).where(Lesson.sip_id == sip_id, Lesson.global_index == 0))
+    ).scalar_one_or_none()
 
 
 # --- Lesson ------------------------------------------------------------------------
@@ -320,12 +362,17 @@ async def build_lesson_context(session: AsyncSession, lesson: Lesson) -> tuple[s
                 seen.add(normalize(c))
                 known.append(c)
 
+    # From the stored curriculum: the first lesson is written while later modules are still mapped.
+    planned = [(m["title"], m["role"]) for m in (sip.curriculum or {}).get("modules", [])] or [
+        (m.title, m.role) for m in modules
+    ]
     parts = [
         f"LEARNING PROFILE:\n{_dump(sip.profile)}",
         *([chapter_ctx] if chapter_ctx else []),
         "CURRICULUM:\n"
         + "\n".join(
-            f"{'>>' if m.id == module.id else '  '} M{m.position}. {m.title} — {m.role}" for m in modules
+            f"{'>>' if i == module.position else '  '} M{i}. {title} — {role}"
+            for i, (title, role) in enumerate(planned, start=1)
         ),
         f"CURRENT MODULE: M{module.position}. {module.title}\nRole: {module.role}\nObjectives:\n"
         + "\n".join(f"- {o}" for o in module.objectives)
@@ -409,25 +456,44 @@ async def generate_lesson(
     writing_input = f"{context}\n\nLESSON PLAN:\n{_dump(plan.model_dump())}"
     draft = await llm.generate("writing", prompts.WRITING.format(**fmt), writing_input, LessonDraft)
 
-    # 6. Deterministic checks + LLM review, at most `max_revisions` revisions
-    checks = check_lesson(draft, lesson.concepts, known, s.lesson_minutes)
-    review = await llm.generate(
-        "review",
-        prompts.REVIEW.format(**fmt),
-        f"{context}\n\nLESSON PLAN:\n{_dump(plan.model_dump())}\n\n"
-        f"LESSON (blocks are 0-indexed):\n{_dump(draft.model_dump())}",
-        Review,
-        escalate=False,
-    )
+    # 6. Deterministic checks, LLM review and the blind answer-key check (in parallel),
+    # at most `max_revisions` revisions; answers still disputed after that are dropped.
+    seed = lesson.id
+
+    async def inspect(draft: LessonDraft):
+        checks = check_lesson(draft, lesson.concepts, known, s.lesson_minutes)
+        review_call = llm.generate(
+            "review",
+            prompts.REVIEW.format(**fmt),
+            f"{context}\n\nLESSON PLAN:\n{_dump(plan.model_dump())}\n\n"
+            f"LESSON (blocks are 0-indexed):\n{_dump(draft.model_dump())}",
+            Review,
+            escalate=False,
+        )
+        solve_text, key = solve.solve_input(draft, seed) if s.solve_enabled else (None, {})
+        if solve_text is None:
+            return checks, await review_call, []
+        review, solved = await asyncio.gather(
+            review_call,
+            llm.generate("solve", prompts.SOLVE, solve_text, Solved, escalate=False),
+        )
+        return checks, review, solve.disagreements(solved, key)
+
+    checks, review, disputed = await inspect(draft)
     revisions = 0
     review_log: list[dict[str, Any]] = [
-        {"checks": {"errors": checks.errors, "warnings": checks.warnings}, "review": review.model_dump()}
+        {"checks": {"errors": checks.errors, "warnings": checks.warnings}, "review": review.model_dump(), "disputed": disputed}
     ]
-    while (checks.errors or review.verdict == "revise") and revisions < s.max_revisions:
+    while (checks.errors or review.verdict == "revise" or disputed) and revisions < s.max_revisions:
         issues = [f"- [structure] {e}" for e in checks.errors] + [
             f"- [{i.severity}/{i.category}] block {i.block_index}: {i.description} -> fix: {i.fix}"
             for i in review.issues
             if i.severity != "minor" or review.verdict == "revise"
+        ] + [
+            f"- [critical/answer_key] block {d['block']}"
+            + (f" card {d['card']}" if d["card"] is not None else "")
+            + f": {d['detail']}. Check the fact; fix the key, or reword the item so only one answer is defensible."
+            for d in disputed
         ]
         draft = await llm.generate(
             "writing",
@@ -437,31 +503,38 @@ async def generate_lesson(
             LessonDraft,
         )
         revisions += 1
-        checks = check_lesson(draft, lesson.concepts, known, s.lesson_minutes)
-        review = await llm.generate(
-            "review",
-            prompts.REVIEW.format(**fmt),
-            f"{context}\n\nLESSON PLAN:\n{_dump(plan.model_dump())}\n\n"
-            f"LESSON (blocks are 0-indexed):\n{_dump(draft.model_dump())}",
-            Review,
-            escalate=False,
-        )
+        checks, review, disputed = await inspect(draft)
         review_log.append({
             "checks": {"errors": checks.errors, "warnings": checks.warnings},
             "review": review.model_dump(),
+            "disputed": disputed,
         })
+
+    removed: list[dict[str, Any]] = []
+    if disputed and not checks.errors:
+        # Still disputed after the revision: drop the item if the lesson holds without it,
+        # otherwise keep it (the solver can be the one that is wrong) and leave the trace.
+        draft, removed = solve.drop_disputed(draft, disputed, lesson.concepts, known, s.lesson_minutes)
 
     await check_claim(session)
     lesson.plan = plan.model_dump()
     lesson.blocks = [b.model_dump(exclude_none=True) for b in draft.blocks]
     lesson.summary = draft.summary
     lesson.concepts_taught = draft.concepts_taught
-    lesson.review = {"rounds": review_log, "unresolved_errors": checks.errors}
+    lesson.review = {
+        "rounds": review_log,
+        "unresolved_errors": checks.errors,
+        "solve": {"disagreements": [d for r in review_log for d in r["disputed"]], "removed": removed},
+    }
     lesson.revisions = revisions
-    failed = bool(checks.errors) or review.verdict == "revise"
+    lesson.meta = {"prompts": prompts.VERSION, "models": dict(llm.used)}
+    lesson.generated_at = utcnow()
+    failed = bool(checks.errors) or bool(blocking(review))
     lesson.status = LessonStatus.FAILED if failed else LessonStatus.READY
     lesson.error = "; ".join(
-        checks.errors or [i.description for i in review.issues] or ["lesson still requires revision"]
+        checks.errors
+        or [i.description for i in blocking(review)]
+        or ["lesson still requires revision"]
     )[:2000] if failed else None
     if chain and not failed:
         nxt = await next_lesson(session, lesson)

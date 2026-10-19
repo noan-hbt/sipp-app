@@ -203,6 +203,9 @@ export const fr = {
     retryPath: 'Relance ton parcours pour continuer.',
     meta: (modules: number, lessons: number, time: string) => `${modules} modules · ${lessons} leçons · ${time}`,
     closeOk: 'Tu peux fermer l’app, je continue sans toi.',
+    firstReady: 'Ta première leçon est prête',
+    firstReadyBody: 'Commence-la maintenant, je finis le reste du parcours pendant ce temps.',
+    firstStart: 'Commencer la leçon',
   },
   home: {
     headline: {
