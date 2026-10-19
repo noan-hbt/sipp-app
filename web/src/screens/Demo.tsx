@@ -14,8 +14,11 @@ import { t } from '../lib/i18n'
 
 const THEME = 'sleep'
 
-/** A real lesson, hand-written, playable without an account. It opens on the request it answers, so the visitor sees it as one example of what Sipp writes. */
-export function Demo() {
+/**
+ * A real lesson, hand-written, playable without an account. It opens on the request it answers, so the visitor sees it as one example of what Sipp writes.
+ * `signedIn`: opened from an empty home, so the next step is creating a Sip, not signing up.
+ */
+export function Demo({ signedIn = false }: { signedIn?: boolean }) {
   const nav = useNavigate()
   const [playing, setPlaying] = useState(false)
   const [done, setDone] = useState<Finished | null>(null)
@@ -62,7 +65,7 @@ export function Demo() {
         </motion.div>
       </div>
       <div className="bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Button onClick={() => nav('/start', { replace: true })} sound="pop">
+        <Button onClick={() => nav(signedIn ? '/new' : '/start', { replace: true })} sound="pop">
           {t.welcome.start}
         </Button>
         <Button variant="ghost" style={{ height: 48, fontSize: 16 }} onClick={() => nav('/', { replace: true })}>

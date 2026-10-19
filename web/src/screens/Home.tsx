@@ -88,7 +88,7 @@ export function Home() {
         {sips.isLoading ? (
           <Skeleton />
         ) : !sips.data ? null : all.length === 0 ? (
-          <Empty onStart={() => nav('/new')} />
+          <Empty onStart={() => nav('/new')} onDemo={() => nav('/demo')} />
         ) : (
           <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 16 }}>
             {resume ? (
@@ -489,7 +489,7 @@ function NewTile({ done, onGo }: { done: boolean; onGo: () => void }) {
   )
 }
 
-function Empty({ onStart }: { onStart: () => void }) {
+function Empty({ onStart, onDemo }: { onStart: () => void; onDemo: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -510,6 +510,9 @@ function Empty({ onStart }: { onStart: () => void }) {
       </p>
       <div style={{ width: '100%', maxWidth: 300, marginTop: 6 }}>
         <Button onClick={onStart}>{t.home.firstSip}</Button>
+        <Button variant="ghost" onClick={onDemo} style={{ height: 48, fontSize: 16, marginTop: 4 }}>
+          {t.welcome.demo}
+        </Button>
       </div>
     </motion.div>
   )
