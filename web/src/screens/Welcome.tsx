@@ -5,6 +5,7 @@ import { RevealLines } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
 import { Button } from '../components/ui'
+import { LegalLinks } from './Legal'
 import { t } from '../lib/i18n'
 
 /** What Sipp does, played out: a wish gets typed, a path of modules comes back. Light tones stay light in dark mode (the caramel band is the same in both). */
@@ -113,6 +114,7 @@ export function Welcome() {
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="muted" style={{ fontSize: 16, lineHeight: 1.45 }}>
             {t.welcome.body}
           </motion.p>
+          <LegalLinks style={{ marginTop: 'auto', paddingTop: 12 }} />
         </div>
       </div>
       <motion.div

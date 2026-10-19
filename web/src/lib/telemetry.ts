@@ -1,7 +1,9 @@
 // Errors (Sentry) and product analytics (PostHog), both off until their key is set at build time.
+// PostHog also waits for the user's consent (asked once, changeable in the profile).
 // Loaded lazily so they never weigh on the first paint. Users are known by id only, never by email,
 // and no lesson answer or free text is ever sent.
 import { getTokens, onTokens } from './api'
+import { currentConsent, onConsent } from './consent'
 
 type PostHog = typeof import('posthog-js').default
 type Sentry = typeof import('@sentry/react')
@@ -9,6 +11,9 @@ type Sentry = typeof import('@sentry/react')
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined
 const POSTHOG_HOST = (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://eu.i.posthog.com'
+
+/** Usage statistics exist in this build: the consent banner and the profile switch only show then. */
+export const analyticsAvailable = !!POSTHOG_KEY
 
 let posthog: PostHog | null = null
 let sentry: Sentry | null = null
@@ -53,32 +58,49 @@ export function initTelemetry() {
       syncUser()
     })
   }
-  if (POSTHOG_KEY) {
-    void import('posthog-js').then(({ default: ph }) => {
-      ph.init(POSTHOG_KEY, {
-        api_host: POSTHOG_HOST,
-        capture_pageview: 'history_change',
-        capture_pageleave: true,
-        autocapture: false, // clicks could carry lesson text
-        disable_session_recording: true,
-        person_profiles: 'identified_only',
-        persistence: 'localStorage',
-        mask_all_text: true,
-        mask_all_element_attributes: true,
-      })
-      posthog = ph
-      knownUser = null
-      syncUser()
-      for (const [event, props] of pending.splice(0)) ph.capture(event, props)
-    })
-  }
+  startAnalytics()
+  onConsent(() => {
+    if (currentConsent() === 'granted') {
+      if (posthog) posthog.opt_in_capturing()
+      else startAnalytics()
+    } else if (posthog) {
+      posthog.opt_out_capturing()
+      posthog.reset()
+    }
+    if (currentConsent() === 'denied') pending.length = 0
+  })
   onTokens(syncUser)
 }
 
-/** A product event. Props must stay small and never hold user text. */
+let starting = false
+function startAnalytics() {
+  if (!POSTHOG_KEY || starting || currentConsent() !== 'granted') return
+  starting = true
+  void import('posthog-js').then(({ default: ph }) => {
+    ph.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      capture_pageview: 'history_change',
+      capture_pageleave: true,
+      autocapture: false, // clicks could carry lesson text
+      disable_session_recording: true,
+      person_profiles: 'identified_only',
+      persistence: 'localStorage',
+      mask_all_text: true,
+      mask_all_element_attributes: true,
+    })
+    posthog = ph
+    knownUser = null
+    syncUser()
+    for (const [event, props] of pending.splice(0)) ph.capture(event, props)
+  })
+}
+
+/** A product event. Props must stay small and never hold user text. Kept until the consent answer, dropped on refusal. */
 export function track(event: string, props?: Record<string, unknown>) {
   if (!POSTHOG_KEY) return
-  if (posthog) posthog.capture(event, props)
+  const consent = currentConsent()
+  if (consent === 'denied') return
+  if (posthog && consent === 'granted') posthog.capture(event, props)
   else if (pending.length < 50) pending.push([event, props])
 }
 

@@ -769,7 +769,28 @@ export const fr = {
     help: 'Si tu traverses un moment difficile, tu peux appeler le 3114 (gratuit, 24 h/24 en France) ou le numéro d’urgence de ton pays. Tu n’es pas seul·e.',
     other: 'Tu peux essayer un autre sujet, ou un autre angle sur celui-ci.',
     otherTopic: 'Choisir un autre sujet',
-    age: 'En créant ton compte, tu confirmes avoir au moins 15 ans.',
+  },
+  legal: {
+    links: { mentions: 'Mentions légales', privacy: 'Confidentialité', terms: 'Conditions' },
+    nav: 'Informations légales',
+    updated: (date: string) => `Mise à jour le ${date}`,
+    missing: '[à compléter]',
+    signup: {
+      before: 'En créant ton compte, tu acceptes les ',
+      terms: 'conditions d’utilisation',
+      mid: ' et la ',
+      privacy: 'politique de confidentialité',
+      after: ', et confirmes avoir au moins 15 ans.',
+    },
+    consent: {
+      label: 'Statistiques d’usage',
+      text: 'On aimerait mesurer comment Sipp est utilisé (écrans vus, actions principales, jamais tes réponses) pour l’améliorer. Tu es d’accord ?',
+      more: 'En savoir plus',
+      accept: 'Accepter',
+      refuse: 'Refuser',
+    },
+    analytics: 'Statistiques d’usage',
+    analyticsHint: 'Écrans vus et actions principales, jamais tes réponses.',
   },
   // @end
 }

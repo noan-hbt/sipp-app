@@ -1,6 +1,6 @@
 import { motion, useAnimationControls } from 'motion/react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { RevealLines } from '../components/motion'
@@ -169,7 +169,15 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           <Button type="submit" disabled={busy || !email || password.length < 8} sound={null} style={{ marginTop: 6 }}>
             {busy ? '…' : mode === 'login' ? t.auth.loginCta : t.auth.registerCta}
           </Button>
-          {mode === 'register' && <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>{t.safety.age}</p>}
+          {mode === 'register' && (
+            <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.45 }}>
+              {t.legal.signup.before}
+              <Link to="/legal/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>{t.legal.signup.terms}</Link>
+              {t.legal.signup.mid}
+              <Link to="/legal/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>{t.legal.signup.privacy}</Link>
+              {t.legal.signup.after}
+            </p>
+          )}
         </motion.form>
       </div>
     </Screen>

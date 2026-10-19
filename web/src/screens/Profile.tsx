@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
-import { useState, type CSSProperties } from 'react'
+import { useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HabitSettings } from '../components/HabitSettings'
 import { Mascot } from '../components/Mascot'
@@ -10,8 +10,10 @@ import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
 import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
 import { setSoundEnabled, soundEnabled } from '../lib/sound'
-import { track } from '../lib/telemetry'
+import { currentConsent, onConsent, setConsent } from '../lib/consent'
+import { analyticsAvailable, track } from '../lib/telemetry'
 import { t, locale, plural } from '../lib/i18n'
+import { LegalLinks } from './Legal'
 
 const list = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
 const item = {
@@ -38,6 +40,7 @@ export function Profile() {
   const stats = useQuery({ queryKey: ['stats'], queryFn: Api.stats })
   const plan = useQuery({ queryKey: ['plan'], queryFn: Api.plan })
   const [sound, setSound] = useState(soundEnabled)
+  const usageStats = useSyncExternalStore(onConsent, currentConsent)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [password, setPassword] = useState('')
 
@@ -238,6 +241,24 @@ export function Profile() {
                   <motion.span layout transition={{ type: 'spring', stiffness: 600, damping: 30 }} style={{ width: 26, height: 26, borderRadius: 13, background: '#fff' }} />
                 </span>
               </button>
+              {analyticsAvailable && (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={usageStats === 'granted'}
+                  onClick={() => setConsent(usageStats === 'granted' ? 'denied' : 'granted')}
+                  style={{ ...rowStyle, borderTop: '1.5px solid var(--bg-deep)', cursor: 'pointer' }}
+                >
+                  {rowIcon('var(--lavender)', 'var(--lavender-ink)', 'M4 20V10M10 20V4M16 20v-7M22 20H2')}
+                  <span style={{ flex: 1, display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    {t.legal.analytics}
+                    <span style={{ fontSize: 13, color: 'var(--muted)' }}>{t.legal.analyticsHint}</span>
+                  </span>
+                  <span style={{ width: 52, height: 32, borderRadius: 16, padding: 3, display: 'flex', flexShrink: 0, justifyContent: usageStats === 'granted' ? 'flex-end' : 'flex-start', background: usageStats === 'granted' ? 'var(--primary)' : 'var(--bg-deep)' }}>
+                    <motion.span layout transition={{ type: 'spring', stiffness: 600, damping: 30 }} style={{ width: 26, height: 26, borderRadius: 13, background: '#fff' }} />
+                  </span>
+                </button>
+              )}
               <button type="button" onClick={() => exportData.mutate()} disabled={exportData.isPending || busy} aria-busy={exportData.isPending} style={{ ...rowStyle, borderTop: '1.5px solid var(--bg-deep)' }}>
                 {rowIcon('var(--sky)', 'var(--sky-ink)', 'M12 4v11M7 10l5 5 5-5M5 20h14')}
                 {exportData.isPending ? t.profile.exporting : t.profile.export}
@@ -252,6 +273,7 @@ export function Profile() {
               </button>
             </div>
             {exportData.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>{t.profile.exportFailed}</p>}
+            <LegalLinks style={{ marginTop: 4 }} />
           </motion.section>
 
           <motion.section variants={item} aria-label={t.profile.account} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
