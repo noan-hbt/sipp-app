@@ -11,13 +11,14 @@ import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 
+// Labels name a subject to learn, never an action ("Créer sa boîte" read as "set up a company here").
 const IDEAS = [
-  { label: 'Créer sa boîte', hint: 'Un vrai programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise' },
-  { label: 'Lire un bilan', hint: 'Actif, passif, résultat', text: 'Je veux savoir lire le bilan comptable d’une entreprise, je pars de zéro' },
-  { label: 'Mieux dormir', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir' },
-  { label: 'Parler italien', hint: 'Les phrases du quotidien', text: 'Je veux tenir une conversation simple en italien' },
-  { label: 'Coder en Python', hint: 'Les bases, pas à pas', text: 'Je veux apprendre les bases de la programmation en Python' },
+  { label: 'Le sommeil', hint: 'Cycles, horloge, habitudes', text: 'Je veux comprendre comment fonctionne le sommeil et comment mieux dormir' },
+  { label: 'L’italien', hint: 'Les phrases du quotidien', text: 'Je veux tenir une conversation simple en italien' },
   { label: 'L’univers', hint: 'Du Big Bang aux trous noirs', text: 'Je veux comprendre l’univers, du Big Bang aux trous noirs' },
+  { label: 'Python', hint: 'Coder pas à pas, de zéro', text: 'Je veux apprendre les bases de la programmation en Python' },
+  { label: 'La compta', hint: 'Lire un bilan : actif, passif', text: 'Je veux savoir lire le bilan comptable d’une entreprise, je pars de zéro' },
+  { label: 'L’entrepreneuriat', hint: 'Un programme en chapitres', text: 'Je veux apprendre à créer et diriger une petite entreprise' },
 ]
 
 /** One-tap details that help the AI aim right; each appends or removes its phrase. */
@@ -145,7 +146,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
             <RevealLines lines={[{ text: 'Qu’est-ce' }, { text: 'qu’on apprend ?', color: 'var(--primary)' }]} />
           </h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            Ton sujet, ton niveau, et pourquoi. Je te prépare un Sip ou un programme sur mesure.
+            N’importe quel sujet. Dis-moi ce que tu veux apprendre, ton niveau et pourquoi : j’écris ton parcours de leçons sur mesure.
           </motion.p>
         </div>
 
@@ -242,7 +243,7 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 10, rowGap: 16 }}>
           <h2 className="display" style={{ gridColumn: '1 / -1', fontSize: 20, margin: '4px 4px 0' }}>
-            En panne d’idée ?
+            Des idées de sujets
           </h2>
           {IDEAS.map((idea, i) => {
             const pal = sipPalette(idea.text)
