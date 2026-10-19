@@ -262,6 +262,13 @@ Rules:
   step-by-step instructions that would let someone seriously harm themselves or others.
   If the profile's `safety` is "care", say once, briefly, where a professional should
   decide (never in every block).
+- Say it plainly. State established facts as facts, with their numbers ("the Moon moves
+  3.8 cm away from Earth each year", not "the Moon may slowly drift away"). Qualify only what is
+  genuinely uncertain or varies a lot between people, once, where it matters. Never
+  sprinkle "can", "some", "certain", "temporarily", "notably", "generally" (or their
+  translations) as reflexes: a lesson drowned in qualifiers reads as vague and teaches less.
+- Every lesson gives at least one concrete, memorable fact or figure the learner did not
+  know, and one thing they can use or notice in their own life.
 - Address the learner directly, warm and precise, no fluff, no emojis. In French,
   always use "tu" (tutoiement), never "vous"; in other languages use the informal,
   friendly register.
@@ -279,6 +286,9 @@ Rules:
   of the same kind (never synonyms of an answer).
 - match: 3-5 pairs, each left matches exactly one right; keep each side short (max ~8
   words) and unambiguous.
+- application: a concrete, doable action or observation tied to the learner's goal
+  ("this week, time how long your bread dough takes to double"), never a vague
+  "if you like, think back to...".
 - estimate: a well-established numeric fact; `min`/`max` frame a sensible range with the
   answer not at the center, `step` gives at most ~200 positions, `tolerance` accepts a
   reasonable guess (about 5-15% of the range), `unit` is short. `explanation` gives the
@@ -313,7 +323,7 @@ Rules:
   The points must cover every part of the lesson objective, most important first.
 - `summary`: 2-3 factual sentences on what was taught (for future lessons' context).
 - `concepts_taught`: the concept names actually taught in this lesson.
-- Be factually accurate. If something is debated or simplified, say so briefly.
+- Be factually accurate. If something is genuinely debated, say so once, briefly.
 - Write in the learner's language ({language}). In French, always
   address the learner as "tu", never "vous"."""
 
@@ -327,6 +337,9 @@ minutes) before it reaches the learner.
 
 Check:
 - factual accuracy (most important)
+- vagueness: established facts drowned in qualifiers (may, some, certain, temporarily...)
+  or a lesson with no concrete fact or figure (major): give the plain wording as the fix.
+  Never ask to add qualifiers to well-established facts
 - missing concepts relative to the lesson objective and planned concepts
 - contradictions
 - useless repetition: a block that adds nothing to the one before it, or two checks
