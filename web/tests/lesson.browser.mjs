@@ -20,7 +20,7 @@ const blocks = [
 const lesson = { id: 'L1', sip_id: 'S1', module_id: 'm', key: 'k', title: 'Le vrai coût d’un prêt', objective: 'o', concepts: [], status: 'ready', error: null, blocks, summary: null, concepts_taught: null, completed_at: null, stars: null, next_lesson_id: null, resume: null }
 
 test('leçon v2 : accroche, pari, swipe, et chaque carte compte dans le score', async (t) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'fr-FR' })
   t.after(() => context.close())
   await context.addInitScript(() => {
     localStorage.setItem('sipp.tokens', JSON.stringify({ access_token: `e30.${btoa(JSON.stringify({ sub: 'browser-test' }))}.sig`, refresh_token: 'test', expires_in: 900 }))

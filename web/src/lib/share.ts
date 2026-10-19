@@ -1,3 +1,4 @@
+import { t, plural } from './i18n'
 /** "J'ai fini mon Sip": a square image drawn on a canvas, shared natively or downloaded. */
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
@@ -41,16 +42,16 @@ async function draw({ title, lessons, minutes, stars }: { title: string; lessons
 
   ctx.fillStyle = '#fff'
   ctx.font = `600 44px ${body}`
-  ctx.fillText('J’ai fini mon Sip', 90, 200)
+  ctx.fillText(t.share.finished, 90, 200)
   ctx.font = `700 92px ${display}`
   const lines = wrap(ctx, title, size - 180, 4)
   lines.forEach((l, i) => ctx.fillText(l, 90, 320 + i * 104))
 
   const y = 320 + lines.length * 104 + 70
   const cells: [string, string][] = [
-    [`${lessons}`, lessons > 1 ? 'leçons' : 'leçon'],
-    [`${minutes}`, 'minutes'],
-    [`${stars}`, stars > 1 ? 'étoiles' : 'étoile'],
+    [`${lessons}`, plural(lessons, t.share.lesson, t.share.lessons)],
+    [`${minutes}`, t.share.minutes],
+    [`${stars}`, plural(stars, t.share.star, t.share.stars)],
   ]
   const w = (size - 180 - 40) / 3
   cells.forEach(([v, l], i) => {
@@ -71,7 +72,7 @@ async function draw({ title, lessons, minutes, stars }: { title: string; lessons
   ctx.font = `500 34px ${body}`
   ctx.fillStyle = 'rgba(255,255,255,.85)'
   ctx.textAlign = 'right'
-  ctx.fillText('Apprendre, 5 minutes à la fois', size - 90, size - 100)
+  ctx.fillText(t.share.tagline, size - 90, size - 100)
   return new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas'))), 'image/png'))
 }
 
@@ -79,7 +80,7 @@ async function draw({ title, lessons, minutes, stars }: { title: string; lessons
 export async function shareSip(info: { title: string; lessons: number; minutes: number; stars: number }): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const blob = await draw(info)
   const file = new File([blob], 'sipp.png', { type: 'image/png' })
-  const text = `J’ai fini « ${info.title} » sur Sipp.`
+  const text = t.share.text(info.title)
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], text })

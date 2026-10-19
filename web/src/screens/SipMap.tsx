@@ -17,6 +17,7 @@ import { duration, LESSON_MINUTES } from "../lib/format";
 import { haptic, play } from "../lib/sound";
 import { Confetti, DeleteButton } from "./ProgramView";
 import { SipPathMap } from "./SipPathMap";
+import { t } from "../lib/i18n";
 
 type LessonState = "done" | "now" | "locked";
 
@@ -147,14 +148,14 @@ export function SipMap() {
     return (
       <Screen>
         <header className="topbar">
-          <IconButton label="Retour" onClick={() => nav("/library")}>
+          <IconButton label={t.common.back} onClick={() => nav("/library")}>
             {Icon.back}
           </IconButton>
         </header>
         <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
           {sip.isError || sip.isPaused ? (
             <ErrorNotice
-              message={sip.isPaused ? "Tu es hors ligne. Reconnecte-toi pour charger ton Sip." : apiErrorMessage(sip.error, "Impossible de charger ton Sip. Réessaie.")}
+              message={sip.isPaused ? t.sipMap.offlineLoad : apiErrorMessage(sip.error, t.sipMap.loadFailed)}
               retry={() => void sip.refetch()}
               busy={sip.isFetching}
             />
@@ -172,14 +173,14 @@ export function SipMap() {
         <div style={{ padding: 12, flexShrink: 0 }}>
           {(sip.isError || sip.isPaused) && (
             <ErrorNotice
-              message={sip.isPaused ? "Tu es hors ligne. Reconnecte-toi pour actualiser ton Sip." : apiErrorMessage(sip.error, "Impossible d’actualiser ton Sip. Réessaie.")}
+              message={sip.isPaused ? t.sipMap.offlineRefresh : apiErrorMessage(sip.error, t.sipMap.refreshFailed)}
               retry={() => void sip.refetch()}
               busy={sip.isFetching}
             />
           )}
           {remove.isError && (
             <ErrorNotice
-              message={apiErrorMessage(remove.error, "Impossible de supprimer ton Sip. Réessaie.")}
+              message={apiErrorMessage(remove.error, t.sipMap.deleteFailed)}
               retry={() => remove.mutate()}
               busy={remove.isPending}
             />
@@ -227,7 +228,7 @@ export function SipMap() {
               }}
             >
               <IconButton
-                label="Retour"
+                label={t.common.back}
                 onClick={() => nav(programId ? `/programs/${programId}` : "/")}
               >
                 {Icon.back}
@@ -249,7 +250,7 @@ export function SipMap() {
                   <Star size={16} />
                   {totalStars}
                 </span>
-                <IconButton label="Voir la carte" onClick={toggleView}>
+                <IconButton label={t.sipMap.seeMap} onClick={toggleView}>
                   {Icon.map}
                 </IconButton>
               </div>
@@ -349,7 +350,7 @@ export function SipMap() {
             >
               {sip.data.summary}
               <span style={{ display: "block", marginTop: 8, fontSize: 13, fontWeight: 600, color: "var(--ink-soft)" }}>
-                {flat.length} leçons · {duration(flat.length)} au total
+                {t.sipMap.total(flat.length, duration(flat.length))}
               </span>
             </p>
           )}
@@ -384,7 +385,7 @@ export function SipMap() {
                       </span>
                       <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                         <span className="kicker" style={{ color: ink }}>
-                          Module {m.position} · {m.lessons.length * LESSON_MINUTES} min
+                          {t.sipMap.module(m.position, m.lessons.length * LESSON_MINUTES)}
                         </span>
                         <span className="display" style={{ fontSize: 18, lineHeight: 1.15 }}>
                           {m.title}
@@ -432,11 +433,11 @@ export function SipMap() {
               }}
             >
               <DeleteButton
-                label={programId ? "Supprimer ce chapitre" : "Supprimer ce Sip"}
+                label={programId ? t.sipMap.deleteChapter : t.sipMap.deleteSip}
                 confirm={
                   programId
-                    ? "Tu pourras le régénérer depuis le programme (ça coûte une création)."
-                    : "Ta progression sera perdue. Ça libère une place."
+                    ? t.sipMap.deleteChapterBody
+                    : t.sipMap.deleteSipBody
                 }
                 busy={remove.isPending}
                 failed={remove.isError}
@@ -479,25 +480,25 @@ export function SipMap() {
               <Mascot mood="bravo" size={52} />
               <div>
                 <span className="display" style={{ fontSize: 18 }}>
-                  {programId ? "Chapitre terminé !" : "Sip terminé !"}
+                  {programId ? t.sipMap.chapterDone : t.sipMap.sipDone}
                 </span>
                 <p className="muted" style={{ fontSize: 14 }}>
                   {programId
-                    ? "La suite de ton programme t’attend."
-                    : "Envie d’aller plus loin sur ce sujet ?"}
+                    ? t.sipMap.chapterNext
+                    : t.sipMap.goFurther}
                 </p>
               </div>
             </div>
             {extend.isError && (
               <ErrorNotice
-                message={apiErrorMessage(extend.error, "Impossible de préparer la suite. Réessaie.")}
+                message={apiErrorMessage(extend.error, t.sipMap.extendFailed)}
                 retry={() => extend.mutate()}
                 busy={extend.isPending}
               />
             )}
             {programId ? (
               <Button sound="pop" onClick={() => nav(`/programs/${programId}`)}>
-                Voir la suite du programme
+                {t.sipMap.seeProgram}
               </Button>
             ) : (
               <Button
@@ -508,7 +509,7 @@ export function SipMap() {
                 {extend.isPending ? (
                   <Mascot mood="think" size={30} />
                 ) : (
-                  "Aller plus loin"
+                  t.sipMap.further
                 )}
               </Button>
             )}
@@ -554,7 +555,7 @@ function NowCard({
           haptic();
           onOpen();
         }}
-        aria-label={`Commencer : ${lesson.title}`}
+        aria-label={t.sipMap.start(lesson.title)}
         style={{
           width: "100%",
           border: "none",
@@ -624,8 +625,8 @@ function NowCard({
               color: "rgba(255,255,255,.82)",
             }}
           >
-            Leçon {index + 1} ·{" "}
-            {preparing ? "je la prépare" : `${LESSON_MINUTES} min`}
+            {t.sipMap.lesson(index + 1)} ·{" "}
+            {preparing ? t.sipMap.preparing : `${LESSON_MINUTES} min`}
           </span>
           <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>
             {lesson.title}
@@ -662,7 +663,7 @@ function LessonRow({
       <motion.button
         animate={shake}
         whileTap={{ scale: 0.98 }}
-        aria-label={done ? undefined : `${lesson.title} (verrouillée)`}
+        aria-label={done ? undefined : t.sipMap.locked(lesson.title)}
         onClick={() => {
           if (done) {
             play("tap");
@@ -727,7 +728,7 @@ function LessonRow({
             {lesson.title}
           </span>
           <span style={{ fontSize: 13, color: "var(--faint)" }}>
-            {done ? "Revoir" : `${LESSON_MINUTES} min`}
+            {done ? t.sipMap.review : `${LESSON_MINUTES} min`}
           </span>
         </span>
         {done && (
@@ -759,7 +760,7 @@ function LessonRow({
               color: "var(--on-ink)",
             }}
           >
-            Termine d’abord « {hint} »
+            {t.sipMap.finishFirst(hint)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -787,13 +788,13 @@ function QuizRow({ stars, locked, onOpen }: { stars: number | null; locked: bool
     >
       <img src={illustration("scene-quiz")} alt="" width={48} height={48} style={{ flexShrink: 0, margin: "-4px 0" }} />
       <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontSize: 15, fontWeight: 600 }}>Quiz du module</span>
+        <span style={{ fontSize: 15, fontWeight: 600 }}>{t.quiz.kicker}</span>
         <span style={{ fontSize: 13, color: "var(--lavender-ink)" }}>
-          {stars === null ? "5 questions · jusqu’à 3 étoiles" : stars >= 3 ? "Maîtrisé · refaire pour réviser" : "Retente pour 3 étoiles"}
+          {stars === null ? t.sipMap.quizNew : stars >= 3 ? t.sipMap.quizMastered : t.sipMap.quizRetry}
         </span>
       </span>
       {stars !== null && (
-        <span style={{ display: "flex", gap: 2 }} aria-label={`${stars} étoiles sur 3`}>
+        <span style={{ display: "flex", gap: 2 }} aria-label={t.quiz.starsLabel(stars)}>
           {[1, 2, 3].map((n) => (
             <Star key={n} size={14} filled={stars >= n} />
           ))}

@@ -1,3 +1,4 @@
+import { t } from './i18n'
 // Mirrors backend/app/pipeline/blocks.py
 
 export interface TextBlock { type: 'text'; content: string }
@@ -147,13 +148,13 @@ export function blockText(b: Block): string {
     case 'concept': return join(b.name, b.definition, b.explanation)
     case 'example': return join(b.title, b.content)
     case 'scenario': return join(b.setting, b.narrative, b.prompt)
-    case 'analogy': return join(`${b.source} et ${b.target}`, b.explanation, ...b.mappings.map((m) => `${m.source} : ${m.target}`), b.limits)
-    case 'comparison': return join(b.title, ...b.items.map((it) => `${it.name} : ${it.values.join(', ')}`), b.takeaway)
-    case 'sequence': return join(b.title, ...b.steps.map((s, i) => `${i + 1}. ${s.title} : ${s.description}`))
-    case 'cause_effect': return join(b.title, ...b.chain.map((c) => (c.explanation ? `${c.label} : ${c.explanation}` : c.label)))
+    case 'analogy': return join(t.speech.and(b.source, b.target), b.explanation, ...b.mappings.map((m) => t.speech.pair(m.source, m.target)), b.limits)
+    case 'comparison': return join(b.title, ...b.items.map((it) => t.speech.pair(it.name, it.values.join(', '))), b.takeaway)
+    case 'sequence': return join(b.title, ...b.steps.map((s, i) => `${i + 1}. ${t.speech.pair(s.title, s.description)}`))
+    case 'cause_effect': return join(b.title, ...b.chain.map((c) => (c.explanation ? t.speech.pair(c.label, c.explanation) : c.label)))
     case 'code': return join(b.caption, b.explanation)
-    case 'math': return join(b.explanation, ...(b.variables ?? []).map((v) => `${v.symbol} : ${v.meaning}`))
-    case 'misconception': return join('Vrai ou faux', b.statement)
+    case 'math': return join(b.explanation, ...(b.variables ?? []).map((v) => t.speech.pair(v.symbol, v.meaning)))
+    case 'misconception': return join(t.speech.trueOrFalse, b.statement)
     case 'question': return join(b.prompt, ...(b.options ?? []).map((o) => o.text))
     case 'fill_blanks': return join(b.text.replace(/\{\d+\}/g, '…'))
     case 'match': return join(b.prompt)
@@ -161,9 +162,9 @@ export function blockText(b: Block): string {
     case 'application': return join(b.prompt, b.guidance)
     case 'hook': return join(b.question, b.teaser)
     case 'predict': return join(b.prompt, ...(b.options ?? []).map((o) => o.text))
-    case 'swipe': return join('Vrai ou faux', b.prompt, ...b.cards.map((c) => c.statement))
+    case 'swipe': return join(t.speech.trueOrFalse, b.prompt, ...b.cards.map((c) => c.statement))
     case 'simulate': return join(b.prompt, b.takeaway)
-    case 'recap': return join('À retenir', ...b.points)
+    case 'recap': return join(t.speech.remember, ...b.points)
   }
 }
 

@@ -4,12 +4,13 @@ import { Api, type Problem } from '../lib/api'
 import { track } from '../lib/telemetry'
 import { BottomSheet } from './BottomSheet'
 import { Button } from './ui'
+import { t } from '../lib/i18n'
 
 const PROBLEMS: [Problem, string][] = [
-  ['wrong', 'Une erreur dans le contenu'],
-  ['unclear', 'Ce n’est pas clair'],
-  ['broken', 'Un exercice ne marche pas'],
-  ['other', 'Autre chose'],
+  ['wrong', t.report.reasons.wrong],
+  ['unclear', t.report.reasons.unclear],
+  ['broken', t.report.reasons.broken],
+  ['other', t.report.reasons.other],
 ]
 
 /** "Something is wrong with this lesson": kept on the server for review, counted in analytics. */
@@ -29,17 +30,17 @@ export function ReportSheet({ lessonId, block, open, onClose }: { lessonId: stri
     }
   }
   return (
-    <BottomSheet open={open} label="Signaler un problème" busy={send.isPending} onClose={close}>
+    <BottomSheet open={open} label={t.report.label} busy={send.isPending} onClose={close}>
       {send.isSuccess ? (
         <>
-          <h2 className="title-m">Merci, c’est noté</h2>
-          <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>Ton signalement m’aide à corriger mes leçons.</p>
-          <Button data-autofocus variant="soft" onClick={close}>Fermer</Button>
+          <h2 className="title-m">{t.report.thanks}</h2>
+          <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>{t.report.thanksBody}</p>
+          <Button data-autofocus variant="soft" onClick={close}>{t.common.close}</Button>
         </>
       ) : (
         <>
-          <h2 className="title-m">Qu’est-ce qui ne va pas ?</h2>
-          <div role="radiogroup" aria-label="Type de problème" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <h2 className="title-m">{t.report.title}</h2>
+          <div role="radiogroup" aria-label={t.report.type} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {PROBLEMS.map(([k, label]) => {
               const on = problem === k
               return (
@@ -57,14 +58,14 @@ export function ReportSheet({ lessonId, block, open, onClose }: { lessonId: stri
             })}
           </div>
           <div className="field">
-            <label htmlFor="report-comment" style={{ color: 'var(--muted)' }}>Un détail ? (facultatif)</label>
+            <label htmlFor="report-comment" style={{ color: 'var(--muted)' }}>{t.report.detail}</label>
             <textarea id="report-comment" rows={3} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} style={{ resize: 'none' }} />
           </div>
-          {send.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>L’envoi a échoué. Réessaie dans un instant.</p>}
+          {send.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>{t.report.failed}</p>}
           <Button disabled={!problem || send.isPending} onClick={() => send.mutate()}>
-            {send.isPending ? 'Envoi…' : 'Envoyer'}
+            {send.isPending ? t.report.sending : t.help.send}
           </Button>
-          <Button variant="ghost" onClick={close} disabled={send.isPending} style={{ height: 44, fontSize: 16 }}>Annuler</Button>
+          <Button variant="ghost" onClick={close} disabled={send.isPending} style={{ height: 44, fontSize: 16 }}>{t.common.cancel}</Button>
         </>
       )}
     </BottomSheet>

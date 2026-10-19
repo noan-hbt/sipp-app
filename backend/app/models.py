@@ -47,6 +47,8 @@ class User(TimestampMixin, Base):
     timezone: Mapped[str | None] = mapped_column(String(64))
     push_subscription: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     reminded_on: Mapped[str | None] = mapped_column(String(10))  # local date of the last reminder
+    # Interface language ("fr" or "en"): reminders are written in it. Unset reads as French.
+    language: Mapped[str | None] = mapped_column(String(8))
 
 
 class RefreshToken(Base):

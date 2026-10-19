@@ -13,6 +13,7 @@ import type { LessonBrief, ModuleOut } from "../lib/api";
 import { LESSON_MINUTES } from "../lib/format";
 import { LANDS } from "../lib/lands";
 import { haptic, play } from "../lib/sound";
+import { t } from "../lib/i18n";
 
 const C = {
   bg: "var(--land-bg)",
@@ -348,7 +349,7 @@ export function SipPathMap({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <RoundButton label="Retour" onClick={onBack}>
+          <RoundButton label={t.common.back} onClick={onBack}>
             {Icon.back}
           </RoundButton>
           <div
@@ -376,7 +377,7 @@ export function SipPathMap({
                 WebkitBoxOrient: "vertical",
               }}
             >
-              {chapter && <span style={{ color: C.faint }}>Ch. {chapter} · </span>}
+              {chapter && <span style={{ color: C.faint }}>{t.pathMap.chapter(chapter)} · </span>}
               {title}
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 700, color: C.muted }}>
@@ -395,7 +396,7 @@ export function SipPathMap({
             key={totalStars}
             initial={{ scale: 1.4 }}
             animate={{ scale: 1 }}
-            aria-label={`${totalStars} étoiles`}
+            aria-label={t.pathMap.stars(totalStars)}
             style={{
               height: 48,
               padding: "0 14px",
@@ -412,7 +413,7 @@ export function SipPathMap({
             <Star size={17} />
             {totalStars}
           </motion.span>
-          <RoundButton label="Voir en liste" onClick={onList} dark>
+          <RoundButton label={t.pathMap.list} onClick={onList} dark>
             {Icon.list}
           </RoundButton>
         </div>
@@ -436,7 +437,7 @@ export function SipPathMap({
                 <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill={C.peach} />
                 </svg>
-                {streak} {streak > 1 ? "jours" : "jour"}
+                {streak} {t.progress.days(streak)}
               </span>
             )}
             {reviewDue > 0 && onReview && (
@@ -449,7 +450,7 @@ export function SipPathMap({
                   play("tap");
                   onReview();
                 }}
-                aria-label={`Réviser ${reviewDue} notion${reviewDue > 1 ? "s" : ""}`}
+                aria-label={t.home.reviewLabel(reviewDue)}
                 style={{
                   border: "none",
                   height: 28,
@@ -462,7 +463,7 @@ export function SipPathMap({
                   whiteSpace: "nowrap",
                 }}
               >
-                Révision · {reviewDue}
+                {t.pathMap.review(reviewDue)}
               </motion.button>
             )}
           </div>
@@ -501,7 +502,7 @@ export function SipPathMap({
         >
           <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
             <span className="kicker" style={{ color: "var(--dock-kicker)" }}>
-              Leçon {now.index + 1} · {now.lesson.status !== "ready" ? "je la prépare" : `${LESSON_MINUTES} min`}
+              {t.sipMap.lesson(now.index + 1)} · {now.lesson.status !== "ready" ? t.sipMap.preparing : `${LESSON_MINUTES} min`}
             </span>
             <span
               className="display"
@@ -528,7 +529,7 @@ export function SipPathMap({
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M8 5.5v13l11-6.5z" />
             </svg>
-            Go
+            {t.pathMap.go}
           </span>
         </motion.button>
       )}
@@ -656,7 +657,7 @@ function ModuleBanner({ zone, tilt }: { zone: Zone; tilt: number }) {
           </svg>
         )}
         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-          Module {zone.module.position} · {zone.module.title}
+          {t.pathMap.module(zone.module.position, zone.module.title)}
         </span>
         {zone.reached &&
           (complete ? (
@@ -703,14 +704,14 @@ function EndMilestone({ node, width }: { node: EndNode; width: number }) {
         />
       </span>
       <Plate left={label.left} top={node.y} width={label.w} right={label.onRight}>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>Fin du module</span>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>{t.pathMap.moduleEnd}</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>
-          {reached ? "Module terminé" : `Encore ${node.remaining} ${node.remaining > 1 ? "leçons" : "leçon"}`}
+          {reached ? t.pathMap.moduleDone : t.pathMap.left(node.remaining)}
         </span>
         {!!node.module.bonus_stars && (
           <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 12, fontWeight: 700, color: "var(--butter-ink)" }}>
             <Star size={12} />
-            {reached ? `+${node.module.bonus_stars} gagnées` : `+${node.module.bonus_stars} à gagner`}
+            {reached ? t.pathMap.won(node.module.bonus_stars) : t.pathMap.toWin(node.module.bonus_stars)}
           </span>
         )}
       </Plate>
@@ -759,8 +760,8 @@ function MapNode({
         <motion.button
           aria-label={
             done
-              ? `${node.lesson.title}, terminée, ${node.lesson.stars ?? 0} étoiles`
-              : `${node.lesson.title} (verrouillée)`
+              ? t.pathMap.doneLabel(node.lesson.title, node.lesson.stars ?? 0)
+              : t.sipMap.locked(node.lesson.title)
           }
           animate={done ? { scale: 1 } : shake}
           initial={appearDelay ? { scale: 0 } : false}
@@ -824,7 +825,7 @@ function MapNode({
                 color: "var(--on-ink)",
               }}
             >
-              Termine d’abord « {lockedHint} »
+              {t.sipMap.finishFirst(lockedHint)}
             </motion.div>
           )}
         </AnimatePresence>
@@ -863,7 +864,7 @@ function MapNode({
         }}
       />
       <motion.button
-        aria-label={`Commencer : ${node.lesson.title}`}
+        aria-label={t.sipMap.start(node.lesson.title)}
         initial={unlocking ? { scale: 0, rotate: -30 } : appearDelay ? { scale: 0 } : false}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 380, damping: 12, delay: unlocking ? 1.1 : appearDelay }}
@@ -904,7 +905,7 @@ function MapNode({
           pointerEvents: "none",
         }}
       >
-        Tu es ici
+        {t.pathMap.here}
         <svg
           width="12"
           height="12"

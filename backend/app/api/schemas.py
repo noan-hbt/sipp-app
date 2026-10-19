@@ -101,6 +101,7 @@ class UserOut(BaseModel):
 class SipCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     input: str = Field(min_length=3, max_length=4000, description="What the user wants to learn.")
+    language: Literal["fr", "en"] | None = Field(default=None, description="The app's interface language.")
     profile: dict[str, Any] | None = Field(
         default=None, description="The confirmed profile from `POST /sips/interpret`, possibly edited."
     )
@@ -109,6 +110,7 @@ class SipCreate(BaseModel):
 class InterpretIn(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     input: str = Field(min_length=3, max_length=4000)
+    language: Literal["fr", "en"] | None = Field(default=None, description="The app's interface language.")
 
 
 class InterpretOut(BaseModel):
@@ -312,12 +314,14 @@ class SettingsIn(BaseModel):
     # Local hour for the daily reminder, or -1 to turn it off.
     reminder_hour: int | None = Field(default=None, ge=-1, le=23)
     timezone: str | None = Field(default=None, max_length=64)
+    language: Literal["fr", "en"] | None = None
 
 
 class SettingsOut(BaseModel):
     daily_goal: int
     reminder_hour: int | None
     timezone: str | None
+    language: str | None
     push_enabled: bool
     push_public_key: str | None
 

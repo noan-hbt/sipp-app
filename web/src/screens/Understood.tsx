@@ -11,11 +11,12 @@ import { Api, ApiError, type Interpretation, type Profile } from '../lib/api'
 import { play } from '../lib/sound'
 import { NEW_SIP_ERRORS } from './NewSip'
 import { track } from '../lib/telemetry'
+import { t } from '../lib/i18n'
 
 const LEVELS = [
-  { label: 'Débutant', value: 'beginner', matches: ['none', 'beginner'] },
-  { label: 'J’ai des bases', value: 'intermediate', matches: ['intermediate'] },
-  { label: 'Avancé', value: 'advanced', matches: ['advanced', 'expert'] },
+  { label: t.understood.levels.beginner, value: 'beginner', matches: ['none', 'beginner'] },
+  { label: t.understood.levels.intermediate, value: 'intermediate', matches: ['intermediate'] },
+  { label: t.understood.levels.advanced, value: 'advanced', matches: ['advanced', 'expert'] },
 ]
 
 export interface UnderstoodState {
@@ -24,7 +25,6 @@ export interface UnderstoodState {
 }
 
 /** What Sipp understood of the request, to confirm or adjust before the path is built. */
-const duration = (min: number) => (min < 60 ? `${min} min` : `${Math.floor(min / 60)} h${min % 60 ? ` ${String(min % 60).padStart(2, '0')}` : ''}`)
 
 export function Understood() {
   const nav = useNavigate()
@@ -52,21 +52,21 @@ export function Understood() {
   const pal = sipPalette(`${profile.topic} ${input}`, profile.theme)
   const known = profile.prior_knowledge ?? []
   const left = profile.out_of_scope ?? []
-  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? 'Oups, réessaie dans un instant.') : create.error ? 'Impossible de joindre Sipp.' : null
+  const err = create.error instanceof ApiError ? (NEW_SIP_ERRORS[create.error.code ?? ''] ?? t.newSip.oops) : create.error ? t.newSip.unreachable : null
 
   return (
     <Screen>
       <header className="topbar">
-        <IconButton label="Retour" onClick={() => nav('/new', { replace: true, state: { text: input } })}>
+        <IconButton label={t.common.back} onClick={() => nav('/new', { replace: true, state: { text: input } })}>
           {Icon.back}
         </IconButton>
       </header>
 
       <div className="scroll" style={{ padding: '4px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="kicker" style={{ color: 'var(--muted)' }}>Avant de préparer ton parcours</span>
+          <span className="kicker" style={{ color: 'var(--muted)' }}>{t.understood.kicker}</span>
           <h1 className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={[{ text: 'Voilà ce que' }, { text: 'j’ai compris.', color: 'var(--primary)' }]} />
+            <RevealLines lines={[{ text: t.understood.title[0] }, { text: t.understood.title[1], color: 'var(--primary)' }]} />
           </h1>
         </div>
 
@@ -86,13 +86,13 @@ export function Understood() {
             transition={{ type: 'spring', stiffness: 220, damping: 12, delay: 0.25 }}
             style={{ position: 'absolute', top: 'calc(50% - 56px)', right: 4 }}
           />
-          <span className="kicker" style={{ color: pal.ink }}>Ton sujet</span>
+          <span className="kicker" style={{ color: pal.ink }}>{t.understood.topic}</span>
           <span className="display" style={{ fontSize: 24, lineHeight: 1.08, paddingRight: 100 }}>{profile.title}</span>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="card" style={{ borderRadius: 24, padding: '4px 16px', display: 'flex', flexDirection: 'column' }}>
-          <Row label="Ton niveau">
-            <div role="radiogroup" aria-label="Ton niveau" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <Row label={t.understood.level}>
+            <div role="radiogroup" aria-label={t.understood.level} style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {LEVELS.map((l) => {
                 const on = l.matches.includes(profile.current_level)
                 return (
@@ -114,10 +114,10 @@ export function Understood() {
             </div>
           </Row>
 
-          <Row label="Ton objectif">
+          <Row label={t.understood.goal}>
             {editingGoal ? (
               <textarea
-                aria-label="Ton objectif"
+                aria-label={t.understood.goal}
                 autoFocus
                 rows={2}
                 maxLength={300}
@@ -133,7 +133,7 @@ export function Understood() {
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <span style={{ flex: 1, fontSize: 16, lineHeight: 1.4 }}>{goal}</span>
                 <button
-                  aria-label="Modifier l’objectif"
+                  aria-label={t.understood.editGoal}
                   onClick={() => setEditingGoal(true)}
                   style={{ width: 36, height: 36, borderRadius: 12, border: 'none', background: 'var(--bg-deep)', color: 'var(--muted)', display: 'grid', placeItems: 'center', flexShrink: 0 }}
                 >
@@ -146,14 +146,14 @@ export function Understood() {
           </Row>
 
           {known.length > 0 && (
-            <Row label="Tu sais déjà">
-              <Chips items={known} tone="mint" onRemove={(i) => update({ prior_knowledge: known.filter((_, j) => j !== i) })} removeLabel="Retirer" />
+            <Row label={t.understood.known}>
+              <Chips items={known} tone="mint" onRemove={(i) => update({ prior_knowledge: known.filter((_, j) => j !== i) })} removeLabel={t.understood.remove} />
             </Row>
           )}
 
           {left.length > 0 && (
-            <Row label="On laisse de côté" last>
-              <Chips items={left} tone="neutral" onRemove={(i) => update({ out_of_scope: left.filter((_, j) => j !== i) })} removeLabel="Inclure" />
+            <Row label={t.understood.left} last>
+              <Chips items={left} tone="neutral" onRemove={(i) => update({ out_of_scope: left.filter((_, j) => j !== i) })} removeLabel={t.understood.include} />
             </Row>
           )}
         </motion.div>
@@ -166,14 +166,13 @@ export function Understood() {
           <span style={{ fontSize: 15, lineHeight: 1.35, color: 'var(--butter-ink)' }}>
             {interpretation.program ? (
               <>
-                <b style={{ fontWeight: 600 }}>Un grand objectif</b> : je le découpe en chapitres, à suivre un par un.
+                <b style={{ fontWeight: 600 }}>{t.understood.programBold}</b>
+                {t.understood.programRest}
               </>
             ) : (
               <>
-                <b style={{ fontWeight: 600 }}>
-                  {interpretation.lessons_min} à {interpretation.lessons_max} leçons
-                </b>{' '}
-                de 5 minutes, soit {duration(interpretation.lessons_min * 5)} à {duration(interpretation.lessons_max * 5)} au total
+                <b style={{ fontWeight: 600 }}>{t.understood.lessonsBold(interpretation.lessons_min, interpretation.lessons_max)}</b>{' '}
+                {t.understood.lessonsRest(t.time.minutes(interpretation.lessons_min * 5), t.time.minutes(interpretation.lessons_max * 5))}
               </>
             )}
           </span>
@@ -191,10 +190,10 @@ export function Understood() {
 
       <div className="bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Button disabled={create.isPending} onClick={() => create.mutate()} sound="pop">
-          {create.isPending ? <Mascot mood="think" size={36} /> : 'C’est bien ça, on y va'}
+          {create.isPending ? <Mascot mood="think" size={36} /> : t.understood.confirm}
         </Button>
         <Button variant="ghost" style={{ height: 44, fontSize: 16 }} onClick={() => nav('/new', { replace: true, state: { text: input } })}>
-          Préciser autre chose
+          {t.understood.refine}
         </Button>
       </div>
     </Screen>
@@ -216,16 +215,16 @@ function Chips({ items, tone, onRemove, removeLabel }: { items: string[]; tone: 
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       <AnimatePresence initial={false}>
-        {items.map((t, i) => (
+        {items.map((item, i) => (
           <motion.span
-            key={t}
+            key={item}
             layout
             exit={{ opacity: 0, scale: 0.8 }}
             style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 4px 4px 11px', borderRadius: 14, background: bg, color: ink, fontSize: 13, fontWeight: 600 }}
           >
-            {t}
+            {item}
             <button
-              aria-label={`${removeLabel} : ${t}`}
+              aria-label={t.speech.pair(removeLabel, item)}
               onClick={() => {
                 play('tap')
                 onRemove(i)

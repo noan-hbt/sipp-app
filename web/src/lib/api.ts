@@ -1,4 +1,5 @@
 import type { Block } from './blocks'
+import { lang, t } from './i18n'
 
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 export const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -151,6 +152,7 @@ export interface Settings {
   daily_goal: number
   reminder_hour: number | null
   timezone: string | null
+  language: string | null
   push_enabled: boolean
   push_public_key: string | null
 }
@@ -236,22 +238,8 @@ export class ApiError extends Error {
   }
 }
 
-export function apiErrorMessage(error: unknown, fallback = 'Impossible de joindre Sipp. Réessaie dans un instant.') {
-  const messages: Record<string, string> = {
-    no_free_slot: 'Ta bibliothèque est pleine. Libère une place pour réessayer.',
-    monthly_limit: 'Tu as utilisé tes générations du mois. Réessaie le mois prochain.',
-    daily_budget_reached: 'Tu as atteint ta limite du jour. Réessaie demain.',
-    too_many_active_builds: 'Un Sip est déjà en préparation. Réessaie dans un instant.',
-    program_adjusting: 'J’ajuste encore la suite de ton programme. Réessaie dans un instant.',
-    already_subscribed: 'Tu as déjà un abonnement. Gère-le depuis ton profil.',
-    billing_unavailable: 'Les abonnements ne sont pas encore ouverts.',
-    billing_provider_error: 'Le paiement est indisponible pour le moment. Réessaie dans un instant.',
-    billing_cancel_failed: 'Ton abonnement n’a pas pu être résilié, donc ton compte est conservé. Réessaie dans un instant.',
-    no_subscription: 'Aucun abonnement à gérer.',
-    help_limit: 'Tu as utilisé tes explications du jour. Réessaie demain.',
-    notes_limit: 'Ton carnet est plein pour ton offre.',
-    plan_feature: 'Cette fonctionnalité est incluse dès l’offre Essentiel.',
-  }
+export function apiErrorMessage(error: unknown, fallback: string = t.errors.unreachable) {
+  const messages: Record<string, string> = t.errors.codes
   return error instanceof ApiError ? messages[error.code ?? ''] ?? fallback : fallback
 }
 
@@ -421,7 +409,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
     })
   } catch (error) {
-    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session ended', 'AbortError')
     const cached = cacheable && typeof caches !== 'undefined'
       ? await cacheTask(async () => {
         const cache = await caches.open('sipp-api')
@@ -434,10 +422,10 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     if (!cached) throw error
     r = cached
   }
-  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session ended', 'AbortError')
   if (r.status === 401 && retry && tokens && !path.startsWith('/auth/login')) {
     const refreshed = await refresh()
-    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+    if (signal.aborted || version !== sessionVersion) throw new DOMException('Session ended', 'AbortError')
     if (refreshed) return api<T>(path, init, false)
   }
   if (!r.ok) {
@@ -463,7 +451,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     }).catch(() => {})
   }
   const data = r.status === 204 ? undefined : await r.json()
-  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session terminée', 'AbortError')
+  if (signal.aborted || version !== sessionVersion) throw new DOMException('Session ended', 'AbortError')
   return data as T
 }
 
@@ -489,8 +477,8 @@ export const Api = {
   exportData: () => api<unknown>('/auth/me/export'),
   sips: ({ signal }: { signal?: AbortSignal } = {}) => api<SipSummary[]>('/sips', { signal }),
   sip: (id: string, signal?: AbortSignal) => api<SipDetail>(`/sips/${id}`, { signal }),
-  createSip: (input: string, profile?: Profile) => api<SipSummary>('/sips', { method: 'POST', json: { input, profile } }),
-  interpret: (input: string) => api<Interpretation>('/sips/interpret', { method: 'POST', json: { input } }),
+  createSip: (input: string, profile?: Profile) => api<SipSummary>('/sips', { method: 'POST', json: { input, profile, language: lang } }),
+  interpret: (input: string) => api<Interpretation>('/sips/interpret', { method: 'POST', json: { input, language: lang } }),
   concepts: ({ signal }: { signal?: AbortSignal } = {}) => api<Concept[]>('/me/concepts', { signal }),
   review: ({ signal }: { signal?: AbortSignal } = {}) => api<ReviewSession>('/me/review', { signal }),
   reviewCard: (id: string, knew: boolean) => api<Concept>(`/me/review/${id}`, { method: 'POST', json: { knew } }),
@@ -507,7 +495,7 @@ export const Api = {
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),
   settings: () => api<Settings>('/auth/me/settings'),
-  saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string }) =>
+  saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string; language?: string }) =>
     api<Settings>('/auth/me/settings', { method: 'PUT', json: body }),
   savePush: (sub: PushSubscriptionJSON) => api<Settings>('/auth/me/push', { method: 'PUT', json: sub }),
   deletePush: () => api<Settings>('/auth/me/push', { method: 'DELETE' }),

@@ -6,7 +6,7 @@ test('PWA conserve cache B hors ligne après logout A et purge export', async (t
   const base = process.env.SIPP_TEST_URL ?? 'http://127.0.0.1:4173'
   const browser = await chromium.launch({ executablePath: process.env.SIPP_CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true })
   t.after(() => browser.close())
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'fr-FR' })
   const tokens = (user) => ({ access_token: `e30.${Buffer.from(JSON.stringify({ sub: user })).toString('base64url')}.sig`, refresh_token: user, expires_in: 900 })
   await context.addInitScript((initial) => {
     if (localStorage.getItem('test.initialized')) return

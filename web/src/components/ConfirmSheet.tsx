@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useModal } from '../lib/useModal'
 import { Mascot } from './Mascot'
 import { Button } from './ui'
+import { t } from '../lib/i18n'
 
 /** Bottom sheet asking to confirm a destructive action. Rendered over the whole app. */
 export function ConfirmSheet({
@@ -88,7 +89,7 @@ export function ConfirmSheet({
                 {busy ? '…' : confirmLabel}
               </Button>
               <Button data-autofocus variant="ghost" onClick={onClose} disabled={busy} style={{ height: 48, fontSize: 16 }}>
-                Annuler
+                {t.common.cancel}
               </Button>
             </div>
           </motion.div>

@@ -12,6 +12,7 @@ import { Api, apiErrorMessage, ApiError, type QuizResult } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 import { LessonPlayer, type Finished } from './Lesson'
+import { t } from '../lib/i18n'
 
 /** End of a module: a few questions from its lessons, graded on the server, best result kept. */
 export function ModuleQuiz() {
@@ -53,23 +54,23 @@ export function ModuleQuiz() {
     return (
       <Screen kind="modal">
         <header className="topbar">
-          <IconButton label="Fermer" onClick={back}>{Icon.close}</IconButton>
+          <IconButton label={t.common.close} onClick={back}>{Icon.close}</IconButton>
         </header>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
           <Mascot mood={quiz.isError ? 'oops' : 'think'} size={96} />
           {quiz.isError ? (
             locked ? (
               <>
-                <p className="muted" style={{ fontSize: 16 }}>Le quiz de fin de module est inclus dès l’offre Essentiel.</p>
-                <Button onClick={() => nav('/offers')}>Voir les offres</Button>
+                <p className="muted" style={{ fontSize: 16 }}>{t.quiz.locked}</p>
+                <Button onClick={() => nav('/offers')}>{t.upsell.offers}</Button>
               </>
             ) : notReady ? (
-              <p className="muted" style={{ fontSize: 16 }}>Termine toutes les leçons du module pour ouvrir son quiz.</p>
+              <p className="muted" style={{ fontSize: 16 }}>{t.quiz.finishFirst}</p>
             ) : (
-              <ErrorNotice message={apiErrorMessage(quiz.error, 'Le quiz n’a pas pu se charger. Réessaie.')} retry={() => void quiz.refetch()} busy={quiz.isFetching} />
+              <ErrorNotice message={apiErrorMessage(quiz.error, t.quiz.loadFailed)} retry={() => void quiz.refetch()} busy={quiz.isFetching} />
             )
           ) : (
-            <p className="muted" style={{ fontSize: 16 }}>Je choisis tes questions…</p>
+            <p className="muted" style={{ fontSize: 16 }}>{t.quiz.loading}</p>
           )}
         </div>
       </Screen>
@@ -79,12 +80,12 @@ export function ModuleQuiz() {
     return (
       <Screen kind="modal">
         <header className="topbar">
-          <IconButton label="Fermer" onClick={back}>{Icon.close}</IconButton>
+          <IconButton label={t.common.close} onClick={back}>{Icon.close}</IconButton>
         </header>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 32px 80px', textAlign: 'center' }}>
           <Mascot size={96} />
-          <p className="muted" style={{ fontSize: 16 }}>Ce module n’a pas d’exercice à reprendre. Passe à la suite !</p>
-          <Button variant="soft" onClick={back}>Retour au parcours</Button>
+          <p className="muted" style={{ fontSize: 16 }}>{t.quiz.nothing}</p>
+          <Button variant="soft" onClick={back}>{t.quiz.backToPath}</Button>
         </div>
       </Screen>
     )
@@ -92,13 +93,13 @@ export function ModuleQuiz() {
   return (
     <LessonPlayer
       key={round}
-      title={`Quiz · ${quiz.data.title}`}
+      title={t.quiz.title(quiz.data.title)}
       blocks={quiz.data.items.map((i) => i.block)}
       onClose={back}
       onFinish={(f) => submit.mutate(f)}
       finishing={submit.isPending}
-      finishError={submit.isError ? apiErrorMessage(submit.error, 'Ton quiz n’a pas été enregistré. Réessaie.') : undefined}
-      finishLabel="Voir mon résultat"
+      finishError={submit.isError ? apiErrorMessage(submit.error, t.quiz.saveFailed) : undefined}
+      finishLabel={t.quiz.seeResult}
     />
   )
 }
@@ -118,7 +119,7 @@ function Result({ r, onBack, onAgain }: { r: QuizResult; onBack: () => void; onA
           transition={{ type: 'spring', stiffness: 110, damping: 15 }}
           style={{ position: 'absolute', left: '50%', top: 'calc(var(--safe-top) + 40px)', width: 320, height: 320, marginLeft: -160, borderRadius: 160, background: '#5a4fc4' }}
         />
-        <span className="kicker" style={{ position: 'relative', color: '#cbc2ff' }}>Quiz du module</span>
+        <span className="kicker" style={{ position: 'relative', color: '#cbc2ff' }}>{t.quiz.kicker}</span>
         <motion.img
           src={illustration('scene-quiz')}
           alt=""
@@ -129,7 +130,7 @@ function Result({ r, onBack, onAgain }: { r: QuizResult; onBack: () => void; onA
           transition={{ type: 'spring', stiffness: 240, damping: 13 }}
           style={{ position: 'relative' }}
         />
-        <div aria-label={`${r.stars} étoiles sur 3`} style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 6, height: 58, marginTop: -16 }}>
+        <div aria-label={t.quiz.starsLabel(r.stars)} style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 6, height: 58, marginTop: -16 }}>
           {[1, 2, 3].map((n) => (
             <span key={n} style={{ marginBottom: n === 2 ? 12 : 0, transform: `rotate(${(n - 2) * 12}deg)` }}>
               <Star size={n === 2 ? 52 : 40} filled={r.stars >= n} animate delay={0.3 + n * 0.2} />
@@ -141,14 +142,14 @@ function Result({ r, onBack, onAgain }: { r: QuizResult; onBack: () => void; onA
           <span style={{ fontSize: 46, color: '#cbc2ff' }}>/{r.total}</span>
         </span>
         <h1 className="display" style={{ position: 'relative', fontSize: 30, lineHeight: 1.05 }}>
-          {r.stars === 3 ? 'Module maîtrisé !' : r.stars === 2 ? 'Bien ancré !' : 'À consolider'}
+          {r.stars === 3 ? t.quiz.mastered : r.stars === 2 ? t.quiz.anchored : t.quiz.consolidate}
         </h1>
         {r.gained > 0 && (
           <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1, type: 'spring', stiffness: 400, damping: 14 }} className="chip" style={{ position: 'relative', background: '#ffc93d', color: '#3b2c05' }}>
-            +{r.gained} étoile{r.gained > 1 ? 's' : ''}
+            {t.quiz.gained(r.gained)}
           </motion.span>
         )}
-        {r.gained === 0 && r.best_stars > r.stars && <p style={{ position: 'relative', fontSize: 14, color: '#cbc2ff' }}>Ton meilleur score reste {r.best_stars} étoiles.</p>}
+        {r.gained === 0 && r.best_stars > r.stars && <p style={{ position: 'relative', fontSize: 14, color: '#cbc2ff' }}>{t.quiz.best(r.best_stars)}</p>}
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -156,11 +157,11 @@ function Result({ r, onBack, onAgain }: { r: QuizResult; onBack: () => void; onA
           style={{ position: 'relative', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto', paddingTop: 16 }}
         >
           <Button onClick={onBack} sound="pop" style={{ background: '#fff', color: '#4a3fb0' }}>
-            Retour au parcours
+            {t.quiz.backToPath}
           </Button>
           {r.stars < 3 && (
             <Button variant="ghost" onClick={onAgain} style={{ color: '#fff', height: 48 }}>
-              Viser les 3 étoiles
+              {t.quiz.again}
             </Button>
           )}
         </motion.div>

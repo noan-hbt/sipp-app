@@ -15,11 +15,32 @@ from app.progress import _zone
 
 log = logging.getLogger("sipp.push")
 
-MESSAGES = [
-    "Ta leçon de 5 minutes t’attend.",
-    "Un Sip avant de passer à autre chose ?",
-    "Cinq minutes pour garder ta série.",
-]
+# Daily reminders, rotating by day, in the user's interface language (French when unset).
+MESSAGES = {
+    "fr": [
+        "Ta leçon de 5 minutes t’attend.",
+        "Un Sip avant de passer à autre chose ?",
+        "Cinq minutes pour garder ta série.",
+    ],
+    "en": [
+        "Your 5-minute lesson is waiting.",
+        "One Sip before you move on?",
+        "Five minutes to keep your streak.",
+    ],
+}
+SAMPLE = {
+    "fr": "C’est comme ça que je te rappellerai ta leçon.",
+    "en": "This is how I’ll remind you about your lesson.",
+}
+
+
+def _lang(user: User) -> str:
+    return user.language if user.language in MESSAGES else "fr"
+
+
+def sample(user: User) -> str:
+    """The test notification, in the user's language."""
+    return SAMPLE[_lang(user)]
 
 
 def enabled() -> bool:
@@ -86,7 +107,8 @@ async def send_due_reminders(session: AsyncSession, now: datetime | None = None)
         user.reminded_on = today
         if await _done_today(session, user, local.date()):
             continue
-        body = MESSAGES[local.toordinal() % len(MESSAGES)]
+        messages = MESSAGES[_lang(user)]
+        body = messages[local.toordinal() % len(messages)]
         if await send(user, {"title": "Sipp", "body": body, "url": "/"}):
             sent += 1
     await session.commit()

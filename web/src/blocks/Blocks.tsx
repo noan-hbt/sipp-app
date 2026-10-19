@@ -15,6 +15,7 @@ import { haptic, play } from '../lib/sound'
 import { Kicker, TONES, type Tone } from './Kicker'
 import { Hook, Predict, Simulate, Swipe } from './Play'
 import { Estimate, FillBlanks, Match } from './Practice'
+import { t } from '../lib/i18n'
 
 hljs.registerLanguage('python', python)
 hljs.registerLanguage('javascript', javascript)
@@ -55,7 +56,7 @@ function Concept({ b }: { b: B.ConceptBlock }) {
   return (
     <article className="lx-card">
       <Kicker icon="concept" tone="peach">
-        Nouvelle notion
+        {t.blocks.concept}
       </Kicker>
       <H>{b.name}</H>
       <motion.p
@@ -76,7 +77,7 @@ function Example({ b }: { b: B.ExampleBlock }) {
   return (
     <article style={{ background: 'var(--sky)', borderRadius: 24, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <Kicker icon="example" tone="sky" onTint>
-        Exemple
+        {t.blocks.example}
       </Kicker>
       <span style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.35 }}>
         <RichText text={b.title} />
@@ -120,13 +121,13 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
   return (
     <article className="lx-card">
       <Kicker icon="analogy" tone="sky">
-        Analogie
+        {t.blocks.analogy}
       </Kicker>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
         <span style={{ background: 'var(--butter)', color: 'var(--butter-ink)', borderRadius: 16, padding: '10px 12px', fontSize: 15, fontWeight: 600, lineHeight: 1.3 }}>
           <RichText text={b.source} />
         </span>
-        <span aria-label="comme" style={{ color: 'var(--faint)', fontSize: 18 }}>
+        <span aria-label={t.blocks.like} style={{ color: 'var(--faint)', fontSize: 18 }}>
           →
         </span>
         <span style={{ background: 'var(--sky)', color: 'var(--sky-ink)', borderRadius: 16, padding: '10px 12px', fontSize: 15, fontWeight: 600, lineHeight: 1.3 }}>
@@ -138,10 +139,10 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
         <div role="table" style={{ borderRadius: 18, boxShadow: 'inset 0 0 0 1.5px var(--line-strong)', overflow: 'hidden' }}>
           <div role="row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--bg-deep)', fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
             <span role="columnheader" style={{ padding: '8px 12px' }}>
-              L’image
+              {t.blocks.image}
             </span>
             <span role="columnheader" style={{ padding: '8px 12px' }}>
-              En vrai
+              {t.blocks.real}
             </span>
           </div>
           {b.mappings.map((m, i) => (
@@ -165,7 +166,7 @@ function Analogy({ b }: { b: B.AnalogyBlock }) {
       )}
       {b.limits && (
         <p className="lx-small">
-          <strong style={{ fontWeight: 600, color: 'var(--ink-soft)' }}>Limite de l’image · </strong>
+          <strong style={{ fontWeight: 600, color: 'var(--ink-soft)' }}>{t.blocks.limits} · </strong>
           <RichText text={b.limits} />
         </p>
       )}
@@ -187,13 +188,13 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="compare" tone="lavender">
-        Comparer
+        {t.blocks.compare}
       </Kicker>
       <H>{b.title}</H>
       <div
         ref={deck}
         role="list"
-        aria-label={`${b.items.length} éléments comparés`}
+        aria-label={t.blocks.compared(b.items.length)}
         onScroll={(e) => {
           const el = e.currentTarget
           const card = el.firstElementChild as HTMLElement | null
@@ -237,7 +238,7 @@ function Comparison({ b }: { b: B.ComparisonBlock }) {
             <button
               key={i}
               type="button"
-              aria-label={`Voir ${it.name}`}
+              aria-label={t.blocks.see(it.name)}
               aria-current={i === at}
               onClick={() => go(i)}
               style={{ border: 'none', padding: 0, height: 8, width: i === at ? 22 : 8, borderRadius: 4, background: i === at ? tones[i][1] : 'var(--line-strong)', transition: 'width .2s, background .2s' }}
@@ -262,7 +263,7 @@ function Sequence({ b }: { b: B.SequenceBlock }) {
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="steps" tone="mint">
-        Étape par étape
+        {t.blocks.steps}
       </Kicker>
       <H>{b.title}</H>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
@@ -294,7 +295,7 @@ function CauseEffect({ b }: { b: B.CauseEffectBlock }) {
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="cause" tone="peach">
-        Cause et effet
+        {t.blocks.cause}
       </Kicker>
       <H>{b.title}</H>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
@@ -370,14 +371,14 @@ function Code({ b }: { b: B.CodeBlock }) {
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span key={String(copied)} initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -8, opacity: 0 }} transition={{ duration: 0.15 }} style={{ display: 'block' }}>
-                {copied ? 'Copié !' : 'Copier'}
+                {copied ? t.blocks.copied : t.blocks.copy}
               </motion.span>
             </AnimatePresence>
           </motion.button>
         </div>
         <pre className="code" style={{ margin: 0, padding: '6px 18px 18px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
-      {copyError && <ErrorNotice message="La copie a échoué. Réessaie." retry={() => void copy()} busy={copying} />}
+      {copyError && <ErrorNotice message={t.blocks.copyFailed} retry={() => void copy()} busy={copying} />}
       <P>{b.explanation}</P>
     </section>
   )
@@ -387,7 +388,7 @@ function MathB({ b }: { b: B.MathBlock }) {
   return (
     <section className="lx-card">
       <Kicker icon="math" tone="sky">
-        Formule
+        {t.blocks.formula}
       </Kicker>
       <motion.div initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }} className="well" style={{ borderRadius: 18, padding: '2px 12px' }}>
         <MathDisplay latex={b.latex} />
@@ -500,7 +501,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
     const chosen = answered ? (answer!.value as string[]) : selected
     body = (
       <div role="group" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {b.kind === 'multiple_choice' && !answered && <span className="lx-small" style={{ fontSize: 14 }}>Plusieurs réponses possibles</span>}
+        {b.kind === 'multiple_choice' && !answered && <span className="lx-small" style={{ fontSize: 14 }}>{t.blocks.several}</span>}
         {(b.options ?? []).map((o, i) => {
           const isChosen = chosen.includes(o.id)
           const isCorrect = correctIds.includes(o.id)
@@ -530,7 +531,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
             style={{ marginTop: 4 }}
             onClick={() => grade(selected.length === correctIds.length && selected.every((s) => correctIds.includes(s)), selected)}
           >
-            Valider
+            {t.blocks.submit}
           </Button>
         )}
       </div>
@@ -542,12 +543,12 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
     body = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="field">
-          <label htmlFor={inputId}>Ta réponse</label>
-          <textarea id={inputId} rows={3} value={answered ? String(answer!.value) : text} disabled={answered} onChange={(e) => setText(e.target.value)} placeholder="Écris ce que tu en penses…" />
+          <label htmlFor={inputId}>{t.blocks.yourAnswer}</label>
+          <textarea id={inputId} rows={3} value={answered ? String(answer!.value) : text} disabled={answered} onChange={(e) => setText(e.target.value)} placeholder={t.blocks.openPlaceholder} />
         </div>
         {!answered && (
           <Button disabled={!text.trim()} sound="pop" onClick={() => onAnswer({ correct: null, value: text.trim() })}>
-            Vérifier
+            {t.blocks.check}
           </Button>
         )}
       </div>
@@ -557,7 +558,7 @@ function Question({ b, answer, onAnswer }: { b: B.QuestionBlock; answer?: Answer
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Kicker icon="question" tone="lavender">
-        {b.kind === 'open' ? 'À toi de formuler' : 'Question'}
+        {b.kind === 'open' ? t.blocks.open : t.blocks.question}
       </Kicker>
       <h2 className="lx-h">
         <RichText text={b.prompt} />
@@ -575,7 +576,7 @@ function TrueFalse({ chosen, truth, onPick }: { chosen: boolean | null; truth: b
         const state: ChoiceState = answered ? (v === truth ? 'correct' : v === chosen ? 'wrong' : 'faded') : 'idle'
         return (
           <ChoiceButton key={String(v)} state={state} disabled={answered} center onClick={() => onPick(v)}>
-            <span style={{ fontSize: 17 }}>{v ? 'Vrai' : 'Faux'}</span>
+            <span style={{ fontSize: 17 }}>{v ? t.blocks.true : t.blocks.false}</span>
           </ChoiceButton>
         )
       })}
@@ -587,10 +588,10 @@ function Misconception({ b, answer, onAnswer }: { b: B.MisconceptionBlock; answe
   return (
     <section style={{ background: 'var(--rose-soft)', borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="myth" tone="rose" onTint>
-        Idée reçue ?
+        {t.blocks.myth}
       </Kicker>
       <motion.p initial={{ scale: 0.96 }} animate={{ scale: 1 }} className="lx-h" style={{ fontSize: 20 }}>
-        « <RichText text={unquote(b.statement)} /> »
+        {t.blocks.quoteOpen}<RichText text={unquote(b.statement)} />{t.blocks.quoteClose}
       </motion.p>
       <TrueFalse
         chosen={answer ? (answer.value as boolean) : null}
@@ -612,7 +613,7 @@ function Application({ b }: { b: B.ApplicationBlock }) {
   return (
     <section style={{ background: 'var(--mint)', borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <Kicker icon="apply" tone="mint" onTint>
-        À toi de jouer
+        {t.blocks.apply}
       </Kicker>
       <p className="lx-lead">
         <RichText text={b.prompt} />
@@ -623,8 +624,8 @@ function Application({ b }: { b: B.ApplicationBlock }) {
         </p>
       )}
       <div className="field" style={{ boxShadow: 'none', marginTop: 2 }}>
-        <label htmlFor={inputId}>{b.optional === false ? 'Ta réponse' : 'Facultatif, juste pour toi'}</label>
-        <textarea id={inputId} rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder="Note une idée…" />
+        <label htmlFor={inputId}>{b.optional === false ? t.blocks.yourAnswer : t.blocks.optional}</label>
+        <textarea id={inputId} rows={2} value={text} onChange={(e) => setText(e.target.value)} placeholder={t.blocks.notePlaceholder} />
       </div>
     </section>
   )
@@ -634,7 +635,7 @@ function Recap({ b }: { b: B.RecapBlock }) {
   return (
     <section style={{ background: 'var(--butter)', borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <Kicker icon="recap" tone="butter" onTint>
-        À retenir
+        {t.speech.remember}
       </Kicker>
       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {b.points.map((p, i) => (

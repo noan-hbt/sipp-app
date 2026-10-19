@@ -8,6 +8,7 @@ import { illustration, sipPalette } from '../components/SipIcon'
 import { Api, type Concept } from '../lib/api'
 import { play } from '../lib/sound'
 import { HScroll } from '../components/HScroll'
+import { t } from '../lib/i18n'
 
 const fold = (s: string) =>
   s
@@ -15,13 +16,13 @@ const fold = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 
-const MASTERY = ['', 'Fragile', 'S’installe', 'Ancrée']
+const MASTERY = t.notebook.mastery
 
 /** How well a notion is learned, as a pill: three strokes (1 fragile → 3 well learned) and a word; "À revoir" when due. */
 export function Mastery({ level, due = false, color = 'var(--primary)' }: { level: number; due?: boolean; color?: string }) {
-  const label = due ? 'À revoir' : MASTERY[Math.min(3, Math.max(1, level))]
+  const label = due ? t.notebook.due : MASTERY[Math.min(3, Math.max(1, level))]
   return (
-    <span role="img" aria-label={`Maîtrise : ${label}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, height: 24, padding: '0 9px', borderRadius: 12, background: 'color-mix(in srgb, var(--surface) 70%, transparent)', color, fontSize: 12, fontWeight: 700 }}>
+    <span role="img" aria-label={t.notebook.masteryLabel(label)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, height: 24, padding: '0 9px', borderRadius: 12, background: 'color-mix(in srgb, var(--surface) 70%, transparent)', color, fontSize: 12, fontWeight: 700 }}>
       <span aria-hidden="true" style={{ display: 'flex', gap: 2 }}>
         {[1, 2, 3].map((i) => (
           <span key={i} style={{ width: 8, height: 8, borderRadius: 4, background: 'currentColor', opacity: i <= level ? 1 : 0.25 }} />
@@ -52,9 +53,9 @@ export function Notebook() {
   const growing = shown.filter((c) => !c.due && c.mastery < 3)
   const solid = shown.filter((c) => !c.due && c.mastery >= 3)
   const dueTotal = all.filter((c) => c.due).length
-  const error = (concepts.isError || concepts.isPaused) && <ErrorNotice message={concepts.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour actualiser ton carnet.' : 'Impossible d’actualiser ton carnet. Réessaie.'} retry={() => { void concepts.refetch() }} busy={concepts.isFetching} />
+  const error = (concepts.isError || concepts.isPaused) && <ErrorNotice message={concepts.isPaused ? t.notebook.offline : t.notebook.failed} retry={() => { void concepts.refetch() }} busy={concepts.isFetching} />
 
-  if (!concepts.data) return <div className="scroll" style={{ padding: '12px 16px 130px' }}>{error || <p className="muted" role="status">Chargement de ton carnet…</p>}</div>
+  if (!concepts.data) return <div className="scroll" style={{ padding: '12px 16px 130px' }}>{error || <p className="muted" role="status">{t.notebook.loading}</p>}</div>
 
   if (!all.length) {
     return (
@@ -62,10 +63,10 @@ export function Notebook() {
         {error}
         <img src={illustration('scene-empty')} alt="" width={160} height={160} />
         <span className="display" style={{ fontSize: 21 }}>
-          Ton carnet est vide
+          {t.notebook.emptyTitle}
         </span>
         <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-          Chaque notion que tu découvres dans une leçon vient se ranger ici, pour la relire et la réviser.
+          {t.notebook.emptyBody}
         </p>
       </div>
     )
@@ -104,9 +105,9 @@ export function Notebook() {
             </svg>
           </span>
           <span style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>Réviser maintenant</span>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>{t.notebook.reviewNow}</span>
             <span style={{ fontSize: 13, color: 'var(--dock-muted)' }}>
-              {dueTotal} notion{dueTotal > 1 ? 's' : ''} à rafraîchir · 2 min
+              {t.notebook.toRefresh(dueTotal)}
             </span>
           </span>
         </motion.button>
@@ -121,15 +122,15 @@ export function Notebook() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Chercher parmi ${all.length} notion${all.length > 1 ? 's' : ''}`}
-          aria-label="Chercher une notion"
+          placeholder={t.notebook.search(all.length)}
+          aria-label={t.notebook.searchLabel}
           style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, minWidth: 0 }}
         />
       </label>
 
       {sips.length > 1 && (
         <HScroll style={{ display: 'flex', gap: 6, margin: '0 -16px', padding: '0 16px' }}>
-          {[[null, 'Tout'] as const, ...sips].map(([id, title]) => (
+          {[[null, t.library.filters.all] as const, ...sips].map(([id, title]) => (
             <button
               key={id ?? 'all'}
               onClick={() => {
@@ -147,12 +148,12 @@ export function Notebook() {
 
       {!shown.length && (
         <p className="muted" style={{ textAlign: 'center', padding: '20px 0', fontSize: 15 }}>
-          Aucune notion ne correspond.
+          {t.notebook.noMatch}
         </p>
       )}
-      <Section title="À revoir bientôt" items={due} render={row} />
-      <Section title="En train de s’installer" items={growing} render={row} />
-      <Section title="Bien acquises" items={solid} render={row} />
+      <Section title={t.notebook.sections.due} items={due} render={row} />
+      <Section title={t.notebook.sections.growing} items={growing} render={row} />
+      <Section title={t.notebook.sections.solid} items={solid} render={row} />
     </div>
   )
 }

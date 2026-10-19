@@ -5,6 +5,7 @@ import { ErrorNotice } from '../components/ErrorNotice'
 import { illustration, sipPalette } from '../components/SipIcon'
 import { Api, type Note } from '../lib/api'
 import { play } from '../lib/sound'
+import { t } from '../lib/i18n'
 
 /** Passages kept from lessons, grouped by Sip, newest first. */
 export function Notes() {
@@ -17,18 +18,18 @@ export function Notes() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['notes'] }),
   })
   const error = (notes.isError || notes.isPaused) && (
-    <ErrorNotice message={notes.isPaused ? 'Tu es hors ligne. Reconnecte-toi pour actualiser tes notes.' : 'Impossible d’actualiser tes notes. Réessaie.'} retry={() => { void notes.refetch() }} busy={notes.isFetching} />
+    <ErrorNotice message={notes.isPaused ? t.notes.offline : t.notes.failed} retry={() => { void notes.refetch() }} busy={notes.isFetching} />
   )
-  if (!notes.data) return <div className="scroll" style={{ padding: '12px 16px 130px' }}>{error || <p className="muted" role="status">Chargement de tes notes…</p>}</div>
+  if (!notes.data) return <div className="scroll" style={{ padding: '12px 16px 130px' }}>{error || <p className="muted" role="status">{t.notes.loading}</p>}</div>
 
   if (!notes.data.length) {
     return (
       <div className="scroll" style={{ padding: '40px 32px 130px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
         {error}
         <img src={illustration('scene-notes')} alt="" width={160} height={160} />
-        <span className="display" style={{ fontSize: 21 }}>Aucune note pour l’instant</span>
+        <span className="display" style={{ fontSize: 21 }}>{t.notes.emptyTitle}</span>
         <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-          Pendant une leçon, appuie longuement sur un passage qui te plaît : il viendra se ranger ici.
+          {t.notes.emptyBody}
         </p>
       </div>
     )
@@ -73,11 +74,11 @@ export function Notes() {
                     </button>
                     <button
                       type="button"
-                      aria-label="Retirer cette note"
+                      aria-label={t.notes.removeLabel}
                       onClick={() => remove.mutate(n.id)}
                       style={{ alignSelf: 'flex-start', border: 'none', background: 'var(--frost)', borderRadius: 14, padding: '6px 10px', fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}
                     >
-                      Retirer
+                      {t.notes.remove}
                     </button>
                   </motion.article>
                 )
@@ -88,7 +89,7 @@ export function Notes() {
       </div>
       <p style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, lineHeight: 1.4, color: 'var(--muted)', margin: '6px 4px 0' }}>
         <img src={illustration('scene-notes')} alt="" width={48} height={48} style={{ flexShrink: 0 }} />
-        Dans une leçon, appuie longuement sur un passage pour le garder ici.
+        {t.notes.hint}
       </p>
     </div>
   )

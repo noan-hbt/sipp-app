@@ -7,21 +7,16 @@ import { useModal } from '../lib/useModal'
 import { Mascot } from './Mascot'
 import { RichText } from './RichText'
 import { Button } from './ui'
+import { t } from '../lib/i18n'
 
 const KINDS: [HelpKind, string, string][] = [
-  ['rephrase', 'Explique autrement', 'lavender'],
-  ['simpler', 'Plus simple', 'mint'],
-  ['example', 'Un exemple', 'butter'],
-  ['word', 'Un mot inconnu', 'sky'],
+  ['rephrase', t.help.kinds.rephrase, 'lavender'],
+  ['simpler', t.help.kinds.simpler, 'mint'],
+  ['example', t.help.kinds.example, 'butter'],
+  ['word', t.help.kinds.word, 'sky'],
 ]
 
-const TITLES: Record<HelpKind, string> = {
-  rephrase: 'Autrement dit',
-  simpler: 'Plus simplement',
-  example: 'Un exemple',
-  word: 'Les mots clés',
-  question: 'Ta question',
-}
+const TITLES: Record<HelpKind, string> = t.help.titles
 
 export type AskHelp = (kind: HelpKind, question?: string) => Promise<string>
 
@@ -36,9 +31,9 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
   const kind = help.variables?.kind
   const err =
     help.error instanceof ApiError && help.error.code === 'help_limit'
-      ? 'Tu m’as beaucoup sollicité aujourd’hui. On en reparle demain ?'
+      ? t.help.limit
       : help.error
-        ? 'Je n’arrive pas à répondre pour l’instant. Réessaie dans un instant.'
+        ? t.help.error
         : null
 
   function close() {
@@ -51,7 +46,7 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
     <dialog
       ref={dialog}
       className="sheet-modal"
-      aria-label="Aide sur ce passage"
+      aria-label={t.help.label}
       onKeyDown={onKeyDown}
       onCancel={(e) => {
         e.preventDefault()
@@ -75,7 +70,7 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
               <span style={{ width: 48, height: 48, borderRadius: 24, background: 'var(--peach-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                 <Mascot mood={help.isPending ? 'think' : 'hello'} size={38} />
               </span>
-              <h2 className="display" style={{ fontSize: 24, letterSpacing: '-0.04em' }}>Qu’est-ce qui coince ?</h2>
+              <h2 className="display" style={{ fontSize: 24, letterSpacing: '-0.04em' }}>{t.help.title}</h2>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
@@ -111,7 +106,7 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
             <AnimatePresence mode="wait">
               {help.isPending ? (
                 <motion.p key="wait" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="lx-small" style={{ textAlign: 'center', padding: '8px 0' }}>
-                  Je cherche une meilleure façon de le dire…
+                  {t.help.thinking}
                 </motion.p>
               ) : help.data && kind ? (
                 <motion.div key={help.submittedAt} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ borderRadius: 22, background: 'var(--surface)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -143,13 +138,13 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 maxLength={500}
-                placeholder="Ou pose ta question…"
-                aria-label="Ta question"
+                placeholder={t.help.placeholder}
+                aria-label={t.help.titles.question}
                 style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', fontSize: 16 }}
               />
               <button
                 type="submit"
-                aria-label="Envoyer"
+                aria-label={t.help.send}
                 disabled={!question.trim() || help.isPending}
                 style={{ width: 40, height: 40, borderRadius: 20, border: 'none', background: question.trim() ? 'var(--primary)' : 'var(--bg-deep)', color: question.trim() ? '#fff' : 'var(--faint)', display: 'grid', placeItems: 'center', flexShrink: 0 }}
               >
@@ -160,7 +155,7 @@ export function HelpSheet({ open, onClose, ask }: { open: boolean; onClose: () =
             </form>
 
             <Button variant="dark" onClick={close}>
-              {help.data ? 'C’est plus clair, je reprends' : 'Retour à la leçon'}
+              {help.data ? t.help.clearer : t.help.back}
             </Button>
           </motion.section>
         </>

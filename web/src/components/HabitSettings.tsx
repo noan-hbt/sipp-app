@@ -4,10 +4,12 @@ import { Api, TZ, type Settings } from '../lib/api'
 import { disablePush, enablePush, needsInstall, pushSupported } from '../lib/push'
 import { track } from '../lib/telemetry'
 import { getTheme, setTheme, type Theme } from '../lib/theme'
+import { t, lang, setLang, type Lang } from '../lib/i18n'
 
 const GOALS = [1, 2, 3, 5]
 const HOURS = [7, 8, 9, 12, 13, 18, 19, 20, 21, 22]
-const THEMES: [Theme, string][] = [['system', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']]
+const THEMES: [Theme, string][] = [['system', t.habits.themes.system], ['light', t.habits.themes.light], ['dark', t.habits.themes.dark]]
+const LANGS: [Lang, string][] = [['fr', 'Français'], ['en', 'English']]
 
 function Chips<T extends string | number>({ label, value, options, onPick, disabled }: {
   label: string
@@ -69,14 +71,14 @@ export function HabitSettings() {
       }
       await enablePush(s.push_public_key!)
       track('reminder_enabled', { hour: s.reminder_hour ?? 19 })
-      return Api.saveSettings({ reminder_hour: s.reminder_hour ?? 19, timezone: TZ })
+      return Api.saveSettings({ reminder_hour: s.reminder_hour ?? 19, timezone: TZ, language: lang })
     },
     onSuccess: put,
     onError: (e) => {
       setPushError(
         e instanceof Error && e.message === 'denied'
-          ? 'Les notifications sont bloquées. Autorise-les pour Sipp dans les réglages de ton appareil.'
-          : 'Impossible d’activer les rappels sur cet appareil pour le moment.',
+          ? t.habits.pushDenied
+          : t.habits.pushFailed,
       )
     },
   })
@@ -88,9 +90,9 @@ export function HabitSettings() {
   return (
     <div className="card" style={{ borderRadius: 24, overflow: 'hidden' }}>
       <div style={block}>
-        <span style={title}>Objectif du jour</span>
+        <span style={title}>{t.habits.goal}</span>
         <Chips
-          label="Leçons par jour"
+          label={t.habits.lessonsPerDay}
           value={s?.daily_goal ?? 1}
           options={GOALS.map((g) => [g, `${g}`])}
           disabled={!s || save.isPending}
@@ -100,20 +102,19 @@ export function HabitSettings() {
           }}
         />
         <span style={hint}>
-          {(s?.daily_goal ?? 1) === 1 ? 'Une leçon par jour, environ 5 minutes.' : `${s?.daily_goal} leçons par jour, environ ${(s?.daily_goal ?? 1) * 5} minutes.`}{' '}
-          Ta série avance dès la première.
+          {t.habits.goalHint(s?.daily_goal ?? 1)}
         </span>
       </div>
 
       <div style={{ ...block, borderTop: '1.5px solid var(--bg-deep)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ ...title, flex: 1 }}>Rappel quotidien</span>
+          <span style={{ ...title, flex: 1 }}>{t.habits.reminder}</span>
           {canPush && (
             <button
               type="button"
               role="switch"
               aria-checked={reminderOn}
-              aria-label="Rappel quotidien"
+              aria-label={t.habits.reminder}
               disabled={!s || reminder.isPending}
               onClick={() => reminder.mutate(!reminderOn)}
               style={{ border: 'none', width: 52, height: 32, borderRadius: 16, padding: 3, display: 'flex', flexShrink: 0, justifyContent: reminderOn ? 'flex-end' : 'flex-start', background: reminderOn ? 'var(--primary)' : 'var(--bg-deep)' }}
@@ -125,39 +126,54 @@ export function HabitSettings() {
         {!s ? null : !canPush ? (
           <span style={hint}>
             {s.push_public_key && needsInstall()
-              ? 'Sur iPhone, ajoute d’abord Sipp à ton écran d’accueil (Partager → Sur l’écran d’accueil) pour recevoir des rappels.'
-              : 'Les rappels ne sont pas disponibles sur cet appareil.'}
+              ? t.habits.install
+              : t.habits.unavailable}
           </span>
         ) : reminderOn ? (
           <>
             <Chips
-              label="Heure du rappel"
+              label={t.habits.hour}
               value={s.reminder_hour ?? 19}
-              options={HOURS.map((h) => [h, `${h} h`])}
+              options={HOURS.map((h) => [h, t.habits.hourLabel(h)])}
               disabled={save.isPending}
-              onPick={(h) => save.mutate({ reminder_hour: h, timezone: TZ })}
+              onPick={(h) => save.mutate({ reminder_hour: h, timezone: TZ, language: lang })}
             />
-            <span style={hint}>Pas de rappel les jours où tu as déjà fait ta leçon.</span>
+            <span style={hint}>{t.habits.skipDone}</span>
             <button type="button" onClick={() => test.mutate()} disabled={test.isPending} style={{ alignSelf: 'flex-start', border: 'none', background: 'none', padding: '2px 0', fontSize: 14, fontWeight: 600, color: 'var(--primary)' }}>
-              {test.isSuccess ? 'Envoyé, regarde tes notifications' : test.isPending ? 'Envoi…' : 'M’envoyer un essai'}
+              {test.isSuccess ? t.habits.testSent : test.isPending ? t.report.sending : t.habits.test}
             </button>
           </>
         ) : (
-          <span style={hint}>Un petit mot à l’heure de ton choix pour ne pas casser ta série.</span>
+          <span style={hint}>{t.habits.reminderHint}</span>
         )}
         {pushError && <span role="alert" style={{ fontSize: 13, color: 'var(--rose-ink)', lineHeight: 1.4 }}>{pushError}</span>}
       </div>
 
       <div style={{ ...block, borderTop: '1.5px solid var(--bg-deep)' }}>
-        <span style={title}>Apparence</span>
+        <span style={title}>{t.habits.appearance}</span>
         <Chips
-          label="Thème"
+          label={t.habits.theme}
           value={theme}
           options={THEMES}
-          onPick={(t) => {
-            setThemeState(t)
-            setTheme(t)
-            track('theme_set', { theme: t })
+          onPick={(next) => {
+            setThemeState(next)
+            setTheme(next)
+            track('theme_set', { theme: next })
+          }}
+        />
+      </div>
+
+      <div style={{ ...block, borderTop: '1.5px solid var(--bg-deep)' }}>
+        <span style={title}>{t.habits.language}</span>
+        <Chips
+          label={t.habits.language}
+          value={lang}
+          options={LANGS}
+          onPick={(next) => {
+            if (next === lang) return
+            track('language_set', { language: next })
+            // Reminders are written in this language too; reload either way.
+            void Api.saveSettings({ language: next }).catch(() => undefined).finally(() => setLang(next))
           }}
         />
       </div>
