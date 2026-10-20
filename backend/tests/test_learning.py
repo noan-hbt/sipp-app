@@ -46,18 +46,26 @@ async def test_settings_goal_reminder_and_timezone(auth_client):
     assert stats["daily_goal"] == 3 and stats["lessons_today"] == 0 and stats["this_week"]["lessons"] == 0
 
 
-async def test_push_subscription_and_reminder_once_a_day(auth_client, monkeypatch):
-    sub = {"endpoint": "https://push.example/abc", "keys": {"p256dh": "k", "auth": "a"}}
-    assert (await auth_client.put("/auth/me/push", json=sub)).json()["push_enabled"]
+TOKEN = "ab" * 32
+
+
+async def test_push_token_and_reminder_once_a_day(auth_client, monkeypatch):
+    assert (await auth_client.put("/auth/me/push", json={"token": "not hex"})).status_code == 422
+    assert (await auth_client.put("/auth/me/push", json={"token": TOKEN.upper()})).json()["push_enabled"]
     await auth_client.put("/auth/me/settings", json={"reminder_hour": 18, "timezone": "Europe/Paris"})
     sent = []
-    monkeypatch.setattr(push, "_send", lambda subscription, payload: sent.append(payload) or None)
+
+    async def delivered(token, sandbox, payload):
+        sent.append((token, sandbox, payload))
+        return 200, ""
+
+    monkeypatch.setattr(push, "_post", delivered)
     at_18_paris = datetime(2026, 10, 9, 16, 5, tzinfo=timezone.utc)
     async with SessionLocal() as s:
         assert await push.send_due_reminders(s, at_18_paris) == 1
         assert await push.send_due_reminders(s, at_18_paris + timedelta(minutes=10)) == 0
         assert await push.send_due_reminders(s, at_18_paris - timedelta(hours=1)) == 0
-    assert len(sent) == 1 and sent[0]["body"] in push.MESSAGES["fr"]
+    assert len(sent) == 1 and sent[0][:2] == (TOKEN, False) and sent[0][2]["body"] in push.MESSAGES["fr"]
     # Reminders follow the interface language.
     assert (await auth_client.put("/auth/me/settings", json={"language": "en"})).json()["language"] == "en"
     assert (await auth_client.put("/auth/me/settings", json={"language": "de"})).status_code == 422
@@ -65,14 +73,36 @@ async def test_push_subscription_and_reminder_once_a_day(auth_client, monkeypatc
         await s.execute(update(User).values(reminded_on=None))
         await s.commit()
         assert await push.send_due_reminders(s, at_18_paris) == 1
-    assert sent[-1]["body"] in push.MESSAGES["en"]
-    # A gone subscription is dropped.
-    monkeypatch.setattr(push, "_send", lambda subscription, payload: 410)
+    assert sent[-1][2]["body"] in push.MESSAGES["en"]
+    # A gone token is dropped.
+
+    async def gone(token, sandbox, payload):
+        return 410, "Unregistered"
+
+    monkeypatch.setattr(push, "_post", gone)
     async with SessionLocal() as s:
         await s.execute(update(User).values(reminded_on=None))
         await s.commit()
         await push.send_due_reminders(s, at_18_paris)
     assert not (await auth_client.get("/auth/me/settings")).json()["push_enabled"]
+
+
+async def test_a_development_build_token_is_sent_to_the_sandbox_gateway(auth_client, monkeypatch):
+    await auth_client.put("/auth/me/push", json={"token": TOKEN})
+    tried = []
+
+    async def only_sandbox(token, sandbox, payload):
+        tried.append(sandbox)
+        return (200, "") if sandbox else (400, "BadDeviceToken")
+
+    monkeypatch.setattr(push, "_post", only_sandbox)
+    async with SessionLocal() as s:
+        user = await s.scalar(select(User))
+        assert await push.send(user, {"title": "Sipp", "body": "x"})
+        assert await push.send(user, {"title": "Sipp", "body": "y"})
+        await s.commit()
+    assert tried == [False, True, True]  # remembered after the first fallback
+    assert (await auth_client.get("/auth/me/settings")).json()["push_enabled"]
 
 
 async def test_feedback_tunes_difficulty_and_keeps_reports(auth_client):

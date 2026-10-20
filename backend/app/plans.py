@@ -1,12 +1,10 @@
-"""Plans: library slots, monthly Sip generations, free trial."""
-
-from datetime import timedelta
+"""Plans: library slots, monthly Sip generations."""
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.billing import live_subscription
+from app.billing import ever_subscribed, live_subscription
 from app.config import get_settings
 from app.models import Program, ProgramStatus, Sip, SipStatus, User, utcnow
 
@@ -80,9 +78,10 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
     used = (standalone or 0) + (programs or 0)
     this_month = user.gen_count if user.gen_month == _month() else 0
     sub = await live_subscription(session, user.id) if name != "free" else None
-    on_trial = (
-        sub is None and user.trial_started_at is not None and name == s.trial_plan
-        and user.plan_expires_at is not None
+    # Apple grants the introductory trial once per Apple ID; never offered again after any subscription here.
+    trial_available = (
+        s.billing_enabled and name == "free" and user.trial_started_at is None
+        and not await ever_subscribed(session, user.id)
     )
     return {
         "billing_enabled": s.billing_enabled,
@@ -93,9 +92,9 @@ async def plan_status(session: AsyncSession, user: User) -> dict:
             "cancel_at_period_end": sub.cancel_at_period_end,
         },
         "plan": name,
-        "on_trial": on_trial,
+        "on_trial": sub is not None and sub.status == "trialing",
         "plan_expires_at": user.plan_expires_at if name != "free" else None,
-        "trial_available": user.trial_started_at is None and name == "free",
+        "trial_available": trial_available,
         "trial_days": s.trial_days,
         "slots": limits["slots"],
         "slots_used": used or 0,
@@ -121,12 +120,3 @@ async def check_plan(session: AsyncSession, user: User, new_slot: bool = True, m
         )
     return p
 
-
-def start_trial(user: User) -> None:
-    s = get_settings()
-    if user.trial_started_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "trial_used", "message": "trial already used"})
-    now = utcnow()
-    user.trial_started_at = now
-    user.plan = s.trial_plan
-    user.plan_expires_at = now + timedelta(days=s.trial_days)

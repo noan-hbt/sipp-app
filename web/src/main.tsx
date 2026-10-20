@@ -8,12 +8,10 @@ import { CrashScreen } from './components/CrashScreen'
 import { getSessionId, onSessionChange } from './lib/api'
 import { initTelemetry } from './lib/telemetry'
 import { applyTheme } from './lib/theme'
-import { watchForUpdates } from './lib/update'
 import './styles/global.css'
 
 applyTheme()
 initTelemetry()
-watchForUpdates()
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 10_000, retry: 1, refetchOnWindowFocus: true, networkMode: 'offlineFirst', queryKeyHashFn: (key) => hashKey([getSessionId(), ...key]) } },

@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { chromium } from 'playwright-core'
 
-test('PWA conserve cache B hors ligne après logout A et purge export', async (t) => {
+// In the iOS app the shell is bundled: only the API goes offline, and answers come from the per-session cache.
+test('cache API : B retrouve le sien hors ligne après logout A, sans export ni données de A', async (t) => {
   const base = process.env.SIPP_TEST_URL ?? 'http://127.0.0.1:4173'
   const browser = await chromium.launch({ executablePath: process.env.SIPP_CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true })
   t.after(() => browser.close())
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'fr-FR' })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce', locale: 'fr-FR', serviceWorkers: 'block' })
   const tokens = (user) => ({ access_token: `e30.${Buffer.from(JSON.stringify({ sub: user })).toString('base64url')}.sig`, refresh_token: user, expires_in: 900 })
   await context.addInitScript((initial) => {
     if (localStorage.getItem('test.initialized')) return
@@ -36,10 +37,6 @@ test('PWA conserve cache B hors ligne après logout A et purge export', async (t
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto(base)
   await page.getByText('Sip du compte A', { exact: true }).first().waitFor()
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.ready
-    if (!navigator.serviceWorker.controller) await new Promise((resolve) => navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }))
-  })
   await page.goto(`${base}/profile`)
   await page.getByRole('button', { name: 'Se déconnecter', exact: true }).click()
   await page.waitForFunction(() => localStorage.getItem('sipp.tokens') === null)
@@ -65,11 +62,9 @@ test('PWA conserve cache B hors ligne après logout A et purge export', async (t
   assert.equal(contents.some((entry) => entry.url.includes('/auth/me/export')), false)
   assert.equal(contents.some((entry) => JSON.stringify(entry.body).includes('Sip du compte A')), false)
   offline = true
-  await context.setOffline(true)
   await page.reload()
   await page.getByText('Sip du compte B', { exact: true }).first().waitFor()
   assert.equal(await page.getByText('Sip du compte A', { exact: true }).count(), 0)
-  assert.equal(await page.evaluate(() => !!navigator.serviceWorker.controller), true)
   await page.goto(`${base}/profile`)
   await page.getByRole('button', { name: 'Se déconnecter', exact: true }).click()
   await page.waitForFunction(() => localStorage.getItem('sipp.tokens') === null)

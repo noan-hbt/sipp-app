@@ -51,10 +51,13 @@ One repo, root directory `/backend` (watch `/backend/**`), two services built fr
 | Service | Variables |
 |---|---|
 | `api` | `SERVICE_ROLE=api` (runs migrations, then uvicorn on `$PORT`) |
-| `sipp-web` | root `/web`, `VITE_API_URL` (build arg), Caddy serves the PWA |
+| `sipp-web` | root `/web`, `VITE_API_URL` (build arg), Caddy serves the web build (no longer the product: only kept while public pages live there) |
 | `sipp-worker` | `SERVICE_ROLE=worker` (no domain, no healthcheck) |
 
-API also: `CORS_ORIGINS` = comma-separated PWA origins.
+API also: `CORS_ORIGINS` = `capacitor://localhost` (the iOS app), plus any web origin still used.
+Subscriptions: `REVENUECAT_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH` (both services: the worker re-reads
+stale subscriptions every 6 hours). Reminders: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`,
+`APNS_TOPIC` (worker). Password reset: `RESEND_API_KEY`, `EMAIL_FROM` (api).
 Both: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `JWT_SECRET`, `OPENROUTER_API_KEY`, `ENV=prod`,
 and optional `MODEL_*` overrides (see `.env.example`). Add the Postgres plugin.
 Health check path: `/health`.
@@ -69,10 +72,15 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | POST | `/auth/register`, `/auth/login` | `{email, password}` → `{access_token, refresh_token, expires_in}` |
 | POST | `/auth/refresh` | `{refresh_token}` → new pair (rotation, old one revoked) |
 | POST | `/auth/logout` | `{refresh_token}` |
+| POST | `/auth/password/forgot` | `{email}` → 204 always; emails a 6-digit code (30 min, 5 tries) |
+| POST | `/auth/password/reset` | `{email, code, password}` → tokens; signs out every other device |
 | GET | `/auth/me` | |
 | GET | `/auth/me/stats?tz=Europe/Paris` | streak days, stars, lessons completed |
 | GET | `/auth/me/usage` | sips and LLM cost over the last 24h vs limits |
-| DELETE | `/auth/me` | `{password}` → deletes the account and all its data |
+| DELETE | `/auth/me` | `{password}` → deletes the account and all its data (the App Store subscription is the user's to cancel) |
+| PUT/DELETE | `/auth/me/push` | `{token}`: this device's APNs token |
+| POST | `/billing/sync` | after a purchase or restore: re-reads the user at RevenueCat, returns the plan |
+| POST | `/billing/webhook/revenuecat` | RevenueCat events (Authorization header checked); the user is re-read, never trusted from the body |
 | POST | `/sips` | `{input}` → 202, `status: queued → generating (stage) → ready / failed` |
 | GET | `/sips` | list with progress and `next_lesson_id` |
 | GET | `/sips/{id}` | roadmap: profile, modules, lessons with status |

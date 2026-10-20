@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Api, TZ, type Settings } from '../lib/api'
-import { disablePush, enablePush, needsInstall, pushSupported } from '../lib/push'
+import { disablePush, enablePush, pushSupported } from '../lib/push'
 import { track } from '../lib/telemetry'
 import { getTheme, setTheme, type Theme } from '../lib/theme'
 import { t, lang, setLang, type Lang } from '../lib/i18n'
@@ -69,7 +69,7 @@ export function HabitSettings() {
         await Api.saveSettings({ reminder_hour: -1 })
         return disablePush()
       }
-      await enablePush(s.push_public_key!)
+      await enablePush()
       track('reminder_enabled', { hour: s.reminder_hour ?? 19 })
       return Api.saveSettings({ reminder_hour: s.reminder_hour ?? 19, timezone: TZ, language: lang })
     },
@@ -85,7 +85,7 @@ export function HabitSettings() {
   const test = useMutation({ mutationFn: Api.testPush })
   const s = settings.data
   const reminderOn = !!s && s.reminder_hour !== null && s.push_enabled
-  const canPush = !!s?.push_public_key && pushSupported()
+  const canPush = !!s?.push_available && pushSupported()
 
   return (
     <div className="card" style={{ borderRadius: 24, overflow: 'hidden' }}>
@@ -125,9 +125,7 @@ export function HabitSettings() {
         </span>
         {!s ? null : !canPush ? (
           <span style={hint}>
-            {s.push_public_key && needsInstall()
-              ? t.habits.install
-              : t.habits.unavailable}
+            {s.push_available ? t.habits.install : t.habits.unavailable}
           </span>
         ) : reminderOn ? (
           <>

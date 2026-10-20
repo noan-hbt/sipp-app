@@ -1,11 +1,11 @@
-"""Daily reminders by web push. Sent by the worker; a no-op until VAPID keys are set."""
+"""Daily reminders through Apple Push Notification service. Sent by the worker; a no-op until the APNs key is set."""
 
-import asyncio
-import json
 import logging
+import time
 from datetime import datetime
 
-from pywebpush import WebPushException, webpush
+import httpx
+import jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,35 +45,77 @@ def sample(user: User) -> str:
 
 def enabled() -> bool:
     s = get_settings()
-    return bool(s.vapid_public_key and s.vapid_private_key)
+    return bool(s.apns_key_id and s.apns_team_id and s.apns_private_key)
 
 
-def _send(subscription: dict, payload: dict) -> int | None:
-    """Returns the HTTP status on a delivery error (410/404 = subscription gone), None on success."""
-    s = get_settings()
+HOSTS = {False: "https://api.push.apple.com", True: "https://api.sandbox.push.apple.com"}
+_bearer: tuple[float, str] | None = None
+_http: httpx.AsyncClient | None = None
+
+
+def _token() -> str:
+    """Provider token, reused for 50 minutes (Apple refuses one older than an hour, or renewed too often)."""
+    global _bearer
+    if _bearer is None or time.time() - _bearer[0] > 50 * 60:
+        s = get_settings()
+        now = time.time()
+        # A one-line environment variable carries the .p8 line breaks as \n.
+        key = s.apns_private_key.replace("\\n", "\n")
+        _bearer = (now, jwt.encode({"iss": s.apns_team_id, "iat": int(now)}, key, algorithm="ES256", headers={"kid": s.apns_key_id}))
+    return _bearer[1]
+
+
+def _client() -> httpx.AsyncClient:
+    global _http
+    if _http is None:
+        _http = httpx.AsyncClient(http2=True, timeout=15.0)
+    return _http
+
+
+async def _post(token: str, sandbox: bool, payload: dict) -> tuple[int, str]:
+    """(HTTP status, Apple's reason) of one delivery."""
+    body = {"aps": {"alert": {"title": payload["title"], "body": payload["body"]}, "sound": "default"}, "url": payload.get("url", "/")}
     try:
-        webpush(
-            subscription_info=subscription,
-            data=json.dumps(payload),
-            vapid_private_key=s.vapid_private_key,
-            vapid_claims={"sub": s.vapid_subject},
-            ttl=6 * 3600,
+        r = await _client().post(
+            f"{HOSTS[sandbox]}/3/device/{token}",
+            json=body,
+            headers={
+                "authorization": f"bearer {_token()}",
+                "apns-topic": get_settings().apns_topic,
+                "apns-push-type": "alert",
+                "apns-expiration": str(int(time.time()) + 6 * 3600),
+            },
         )
-        return None
-    except WebPushException as e:
-        return e.response.status_code if e.response is not None else 0
+    except httpx.HTTPError as e:
+        return 0, type(e).__name__
+    if r.status_code == 200:
+        return 200, ""
+    try:
+        return r.status_code, r.json().get("reason", "")
+    except ValueError:
+        return r.status_code, ""
 
 
 async def send(user: User, payload: dict) -> bool:
-    """Sends one push; drops the subscription when the browser says it is gone."""
-    if not user.push_subscription:
+    """Sends one push; drops the token when Apple says it is gone.
+
+    Debug and TestFlight builds differ: a token is tried on the production gateway, then on the
+    sandbox one, and the gateway that accepts it is remembered."""
+    device = user.push_subscription or {}
+    token = device.get("apns")
+    if not token:
         return False
-    status = await asyncio.to_thread(_send, user.push_subscription, payload)
-    if status in (404, 410):
+    sandbox = bool(device.get("sandbox"))
+    status, reason = await _post(token, sandbox, payload)
+    if status == 400 and reason == "BadDeviceToken":
+        status, reason = await _post(token, not sandbox, payload)
+        if status == 200:
+            user.push_subscription = {"apns": token, "sandbox": not sandbox}
+    if status == 410 or (status == 400 and reason in ("BadDeviceToken", "DeviceTokenNotForTopic")):
         user.push_subscription = None
-    elif status is not None:
-        log.warning("push to %s failed: HTTP %s", user.id, status)
-    return status is None
+    elif status != 200:
+        log.warning("push to %s failed: HTTP %s %s", user.id, status, reason)
+    return status == 200
 
 
 async def _done_today(session: AsyncSession, user: User, local_today) -> bool:

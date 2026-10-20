@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -10,7 +10,6 @@ import { sipPalette, topicArt } from '../components/SipIcon'
 import { Button, Icon, IconButton } from '../components/ui'
 import { Api, ApiError } from '../lib/api'
 import { play } from '../lib/sound'
-import { track } from '../lib/telemetry'
 import { t } from '../lib/i18n'
 
 // Labels name a subject to learn, never an action ("Créer sa boîte" read as "set up a company here").
@@ -44,7 +43,6 @@ function toggleDetail(text: string, d: string) {
 /** `guest`: visitor not signed up yet; the wish is kept and the Sip is created right after sign-up. */
 export function NewSip({ guest = false }: { guest?: boolean }) {
   const nav = useNavigate()
-  const qc = useQueryClient()
   const back = useLocation().state as { text?: string } | null
   const input = useRef<HTMLTextAreaElement>(null)
   const [text, setText] = useState(() => {
@@ -62,15 +60,6 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
   }, [])
 
   const plan = useQuery({ queryKey: ['plan'], queryFn: Api.plan, enabled: !guest })
-  const trial = useMutation({
-    mutationFn: Api.startTrial,
-    onSuccess: (p) => {
-      track('trial_started', { from: 'new_sip' })
-      play('complete')
-      qc.setQueryData(['plan'], p)
-      create.reset()
-    },
-  })
   // First what Sipp understood, confirmed on the next screen; the Sip is created there.
   const create = useMutation({
     mutationFn: (wish: string) => Api.interpret(wish).then((interpretation) => ({ input: wish, interpretation })),
@@ -248,8 +237,8 @@ export function NewSip({ guest = false }: { guest?: boolean }) {
 
       <div className="bottom-bar">
         {paywall && plan.data?.trial_available ? (
-          <Button variant="peach" disabled={trial.isPending} onClick={() => trial.mutate()} sound="pop">
-            {trial.isPending ? <Mascot mood="think" size={36} /> : t.newSip.trial(plan.data.trial_days)}
+          <Button variant="peach" onClick={() => nav('/offers')} sound="pop">
+            {t.newSip.trial(plan.data.trial_days)}
           </Button>
         ) : (
           <Button disabled={!ready || create.isPending} onClick={submit} sound="pop">

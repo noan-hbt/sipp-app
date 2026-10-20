@@ -1,3 +1,6 @@
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { isNative } from './native'
+
 export type Theme = 'system' | 'light' | 'dark'
 
 const KEY = 'sipp.theme'
@@ -11,13 +14,15 @@ export function getTheme(): Theme {
   }
 }
 
-/** Sets data-theme on <html> (none = follow the device) and the browser bar colour. */
+/** Sets data-theme on <html> (none = follow the device), the browser bar colour and the iOS status bar text. */
 export function applyTheme(theme: Theme = getTheme()) {
   const root = document.documentElement
   if (theme === 'system') root.removeAttribute('data-theme')
   else root.setAttribute('data-theme', theme)
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#1a1613' : '#fbf5ee')
+  // Style.Dark is light text, for a dark background.
+  if (isNative) void StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => undefined)
 }
 
 export function setTheme(theme: Theme) {

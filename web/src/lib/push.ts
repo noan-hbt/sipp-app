@@ -1,39 +1,60 @@
+import { PushNotifications } from '@capacitor/push-notifications'
 import { Api, type Settings } from './api'
+import { isNative } from './native'
 
-export const pushSupported = () =>
-  typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+/** Reminders arrive as iOS notifications: only inside the app. */
+export const pushSupported = () => isNative
 
-/** iOS only delivers web push to an app added to the home screen. */
-export const needsInstall = () =>
-  /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches
-
-function keyBytes(base64: string) {
-  const padded = (base64 + '='.repeat((4 - (base64.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/')
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0))
+/** Registers with APNs and resolves with this device's token. */
+async function deviceToken(): Promise<string> {
+  const handles: { remove: () => Promise<void> }[] = []
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('no_token')), 15000)
+      void PushNotifications.addListener('registration', (t) => {
+        clearTimeout(timer)
+        resolve(t.value)
+      }).then((h) => handles.push(h))
+      void PushNotifications.addListener('registrationError', (e) => {
+        clearTimeout(timer)
+        reject(new Error(e.error))
+      }).then((h) => handles.push(h))
+      PushNotifications.register().catch(reject)
+    })
+  } finally {
+    for (const h of handles) void h.remove()
+  }
 }
 
-async function registration() {
-  // No service worker in dev, or not yet installed: don't wait forever.
-  return Promise.race([
-    navigator.serviceWorker.ready,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('no_service_worker')), 8000)),
-  ])
-}
-
-/** Asks permission, subscribes this device and stores the subscription. */
-export async function enablePush(publicKey: string): Promise<Settings> {
-  const permission = await Notification.requestPermission()
-  if (permission !== 'granted') throw new Error('denied')
-  const reg = await registration()
-  const sub = (await reg.pushManager.getSubscription())
-    ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) }))
-  return Api.savePush(sub.toJSON())
+/** Asks permission, registers this device and stores its token. */
+export async function enablePush(): Promise<Settings> {
+  let permission = await PushNotifications.checkPermissions()
+  if (permission.receive !== 'granted' && permission.receive !== 'denied') permission = await PushNotifications.requestPermissions()
+  if (permission.receive !== 'granted') throw new Error('denied')
+  return Api.savePush(await deviceToken())
 }
 
 export async function disablePush(): Promise<Settings> {
   try {
-    const reg = await registration()
-    await (await reg.pushManager.getSubscription())?.unsubscribe()
-  } catch { /* nothing to unsubscribe */ }
+    await PushNotifications.unregister()
+  } catch { /* nothing registered */ }
   return Api.deletePush()
+}
+
+/** APNs can hand the app a new token (restore, reinstall): keep the server's copy current. */
+export async function refreshPushToken(): Promise<void> {
+  if (!isNative) return
+  const settings = await Api.settings()
+  if (!settings.push_enabled || (await PushNotifications.checkPermissions()).receive !== 'granted') return
+  await Api.savePush(await deviceToken())
+}
+
+/** A tapped reminder opens the screen it points to. */
+export function onPushOpened(go: (url: string) => void): () => void {
+  if (!isNative) return () => {}
+  const handle = PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+    const url = (action.notification.data as { url?: unknown } | undefined)?.url
+    go(typeof url === 'string' && url.startsWith('/') ? url : '/')
+  })
+  return () => void handle.then((h) => h.remove())
 }
