@@ -18,6 +18,16 @@ class DeleteAccountIn(BaseModel):
     password: str
 
 
+class ForgotIn(BaseModel):
+    email: EmailStr
+
+
+class ResetIn(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+    password: str = Field(min_length=8, max_length=200)
+
+
 class UsageOut(BaseModel):
     sips_last_24h: int
     cost_last_24h_usd: float
@@ -25,7 +35,7 @@ class UsageOut(BaseModel):
 
 
 class SubscriptionOut(BaseModel):
-    status: str  # active, trialing, past_due
+    status: str  # active, trialing, past_due (renewal failing, still in the grace period)
     interval: str
     current_period_end: datetime | None
     cancel_at_period_end: bool
@@ -60,28 +70,12 @@ class PlanInfo(BaseModel):
     sips_per_month: int
     lite: bool
     hours_per_month: float
-    # Cents, tax included, per interval ("month", "year"); empty for the free plan.
+    # Reference cents, tax included, per interval ("month", "year"); empty for the free plan.
+    # The app shows the App Store's own localized price for the product.
     prices: dict[str, int]
+    # App Store product id per interval.
+    products: dict[str, str] = {}
     features: FeaturesOut | None = None
-
-
-class CheckoutIn(BaseModel):
-    plan: Literal["basic", "plus"]
-    interval: Literal["month", "year"]
-    # Express request to start before the 14-day withdrawal period ends.
-    consent: StrictBool
-
-
-class CheckoutOut(BaseModel):
-    transaction_id: str
-    client_token: str
-    environment: str
-    success_url: str
-
-
-class PortalOut(BaseModel):
-    url: str
-    cancel_url: str | None
 
 
 class TokenOut(BaseModel):
@@ -325,12 +319,13 @@ class SettingsOut(BaseModel):
     timezone: str | None
     language: str | None
     push_enabled: bool
-    push_public_key: str | None
+    # The server can send reminders (an APNs key is set).
+    push_available: bool
 
 
 class PushIn(BaseModel):
-    endpoint: str = Field(max_length=2000)
-    keys: dict[str, str]
+    # The APNs device token, in hex.
+    token: str = Field(pattern=r"^[0-9a-fA-F]{32,200}$")
 
 
 class ConceptOut(BaseModel):

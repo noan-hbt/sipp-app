@@ -1,7 +1,11 @@
 /**
  * Synthesized UI sounds (Web Audio, no assets). Soft, short, warm: sine/triangle
  * tones with quick envelopes. Respects a persisted mute setting.
+ * In the iOS app the meaningful ones also come with a haptic, which follows the
+ * phone's own vibration setting rather than the mute.
  */
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
+import { isNative } from './native'
 
 type SoundName = 'tap' | 'pop' | 'reveal' | 'correct' | 'wrong' | 'star' | 'complete' | 'unlock' | 'whoosh'
 
@@ -102,14 +106,24 @@ const SOUNDS: Record<SoundName, () => void> = {
 }
 
 
+const HAPTICS: Partial<Record<SoundName, () => Promise<void>>> = {
+  pop: () => Haptics.impact({ style: ImpactStyle.Light }),
+  correct: () => Haptics.notification({ type: NotificationType.Success }),
+  wrong: () => Haptics.notification({ type: NotificationType.Error }),
+  star: () => Haptics.impact({ style: ImpactStyle.Medium }),
+  complete: () => Haptics.notification({ type: NotificationType.Success }),
+  unlock: () => Haptics.impact({ style: ImpactStyle.Medium }),
+}
+
 const last: Partial<Record<SoundName, number>> = {}
 
 export function play(name: SoundName) {
-  if (!enabled) return
   // Drop rapid repeats of the same sound (double taps, chained reveals).
   const now = performance.now()
   if (now - (last[name] ?? -1e9) < 140) return
   last[name] = now
+  if (isNative) void HAPTICS[name]?.().catch(() => undefined)
+  if (!enabled) return
   try {
     SOUNDS[name]()
   } catch {
@@ -130,8 +144,12 @@ export function setSoundEnabled(v: boolean) {
   if (v) play('pop')
 }
 
-/** Light haptic tick where supported (Android). iOS Safari ignores it. */
+/** Light haptic tick: the Taptic Engine in the app, vibration where a browser supports it. */
 export function haptic(ms = 8) {
+  if (isNative) {
+    void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined)
+    return
+  }
   try {
     navigator.vibrate?.(ms)
   } catch {

@@ -9,7 +9,9 @@ import { CountUp } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
 import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
+import { MANAGE_SUBSCRIPTIONS_URL, openExternal } from '../lib/native'
 import { setSoundEnabled, soundEnabled } from '../lib/sound'
+import { restore, storeAvailable } from '../lib/store'
 import { track } from '../lib/telemetry'
 import { t, locale, plural } from '../lib/i18n'
 
@@ -41,23 +43,29 @@ export function Profile() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [password, setPassword] = useState('')
 
-  const trial = useMutation({
-    mutationFn: Api.startTrial,
-    onSuccess: () => {
-      track('trial_started', { from: 'profile' })
-      return queryClient.invalidateQueries({ queryKey: ['plan'] })
+  const restoring = useMutation({
+    mutationFn: async () => {
+      await restore()
+      return Api.syncPurchases()
     },
-  })
-  const portal = useMutation({
-    mutationFn: async (to: 'manage' | 'cancel') => {
-      const urls = await Api.billingPortal()
-      window.location.assign(to === 'cancel' ? urls.cancel_url ?? urls.url : urls.url)
+    onSuccess: (p) => {
+      track('purchases_restored', { plan: p.plan })
+      queryClient.setQueryData(['plan'], p)
     },
   })
   const exportData = useMutation({
     mutationFn: async () => {
       const data = await Api.exportData()
-      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      // In the app there is no download folder: hand the file to the iOS share sheet.
+      const file = new File([blob], 'sipp-export.json', { type: 'application/json' })
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] }).catch((e: unknown) => {
+          if (!(e instanceof DOMException && e.name === 'AbortError')) throw e
+        })
+        return
+      }
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = 'sipp-export.json'
@@ -189,29 +197,34 @@ export function Profile() {
                             ? t.profile.cancelled(day(sub.current_period_end))
                             : t.profile.renews(yearly, day(sub.current_period_end))}
                       </p>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <Button variant="soft" onClick={() => portal.mutate('manage')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, boxShadow: 'none' }}>
-                          {sub.status === 'past_due' ? t.profile.updatePayment : t.profile.manage}
-                        </Button>
-                        {!sub.cancel_at_period_end && (
-                          <Button variant="ghost" onClick={() => portal.mutate('cancel')} disabled={portal.isPending || busy} style={{ flex: 1, fontSize: 15, height: 'auto', minHeight: 48, color: 'var(--plan-ink)', boxShadow: 'inset 0 0 0 2px color-mix(in srgb, var(--plan-ink) 18%, transparent)' }}>
-                            {t.profile.cancel}
-                          </Button>
-                        )}
-                      </div>
-                      {portal.isError && <p role="alert" style={{ color: 'var(--coral)', fontSize: 14 }}>{apiErrorMessage(portal.error)}</p>}
+                      <Button
+                        variant="soft"
+                        onClick={() => openExternal(sub.status === 'past_due' ? 'https://apps.apple.com/account/billing' : MANAGE_SUBSCRIPTIONS_URL)}
+                        disabled={busy}
+                        style={{ fontSize: 15, height: 'auto', minHeight: 48, boxShadow: 'none' }}
+                      >
+                        {sub.status === 'past_due' ? t.profile.updatePayment : t.profile.manage}
+                      </Button>
                     </div>
                   )
                 })()}
                 {subscription.trial_available ? (
-                  <Button onClick={() => trial.mutate()} disabled={trial.isPending || busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52 }}>
-                    {trial.isPending ? t.profile.trialActivating : t.profile.tryEssential(subscription.trial_days)}
+                  <Button onClick={() => nav('/offers')} disabled={busy} style={{ position: 'relative', fontSize: 15, padding: '12px 16px', height: 'auto', minHeight: 52 }}>
+                    {t.profile.tryEssential(subscription.trial_days)}
                   </Button>
                 ) : null}
-                <button type="button" onClick={() => nav('/offers')} style={{ position: 'relative', alignSelf: 'flex-start', border: 'none', background: 'none', padding: '6px 0', fontSize: 15, fontWeight: 700, color: 'var(--plan-ink)' }}>
-                  {t.upsell.offers} →
-                </button>
-                {trial.isError && <p role="alert" style={{ color: 'var(--coral)', fontSize: 14 }}>{t.upsell.trialFailed}</p>}
+                <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <button type="button" onClick={() => nav('/offers')} style={{ border: 'none', background: 'none', padding: '6px 0', fontSize: 15, fontWeight: 700, color: 'var(--plan-ink)' }}>
+                    {t.upsell.offers} →
+                  </button>
+                  {storeAvailable && subscription.plan !== 'max' && (
+                    <button type="button" onClick={() => restoring.mutate()} disabled={restoring.isPending || busy} style={{ border: 'none', background: 'none', padding: '6px 0', fontSize: 14, fontWeight: 600, color: 'var(--plan-muted)' }}>
+                      {restoring.isPending ? t.offers.restoring : t.offers.restore}
+                    </button>
+                  )}
+                </div>
+                {restoring.isError && <p role="alert" style={{ position: 'relative', color: 'var(--coral)', fontSize: 14 }}>{apiErrorMessage(restoring.error, t.offers.restoreFailed)}</p>}
+                {restoring.isSuccess && <p role="status" style={{ position: 'relative', fontSize: 14, color: 'var(--plan-muted)' }}>{restoring.data.subscription ? t.offers.restored : t.offers.nothingToRestore}</p>}
               </>
             ) : (
               <p role="status" style={{ position: 'relative', color: 'var(--plan-muted)' }}>{plan.isError ? t.profile.subUnavailable : t.profile.subLoading}</p>
@@ -280,6 +293,11 @@ export function Profile() {
                 style={{ borderRadius: 24, padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}
               >
                 <p className="muted" style={{ fontSize: 14 }}>{t.profile.deleteWarning(!!subscription?.subscription)}</p>
+                {subscription?.subscription && !subscription.subscription.cancel_at_period_end && (
+                  <Button variant="soft" type="button" onClick={() => openExternal(MANAGE_SUBSCRIPTIONS_URL)} style={{ fontSize: 15, height: 'auto', minHeight: 48, boxShadow: 'none' }}>
+                    {t.profile.manage}
+                  </Button>
+                )}
                 <div className="field">
                   <label htmlFor="profile-password" style={{ color: 'var(--muted)' }}>{t.profile.password}</label>
                   <input

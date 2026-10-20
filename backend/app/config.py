@@ -4,19 +4,26 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+AUTH_RATE_LIMITS = {"register": 5, "login": 20, "refresh": 30, "forgot": 5, "reset": 10}
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     env: str = "dev"
-    # Web push reminders (VAPID); off when empty. Public key in base64url (uncompressed point).
-    vapid_public_key: str = ""
-    vapid_private_key: str = ""
-    vapid_subject: str = "mailto:hello@sipp.app"
+    # Reminders through Apple Push Notification service (token auth, a .p8 key); off when empty.
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_private_key: str = ""  # contents of the .p8 file
+    apns_topic: str = "app.sipp"  # the app's bundle id
+    # Password reset codes by email (Resend); without a key the code is only logged, in dev.
+    resend_api_key: str = ""
+    email_from: str = "Sipp <hello@sipp.app>"
     # Error tracking; off when empty.
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = Field(default=0.1, ge=0, le=1)
-    # Comma-separated origins allowed to call the API from a browser (the PWA)
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Comma-separated origins allowed to call the API: the iOS app (capacitor://localhost) and the dev server
+    cors_origins: str = "capacitor://localhost,http://localhost:5173,http://127.0.0.1:5173"
     database_url: str = "sqlite+aiosqlite:///./sipp.db"
 
     # Auth
@@ -25,7 +32,7 @@ class Settings(BaseSettings):
     access_token_minutes: int = 60
     refresh_token_days: int = 60
     auth_rate_limit_window_seconds: int = Field(default=60, ge=1)
-    auth_rate_limits: dict[str, int] = {"register": 5, "login": 20, "refresh": 30}
+    auth_rate_limits: dict[str, int] = AUTH_RATE_LIMITS
     auth_password_workers: int = Field(default=2, ge=1)
 
     # OpenRouter
@@ -82,29 +89,24 @@ class Settings(BaseSettings):
     llm_max_concurrent_per_user: int = Field(default=5, ge=1)
     max_help_per_day: int = 30
 
-    # Billing (Paddle, merchant of record). Off until every key and price id is set.
-    paddle_env: str = "sandbox"  # sandbox | production
-    paddle_api_key: str = ""
-    paddle_webhook_secret: str = ""
-    paddle_client_token: str = ""  # public, for Paddle.js
-    paddle_price_basic_month: str = ""
-    paddle_price_basic_year: str = ""
-    paddle_price_plus_month: str = ""
-    paddle_price_plus_year: str = ""
-    # Shown on the offers (cents, tax included); must match the Paddle prices.
+    # Billing: App Store subscriptions through RevenueCat. Off until both secrets are set.
+    revenuecat_secret_key: str = ""  # sk_..., server side only
+    revenuecat_webhook_auth: str = ""  # the Authorization header value set on the RevenueCat webhook
+    # App Store Connect product ids, one per plan and interval.
+    store_product_basic_month: str = "sipp_basic_month"
+    store_product_basic_year: str = "sipp_basic_year"
+    store_product_plus_month: str = "sipp_plus_month"
+    store_product_plus_year: str = "sipp_plus_year"
+    # Reference prices (cents, tax included) for the comparison; the app shows the App Store's own.
     plan_prices: dict[str, dict[str, int]] = {
         "basic": {"month": 599, "year": 5990},
         "plus": {"month": 1299, "year": 12990},
     }
-    public_app_url: str = "http://localhost:5173"
-    # Access kept while Paddle retries a failed renewal.
-    billing_grace_days: int = 7
-    # Slack after a paid period ends, in case the renewal webhook is late.
+    # Slack after a paid period ends, in case the renewal reaches us late.
     billing_period_slack_hours: int = 48
-    billing_webhook_tolerance_seconds: int = 300
 
     # Plans: library slots (Sips kept at once) and new Sips per calendar month.
-    # Paddle subscriptions and the one-time trial set user.plan.
+    # App Store subscriptions set user.plan.
     plans: dict[str, dict[str, int | bool]] = {
         "free": {"slots": 1, "sips_per_month": 1, "lite": True},
         "basic": {"slots": 3, "sips_per_month": 4, "lite": False},
@@ -120,7 +122,7 @@ class Settings(BaseSettings):
         "max": {"audio": True, "quiz": True, "notes": 0, "help_per_day": 60},
     }
     default_plan: str = "free"
-    trial_plan: str = "basic"
+    # The introductory free trial set on the App Store subscriptions (shown in the app, granted by Apple).
     trial_days: int = 7
     # Lite generation: one small model everywhere, short course.
     model_lite: str = "openai/gpt-6-luna"
@@ -147,29 +149,27 @@ class Settings(BaseSettings):
     @field_validator("auth_rate_limits")
     @classmethod
     def _auth_limits(cls, v: dict[str, int]) -> dict[str, int]:
-        if set(v) != {"register", "login", "refresh"} or any(limit < 1 for limit in v.values()):
-            raise ValueError("auth_rate_limits must contain positive register, login and refresh limits")
+        # Endpoints left out keep their default, so an older AUTH_RATE_LIMITS still starts.
+        v = {**AUTH_RATE_LIMITS, **v}
+        if set(v) != set(AUTH_RATE_LIMITS) or any(limit < 1 for limit in v.values()):
+            raise ValueError(f"auth_rate_limits takes positive limits for {', '.join(AUTH_RATE_LIMITS)} only")
         return v
 
     def model_for(self, stage: str) -> str:
         return getattr(self, f"model_{stage}")
 
-    def paddle_prices(self) -> dict[tuple[str, str], str]:
-        """(plan, interval) -> Paddle price id, only for configured prices."""
-        prices = {
-            ("basic", "month"): self.paddle_price_basic_month,
-            ("basic", "year"): self.paddle_price_basic_year,
-            ("plus", "month"): self.paddle_price_plus_month,
-            ("plus", "year"): self.paddle_price_plus_year,
+    def store_products(self) -> dict[tuple[str, str], str]:
+        """(plan, interval) -> App Store product id."""
+        return {
+            ("basic", "month"): self.store_product_basic_month,
+            ("basic", "year"): self.store_product_basic_year,
+            ("plus", "month"): self.store_product_plus_month,
+            ("plus", "year"): self.store_product_plus_year,
         }
-        return {k: v for k, v in prices.items() if v}
 
     @property
     def billing_enabled(self) -> bool:
-        return bool(
-            self.paddle_api_key and self.paddle_webhook_secret and self.paddle_client_token
-            and len(self.paddle_prices()) == 4
-        )
+        return bool(self.revenuecat_secret_key and self.revenuecat_webhook_auth)
 
 
 @lru_cache

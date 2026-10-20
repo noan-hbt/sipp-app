@@ -166,7 +166,8 @@ export interface Settings {
   timezone: string | null
   language: string | null
   push_enabled: boolean
-  push_public_key: string | null
+  /** The server can send reminders. */
+  push_available: boolean
 }
 export interface Note {
   id: string
@@ -230,10 +231,12 @@ export interface PlanInfo {
   sips_per_month: number
   lite: boolean
   hours_per_month: number
+  /** Reference cents; in the app the App Store's own price is shown. */
   prices: Partial<Record<'month' | 'year', number>>
+  /** App Store product id per interval. */
+  products?: Partial<Record<'month' | 'year', string>>
   features?: { audio: boolean; quiz: boolean; notes: number; help_per_day: number }
 }
-export interface Checkout { transaction_id: string; client_token: string; environment: string; success_url: string }
 export interface ApiErrorDetail { code?: string; message?: string }
 
 export class ApiError extends Error {
@@ -493,11 +496,12 @@ export const Api = {
   me: ({ signal }: { signal?: AbortSignal } = {}) => api<Me>('/auth/me', { signal }),
   aiConsent: () => api<Me>('/auth/me/ai-consent', { method: 'POST' }),
   plan: ({ signal }: { signal?: AbortSignal } = {}) => api<Plan>('/auth/me/plan', { signal }),
-  startTrial: () => api<Plan>('/auth/me/trial', { method: 'POST' }),
   plans: () => api<PlanInfo[]>('/auth/plans'),
-  checkout: (plan: 'basic' | 'plus', interval: 'month' | 'year') =>
-    api<Checkout>('/billing/checkout', { method: 'POST', json: { plan, interval, consent: true } }),
-  billingPortal: () => api<{ url: string; cancel_url: string | null }>('/billing/portal', { method: 'POST' }),
+  /** After an App Store purchase or restore: the server re-reads it and answers with the new plan. */
+  syncPurchases: () => api<Plan>('/billing/sync', { method: 'POST' }),
+  forgotPassword: (email: string) => api<void>('/auth/password/forgot', { method: 'POST', json: { email } }),
+  resetPassword: (email: string, code: string, password: string) =>
+    api<Tokens>('/auth/password/reset', { method: 'POST', json: { email, code, password } }),
   exportData: () => api<unknown>('/auth/me/export'),
   sips: ({ signal }: { signal?: AbortSignal } = {}) => api<SipSummary[]>('/sips', { signal }),
   sip: (id: string, signal?: AbortSignal) => api<SipDetail>(`/sips/${id}`, { signal }),
@@ -521,7 +525,7 @@ export const Api = {
   settings: () => api<Settings>('/auth/me/settings'),
   saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string; language?: string }) =>
     api<Settings>('/auth/me/settings', { method: 'PUT', json: body }),
-  savePush: (sub: PushSubscriptionJSON) => api<Settings>('/auth/me/push', { method: 'PUT', json: sub }),
+  savePush: (token: string) => api<Settings>('/auth/me/push', { method: 'PUT', json: { token } }),
   deletePush: () => api<Settings>('/auth/me/push', { method: 'DELETE' }),
   testPush: () => api<void>('/auth/me/push/test', { method: 'POST' }),
   feedback: (lessonId: string, body: { feeling?: Feeling; problem?: Problem; comment?: string; block?: number }) =>

@@ -240,3 +240,50 @@ async def test_new_requests_to_the_ai_need_consent_once(client):
     again = (await client.post("/auth/me/ai-consent")).json()["ai_consent_at"]
     assert again.rstrip("Z") == first.rstrip("Z")  # the first agreement is kept
     assert (await client.post("/sips", json={"input": "taux"})).status_code == 202
+
+
+async def test_password_reset_by_emailed_code(client, monkeypatch):
+    from app import mail
+
+    sent = []
+
+    async def capture(to, code, language):
+        sent.append((to, code))
+
+    monkeypatch.setattr(mail, "send_reset_code", capture)
+    r = await client.post("/auth/register", json={"email": "a@b.co", "password": "password123"})
+    old_refresh = r.json()["refresh_token"]
+    # Unknown address: same answer, nothing sent.
+    assert (await client.post("/auth/password/forgot", json={"email": "nobody@b.co"})).status_code == 204
+    assert (await client.post("/auth/password/forgot", json={"email": "A@b.co"})).status_code == 204
+    assert [to for to, _ in sent] == ["a@b.co"]
+    code = sent[0][1]
+    wrong = "000000" if code != "000000" else "111111"
+    body = {"email": "a@b.co", "code": wrong, "password": "newpassword1"}
+    assert (await client.post("/auth/password/reset", json=body)).json()["detail"]["code"] == "invalid_code"
+    r = await client.post("/auth/password/reset", json={**body, "code": code})
+    assert r.status_code == 200 and r.json()["access_token"]
+    # Used once; old password and old sessions are gone, the new password works.
+    assert (await client.post("/auth/password/reset", json={**body, "code": code})).status_code == 400
+    assert (await client.post("/auth/refresh", json={"refresh_token": old_refresh})).status_code == 401
+    assert (await client.post("/auth/login", json={"email": "a@b.co", "password": "password123"})).status_code == 401
+    assert (await client.post("/auth/login", json={"email": "a@b.co", "password": "newpassword1"})).status_code == 200
+
+
+async def test_password_reset_code_locks_after_five_wrong_tries(client, monkeypatch):
+    from app import mail
+
+    sent = []
+
+    async def capture(to, code, language):
+        sent.append(code)
+
+    monkeypatch.setattr(mail, "send_reset_code", capture)
+    await client.post("/auth/register", json={"email": "a@b.co", "password": "password123"})
+    await client.post("/auth/password/forgot", json={"email": "a@b.co"})
+    code = sent[0]
+    wrong = "000000" if code != "000000" else "111111"
+    for _ in range(5):
+        await client.post("/auth/password/reset", json={"email": "a@b.co", "code": wrong, "password": "newpassword1"})
+    r = await client.post("/auth/password/reset", json={"email": "a@b.co", "code": code, "password": "newpassword1"})
+    assert r.status_code == 400

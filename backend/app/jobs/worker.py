@@ -12,7 +12,7 @@ from app.llm.client import OpenRouterClient
 from app.llm.record import make_llm
 from app.models import Job, Lesson, Program, Sip
 from app.observability import init_sentry
-from app.paddle import PaddleClient
+from app.revenuecat import RevenueCatClient
 from app.pipeline import engine, programs
 
 log = logging.getLogger("sipp.worker")
@@ -138,15 +138,15 @@ async def main() -> None:
                     pass
 
     async def billing_sync() -> None:
-        """Catches webhooks Paddle never delivered; idempotent, so several workers are fine."""
-        paddle = PaddleClient()
+        """Re-reads subscriptions not refreshed lately (missed webhooks); idempotent, so several workers are fine."""
+        rc = RevenueCatClient()
         while not stop.is_set():
             if s.billing_enabled:
                 try:
                     async with SessionLocal() as session:
-                        n = await billing.reconcile(session, paddle)
+                        n = await billing.reconcile(session, rc)
                     if n:
-                        log.info("billing: %d subscriptions re-read from Paddle", n)
+                        log.info("billing: %d customers re-read from RevenueCat", n)
                 except Exception:  # noqa: BLE001
                     log.exception("billing reconciliation failed")
             try:

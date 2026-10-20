@@ -4,7 +4,9 @@ import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { TabBar } from './components/TabBar'
 import { Api, getTokens, onConsentRequired, onTokens } from './lib/api'
+import { onPushOpened, refreshPushToken } from './lib/push'
 import { play } from './lib/sound'
+import { forget, identify } from './lib/store'
 import { AiConsent } from './screens/AiConsent'
 import { Auth } from './screens/Auth'
 import { Generating } from './screens/Generating'
@@ -12,7 +14,6 @@ import { Home } from './screens/Home'
 import { Library } from './screens/Library'
 import { NewSip, WISH_KEY } from './screens/NewSip'
 import { Offers } from './screens/Offers'
-import { BillingReturn } from './screens/BillingReturn'
 import { Profile } from './screens/Profile'
 import { ProgramView } from './screens/ProgramView'
 import { Progress } from './screens/Progress'
@@ -20,7 +21,6 @@ import { SipMap } from './screens/SipMap'
 import { Understood } from './screens/Understood'
 import { Welcome } from './screens/Welcome'
 import { track } from './lib/telemetry'
-import { updateOnNavigation } from './lib/update'
 
 // The lesson player carries the block renderers and code highlighting: loaded on first use.
 const Lesson = lazy(() => import('./screens/Lesson').then((m) => ({ default: m.Lesson })))
@@ -83,11 +83,27 @@ function useNeedsAiConsent(loggedIn: boolean) {
   }
 }
 
+/** In the iOS app: purchases follow the account, reminders keep a fresh token and open their screen. */
+function useNativeAccount(loggedIn: boolean) {
+  const nav = useNavigate()
+  const me = useQuery({ queryKey: ['me'], queryFn: Api.me, enabled: loggedIn, staleTime: Infinity })
+  const id = loggedIn ? me.data?.id : undefined
+  useEffect(() => {
+    if (id) {
+      void identify(id).catch(() => undefined)
+      void refreshPushToken().catch(() => undefined)
+    } else if (!loggedIn) {
+      void forget()
+    }
+  }, [id, loggedIn])
+  useEffect(() => onPushOpened((url) => nav(url)), [nav])
+}
+
 export default function App() {
   const location = useLocation()
   const loggedIn = useLoggedIn()
   const consent = useNeedsAiConsent(loggedIn)
-  useEffect(() => updateOnNavigation(location.pathname), [location.pathname])
+  useNativeAccount(loggedIn)
   usePendingWish(loggedIn && consent.known && !consent.needed)
   return (
     <div className="app">
@@ -115,7 +131,6 @@ export default function App() {
               <Route path="/review" element={<Review />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/offers" element={<Offers />} />
-              <Route path="/billing/return" element={<BillingReturn />} />
               {import.meta.env.DEV && <Route path="/dev/blocks" element={<BlockGallery />} />}
               <Route path="/sips/:sipId/building" element={<Generating />} />
               <Route path="/sips/:sipId" element={<SipMap />} />

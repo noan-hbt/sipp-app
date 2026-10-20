@@ -17,7 +17,7 @@ async def _set_plan(plan: str, expires=None):
 async def test_free_plan_slot_and_lite(auth_client):
     await _set_plan("free")
     p = (await auth_client.get("/auth/me/plan")).json()
-    assert p["plan"] == "free" and p["slots"] == 1 and p["lite"] and p["trial_available"]
+    assert p["plan"] == "free" and p["slots"] == 1 and p["lite"]
     r = await auth_client.post("/sips", json={"input": "le café"})
     assert r.status_code == 202 and r.json()["lite"] is True
     r = await auth_client.post("/sips", json={"input": "la bière"})
@@ -33,16 +33,11 @@ async def test_monthly_limit_counts_deleted_slots(auth_client):
     assert r.status_code == 402 and r.json()["detail"]["code"] == "monthly_limit"
 
 
-async def test_trial_once_and_expiry(auth_client):
-    await _set_plan("free")
-    p = (await auth_client.post("/auth/me/trial")).json()
-    assert p["plan"] == get_settings().trial_plan and p["on_trial"] and not p["trial_available"]
-    assert (await auth_client.post("/auth/me/trial")).status_code == 409
+async def test_paid_plan_expiry(auth_client):
+    await _set_plan("basic", utcnow() + timedelta(days=3))
     r = await auth_client.post("/sips", json={"input": "le café"})
     assert r.json()["lite"] is False
-    async with SessionLocal() as s:
-        await s.execute(update(User).values(plan_expires_at=utcnow() - timedelta(minutes=1)))
-        await s.commit()
+    await _set_plan("basic", utcnow() - timedelta(minutes=1))
     p = (await auth_client.get("/auth/me/plan")).json()
     assert p["plan"] == "free" and not p["on_trial"]
 
@@ -57,7 +52,7 @@ async def test_public_plans(client):
     plans = (await client.get("/auth/plans")).json()
     assert [p["name"] for p in plans] == ["free", "basic", "plus"]
     assert plans[0].pop("features") == {"audio": False, "quiz": False, "notes": 10, "help_per_day": 5}
-    assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True, "hours_per_month": 0.3, "prices": {}}
+    assert plans[0] == {"name": "free", "slots": 1, "sips_per_month": 1, "lite": True, "hours_per_month": 0.3, "prices": {}, "products": {}}
     assert plans[1]["hours_per_month"] == 6.0
 
 

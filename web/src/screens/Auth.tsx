@@ -9,11 +9,13 @@ import { Api, ApiError, setTokens } from '../lib/api'
 import { play } from '../lib/sound'
 import { track } from '../lib/telemetry'
 import { t } from '../lib/i18n'
+import { ForgotPassword } from './ForgotPassword'
 import { WISH_KEY } from './NewSip'
 
 export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' }) {
   const nav = useNavigate()
   const [mode, setMode] = useState<'login' | 'register'>(initial)
+  const [forgot, setForgot] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -94,14 +96,17 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
         </div>
 
         <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <h1 key={mode} className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
-            <RevealLines lines={mode === 'register' ? [{ text: registerTitle[0] }, { text: registerTitle[1], color: 'var(--primary)' }] : [{ text: t.auth.loginTitle[0] }, { text: t.auth.loginTitle[1], color: 'var(--primary)' }]} />
+          <h1 key={forgot ? 'forgot' : mode} className="display" style={{ fontSize: 38, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
+            <RevealLines lines={forgot ? [{ text: t.forgot.title[0] }, { text: t.forgot.title[1], color: 'var(--primary)' }] : mode === 'register' ? [{ text: registerTitle[0] }, { text: registerTitle[1], color: 'var(--primary)' }] : [{ text: t.auth.loginTitle[0] }, { text: t.auth.loginTitle[1], color: 'var(--primary)' }]} />
           </h1>
-          <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
-            {mode === 'register' ? (wish ? t.auth.wishBody : t.auth.registerBody) : t.auth.loginBody}
-          </p>
+          {!forgot && (
+            <p className="muted" style={{ fontSize: 15, lineHeight: 1.45 }}>
+              {mode === 'register' ? (wish ? t.auth.wishBody : t.auth.registerBody) : t.auth.loginBody}
+            </p>
+          )}
         </div>
 
+        {forgot ? <ForgotPassword initialEmail={email} onBack={() => setForgot(false)} /> : <>
         <div style={{ margin: '0 16px', display: 'flex', borderRadius: 26, padding: 4, position: 'relative', background: 'var(--bg-deep)' }}>
           {(['register', 'login'] as const).map((m) => (
             <button
@@ -180,7 +185,21 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
             {busy ? '…' : mode === 'login' ? t.auth.loginCta : t.auth.registerCta}
           </Button>
           {mode === 'register' && <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>{t.safety.age}</p>}
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={() => {
+                play('tap')
+                setError(null)
+                setForgot(true)
+              }}
+              style={{ border: 'none', background: 'none', height: 40, fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}
+            >
+              {t.auth.forgot}
+            </button>
+          )}
         </motion.form>
+        </>}
       </div>
     </Screen>
   )

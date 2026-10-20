@@ -1,18 +1,24 @@
+import hashlib
+import hmac
 import logging
+import secrets
+from datetime import timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
     Credentials,
     DeleteAccountIn,
+    ForgotIn,
     PlanInfo,
     PlanOut,
     PushIn,
     RefreshIn,
+    ResetIn,
     SettingsIn,
     SettingsOut,
     StatsOut,
@@ -29,14 +35,13 @@ from app.auth import (
     rotate_refresh_token,
     verify_password_async,
 )
-from app import push
-from app.billing import live_subscription
+from app import mail, push
 from app.concepts import sync_cards
 from app.config import get_settings
 from app.db import get_session
-from app.models import ConceptCard, Lesson, Module, Note, Sip, User, utcnow
-from app.paddle import PaddleClient, PaddleError, get_paddle
-from app.plans import FREE_FEATURES, plan_status, start_trial
+from app.models import ConceptCard, Lesson, Module, Note, PasswordReset, RefreshToken, Sip, User, utcnow
+from app.plans import FREE_FEATURES, plan_status
+from app.revenuecat import RevenueCatClient, RevenueCatError, get_revenuecat
 from app.progress import stats
 from app.quota import usage
 
@@ -78,6 +83,63 @@ async def login(body: Credentials, session: AsyncSession = Depends(get_session))
 @router.post("/refresh", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
 async def refresh(body: RefreshIn, session: AsyncSession = Depends(get_session)):
     return await rotate_refresh_token(session, body.refresh_token)
+
+
+RESET_MINUTES = 30
+RESET_ATTEMPTS = 5
+
+
+def _code_hash(reset_id: str, code: str) -> str:
+    return hmac.new(get_settings().jwt_secret.encode(), f"{reset_id}:{code}".encode(), hashlib.sha256).hexdigest()
+
+
+@router.post("/password/forgot", status_code=204, dependencies=[Depends(limit_auth_attempts)])
+async def forgot_password(body: ForgotIn, session: AsyncSession = Depends(get_session)):
+    """Emails a 6-digit code. Same answer whether the address has an account or not."""
+    user = await session.scalar(select(User).where(User.email == body.email.lower()))
+    if user is None:
+        return
+    await session.execute(delete(PasswordReset).where(PasswordReset.user_id == user.id))
+    code = f"{secrets.randbelow(10**6):06d}"
+    reset = PasswordReset(user_id=user.id, code_hash="", expires_at=utcnow() + timedelta(minutes=RESET_MINUTES))
+    session.add(reset)
+    await session.flush()
+    reset.code_hash = _code_hash(reset.id, code)
+    await session.commit()
+    try:
+        await mail.send_reset_code(user.email, code, user.language)
+    except mail.MailError as e:
+        log.error("reset email to %s failed: %s", user.id, e)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY, {"code": "email_failed", "message": "the email could not be sent, retry later"}
+        ) from e
+
+
+@router.post("/password/reset", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
+async def reset_password(body: ResetIn, session: AsyncSession = Depends(get_session)):
+    """Sets a new password from the emailed code, signs out every device and signs this one in."""
+    wrong = HTTPException(status.HTTP_400_BAD_REQUEST, {"code": "invalid_code", "message": "wrong or expired code"})
+    user = await session.scalar(select(User).where(User.email == body.email.lower()))
+    reset = user and await session.scalar(
+        select(PasswordReset).where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None))
+    )
+    if not reset:
+        raise wrong
+    expires = reset.expires_at if reset.expires_at.tzinfo else reset.expires_at.replace(tzinfo=utcnow().tzinfo)
+    if expires <= utcnow() or reset.attempts >= RESET_ATTEMPTS:
+        raise wrong
+    if not hmac.compare_digest(reset.code_hash, _code_hash(reset.id, body.code)):
+        reset.attempts += 1
+        await session.commit()
+        raise wrong
+    reset.used_at = utcnow()
+    user.password_hash = await hash_password_async(body.password)
+    await session.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+        .values(revoked_at=utcnow())
+    )
+    return await issue_tokens(session, user)
 
 
 @router.post("/logout", status_code=204)
@@ -125,14 +187,13 @@ async def me_stats(
 
 
 def _settings_out(user: User) -> SettingsOut:
-    s = get_settings()
     return SettingsOut(
         daily_goal=user.daily_goal,
         reminder_hour=user.reminder_hour,
         timezone=user.timezone,
         language=user.language,
         push_enabled=user.push_subscription is not None,
-        push_public_key=s.vapid_public_key or None,
+        push_available=push.enabled(),
     )
 
 
@@ -163,10 +224,8 @@ async def put_settings(body: SettingsIn, user: User = Depends(current_user), ses
 
 @router.put("/me/push", response_model=SettingsOut)
 async def put_push(body: PushIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
-    """Stores this device's web push subscription (one device per account)."""
-    if not body.endpoint.startswith("https://") or not {"p256dh", "auth"} <= set(body.keys):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid push subscription")
-    user.push_subscription = {"endpoint": body.endpoint, "keys": {k: body.keys[k] for k in ("p256dh", "auth")}}
+    """Stores this device's APNs token (one device per account)."""
+    user.push_subscription = {"apns": body.token.lower(), "sandbox": False}
     await session.commit()
     return _settings_out(user)
 
@@ -205,19 +264,12 @@ async def list_plans():
         PlanInfo(
             name=name, slots=int(p["slots"]), sips_per_month=int(p["sips_per_month"]),
             lite=bool(p["lite"]), hours_per_month=hours(p), prices=s.plan_prices.get(name, {}),
+            products={i: pid for (plan, i), pid in s.store_products().items() if plan == name},
             features={**FREE_FEATURES, **s.plan_features.get(name, {})},
         )
         for name, p in s.plans.items()
         if name != "max"
     ]
-
-
-@router.post("/me/trial", response_model=PlanOut)
-async def me_trial(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)):
-    """Starts the one-time free trial of the paid plan."""
-    start_trial(user)
-    await session.commit()
-    return await plan_status(session, user)
 
 
 @router.get("/me/export")
@@ -287,24 +339,19 @@ async def delete_account(
     body: DeleteAccountIn,
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
-    paddle: PaddleClient = Depends(get_paddle),
+    rc: RevenueCatClient = Depends(get_revenuecat),
 ):
     """Permanently deletes the account and all its data (sips, lessons, tokens).
 
-    A running subscription is cancelled at Paddle first, so a deleted account is never billed
-    again; billing records stay, detached from the user, for accounting."""
+    An App Store subscription belongs to the Apple ID: the app tells the user to cancel it in their
+    Apple settings first. Its record stays, detached from the user, for support and refunds; the customer
+    is erased at RevenueCat."""
     if not await verify_password_async(body.password, user.password_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid password")
-    sub = await live_subscription(session, user.id)
-    if sub is not None:
+    if get_settings().billing_enabled:
         try:
-            await paddle.cancel_subscription(sub.id)
-        except PaddleError as e:
-            log.error("cancel %s before account deletion failed: %s", sub.id, e)
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY,
-                {"code": "billing_cancel_failed", "message": "subscription could not be cancelled, retry later"},
-            ) from e
-        sub.status = "canceled"
+            await rc.delete_subscriber(user.id)
+        except RevenueCatError as e:
+            log.error("revenuecat customer %s not erased: %s", user.id, e)
     await session.execute(delete(User).where(User.id == user.id))  # FK cascades
     await session.commit()

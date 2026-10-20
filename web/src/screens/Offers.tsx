@@ -7,9 +7,11 @@ import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
 import { RevealLines } from '../components/motion'
 import { Button, Icon } from '../components/ui'
+import type { PurchasesPackage } from '@revenuecat/purchases-capacitor'
 import { Api, apiErrorMessage, type Plan, type PlanInfo } from '../lib/api'
-import { openCheckout } from '../lib/paddle'
+import { MANAGE_SUBSCRIPTIONS_URL, isNative, openExternal } from '../lib/native'
 import { play } from '../lib/sound'
+import { buy, catalog, restore, storeAvailable } from '../lib/store'
 import { track } from '../lib/telemetry'
 import { t, locale } from '../lib/i18n'
 
@@ -17,8 +19,21 @@ const NAMES: Record<Plan['plan'], string> = t.plans.names
 type Interval = 'month' | 'year'
 type Paid = 'basic' | 'plus'
 
-const euros = (cents: number) =>
-  (cents / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR', minimumFractionDigits: cents % 100 ? 2 : 0 })
+/** A price in minor units (cents) in the store's currency. */
+const money = (cents: number, currency = 'EUR') =>
+  (cents / 100).toLocaleString(locale, { style: 'currency', currency, minimumFractionDigits: cents % 100 ? 2 : 0 })
+
+// Apple's standard licence unless our own terms are published; the privacy policy must be public.
+const TERMS_URL = (import.meta.env.VITE_TERMS_URL as string | undefined) || 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+const PRIVACY_URL = import.meta.env.VITE_PRIVACY_URL as string | undefined
+
+/** Days of the free introductory offer on this product, or 0 when it has none (or Apple would not give it). */
+function trialDaysOf(pkg: PurchasesPackage | undefined, eligible: Set<string> | undefined) {
+  const intro = pkg?.product.introPrice
+  if (!pkg || !intro || intro.price !== 0 || !eligible?.has(pkg.product.identifier)) return 0
+  const unit = { DAY: 1, WEEK: 7, MONTH: 30, YEAR: 365 }[intro.periodUnit] ?? 0
+  return unit * intro.periodNumberOfUnits
+}
 const hours = (h: number) => `~${t.time.minutes(h < 1 ? Math.round(h * 60) : Math.round(h) * 60)}`
 
 const TAGLINES: Partial<Record<Plan['plan'], string>> = t.offers.taglines
@@ -42,70 +57,93 @@ const ROWS: [string, (p: PlanInfo) => string | boolean][] = [
   [t.offers.rows.help, (p) => String(p.features?.help_per_day ?? '')],
 ]
 
+const linkStyle = { border: 'none', background: 'none', height: 36, fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', textDecoration: 'underline' } as const
+
 const check = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M5 12l5 5 9-10" />
   </svg>
 )
 
-/** The paywall: the recommended plan up front, a comparison table, then a free trial or a Paddle checkout. */
+/** The paywall: the recommended plan up front, a comparison table, then Apple's purchase sheet (free trial first when offered). */
 export function Offers() {
   const nav = useNavigate()
   const qc = useQueryClient()
   const plans = useQuery({ queryKey: ['plans'], queryFn: Api.plans, staleTime: 5 * 60_000 })
   const mine = useQuery({ queryKey: ['plan'], queryFn: Api.plan })
-  const me = useQuery({ queryKey: ['me'], queryFn: Api.me })
+  const store = useQuery({ queryKey: ['store-catalog'], queryFn: catalog, enabled: storeAvailable, staleTime: 10 * 60_000, retry: 1 })
   const [interval, setPeriod] = useState<Interval>('year')
   const [chosen, setChosen] = useState<Paid>('basic')
-  const [consent, setConsent] = useState(false)
-  // With a free trial on offer, paying right away is the secondary path.
-  const [direct, setDirect] = useState(false)
-  const trial = useMutation({
-    mutationFn: Api.startTrial,
-    onSuccess: (p) => {
-      track('trial_started', { from: 'offers' })
-      play('complete')
-      qc.setQueryData(['plan'], p)
-    },
-  })
+  const [late, setLate] = useState(false)
+  const done = (p: Plan) => {
+    qc.setQueryData(['plan'], p)
+    void qc.invalidateQueries({ queryKey: ['plans'] })
+  }
   const subscribe = useMutation({
-    mutationFn: async () => {
-      const c = await Api.checkout(chosen, interval)
-      track('checkout_opened', { plan: chosen, interval })
-      await openCheckout({
-        transactionId: c.transaction_id,
-        clientToken: c.client_token,
-        environment: c.environment,
-        successUrl: c.success_url,
-        email: me.data?.email,
-      })
+    mutationFn: async (pkg: PurchasesPackage) => {
+      setLate(false)
+      track('purchase_opened', { plan: chosen, interval })
+      if (!(await buy(pkg))) return null
+      track('subscribed', { plan: chosen, interval, trial: trialDaysOf(pkg, store.data?.introEligible) > 0 })
+      try {
+        return await Api.syncPurchases()
+      } catch {
+        // Paid at Apple: the webhook grants it in a moment even if this call failed.
+        setLate(true)
+        void qc.invalidateQueries({ queryKey: ['plan'] })
+        return null
+      }
+    },
+    onSuccess: (p) => {
+      if (!p) return
+      play('complete')
+      done(p)
     },
   })
-  const portal = useMutation({
-    mutationFn: Api.billingPortal,
-    onSuccess: ({ url }) => window.location.assign(url),
+  const restoring = useMutation({
+    mutationFn: async () => {
+      await restore()
+      return Api.syncPurchases()
+    },
+    onSuccess: (p) => {
+      track('purchases_restored', { plan: p.plan })
+      done(p)
+    },
   })
   useEffect(() => track('offers_viewed'), [])
   const current = mine.data?.plan
-  const canTry = mine.data?.trial_available ?? false
-  const selling = (mine.data?.billing_enabled ?? false) && !mine.data?.subscription && current !== 'max'
   const subscribed = !!mine.data?.subscription
-  const chosenPrice = plans.data?.find((p) => p.name === chosen)?.prices[interval]
+  const productOf = (p: PlanInfo | undefined, i: Interval) => p?.products?.[i]
+  const pkgOf = (p: PlanInfo | undefined, i: Interval) => {
+    const id = productOf(p, i)
+    return id ? store.data?.packages[id] : undefined
+  }
+  const chosenInfo = plans.data?.find((p) => p.name === chosen)
+  const chosenPkg = pkgOf(chosenInfo, interval)
+  const selling = storeAvailable && (mine.data?.billing_enabled ?? false) && !subscribed && current !== 'max'
+  const trialDays = mine.data?.trial_available ? trialDaysOf(chosenPkg, store.data?.introEligible) : 0
+  const canTry = trialDays > 0
 
   const paid = (plans.data ?? []).filter((p) => p.name === 'basic' || p.name === 'plus')
   const table = (plans.data ?? []).filter((p) => p.name !== 'max')
-  const trialDays = mine.data?.trial_days ?? 7
 
-  /** Big price: monthly, or the yearly price brought back to a month. */
-  const price = (p: PlanInfo) => {
-    const cents = p.prices[interval]
-    if (!mine.data?.billing_enabled || cents == null) return null
-    return interval === 'month' ? cents : Math.round(cents / 12)
+  /** The App Store's price in the user's currency, else the reference price in euros. */
+  const priceOf = (p: PlanInfo, i: Interval): { cents: number; currency: string } | null => {
+    const pkg = pkgOf(p, i)
+    if (pkg) return { cents: Math.round(pkg.product.price * 100), currency: pkg.product.currencyCode }
+    if (storeAvailable && store.isSuccess) return null // not on sale in this storefront
+    const cents = p.prices[i]
+    return cents == null ? null : { cents, currency: 'EUR' }
   }
+  /** Big price: what Apple will charge for the period (Apple requires it to be the most prominent). */
+  const price = (p: PlanInfo) => priceOf(p, interval)
   const perDay = (p: PlanInfo) => {
-    const cents = p.prices[interval]
-    return cents == null ? null : Math.ceil(cents / (interval === 'month' ? 30 : 365))
+    const v = priceOf(p, interval)
+    return v == null ? null : { ...v, cents: Math.ceil(v.cents / (interval === 'month' ? 30 : 365)) }
   }
+  const chosenPrice = chosenInfo ? priceOf(chosenInfo, interval) : null
+  const chosenPriceText = chosenPkg?.product.priceString ?? (chosenPrice ? money(chosenPrice.cents, chosenPrice.currency) : null)
+  const per = interval === 'month' ? t.offers.perMonth : t.offers.perYear
 
   return (
     <Screen kind="modal">
@@ -148,7 +186,7 @@ export function Offers() {
         </div>
 
         <div style={{ padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {selling && (
+          {!subscribed && current !== 'max' && (
             <div role="radiogroup" aria-label={t.offers.interval} style={{ alignSelf: 'center', display: 'flex', gap: 2, padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
               {(['month', 'year'] as const).map((i) => (
                 <button
@@ -169,12 +207,12 @@ export function Offers() {
 
           {paid.map((p, i) => {
             const isMine = p.name === current
-            const pickable = selling
+            const pickable = !subscribed && current !== 'max'
             const featured = pickable ? p.name === chosen : p.name === 'basic'
             const big = price(p)
-            const yearly = p.prices.year
             const day = perDay(p)
-            const badge = p.name === 'basic' ? (canTry ? t.offers.recommendedTrial(trialDays) : t.offers.recommended) : null
+            const offered = mine.data?.trial_available ? trialDaysOf(pkgOf(p, interval), store.data?.introEligible) : 0
+            const badge = p.name === 'basic' ? (offered ? t.offers.recommendedTrial(offered) : t.offers.recommended) : null
             return (
               <motion.section
                 key={p.name}
@@ -214,10 +252,10 @@ export function Offers() {
                     <span style={{ fontSize: 13, color: 'var(--muted)' }}>{isMine ? (mine.data?.on_trial ? t.offers.yourTrial : t.offers.yourPlan) : TAGLINES[p.name]}</span>
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <span className="display" style={{ fontSize: featured ? 34 : 24, lineHeight: 1 }}>{big == null ? t.offers.soon : euros(big)}</span>
+                    <span className="display" style={{ fontSize: featured ? 34 : 24, lineHeight: 1 }}>{big == null ? t.offers.soon : money(big.cents, big.currency)}</span>
                     {big != null && (
                       <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                        {t.offers.perMonth}{interval === 'year' && yearly != null ? t.offers.perYearNote(euros(yearly)) : ''}
+                        {interval === 'year' ? `${t.offers.perYear}${t.offers.monthlyEquivalent(money(Math.floor(big.cents / 12), big.currency))}` : t.offers.perMonth}
                       </span>
                     )}
                   </span>
@@ -226,7 +264,7 @@ export function Offers() {
                   <>
                     {day != null && big != null && (
                       <span style={{ alignSelf: 'flex-start', height: 28, padding: '0 12px', borderRadius: 14, background: 'var(--butter)', color: 'var(--butter-ink)', display: 'flex', alignItems: 'center', fontSize: 13, fontWeight: 700 }}>
-                        {t.offers.perDay(euros(day))}
+                        {t.offers.perDay(money(day.cents, day.currency))}
                       </span>
                     )}
                     <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -280,76 +318,54 @@ export function Offers() {
             </motion.section>
           )}
 
-          {trial.isError && (
-            <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14 }}>
-              {t.upsell.trialFailed}
-            </p>
-          )}
         </div>
       </div>
 
       <div className="bottom-bar" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {subscribed ? (
+          <Button onClick={() => openExternal(MANAGE_SUBSCRIPTIONS_URL)}>{t.offers.manage}</Button>
+        ) : selling && chosenPkg ? (
           <>
-            <Button disabled={portal.isPending} onClick={() => portal.mutate()}>
-              {portal.isPending ? <Mascot mood="think" size={36} /> : t.offers.manage}
-            </Button>
-            {portal.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(portal.error)}</p>}
-          </>
-        ) : selling && (!canTry || direct) ? (
-          <>
-            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.4, color: 'var(--ink-soft)' }}>
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                style={{ width: 20, height: 20, marginTop: 1, flexShrink: 0, accentColor: 'var(--primary)' }}
-              />
-              <span>
-                {t.offers.consent}
-              </span>
-            </label>
-            <Button disabled={!consent || subscribe.isPending || chosenPrice == null} onClick={() => subscribe.mutate()} sound="pop">
+            <Button disabled={subscribe.isPending || restoring.isPending} onClick={() => subscribe.mutate(chosenPkg)} sound="pop">
               {subscribe.isPending
                 ? <Mascot mood="think" size={36} />
-                : t.offers.subscribe(NAMES[chosen], chosenPrice != null ? `${euros(chosenPrice)}${interval === 'month' ? t.offers.perMonth : t.offers.perYear}` : null)}
+                : canTry ? t.offers.tryFree(trialDays) : t.offers.subscribe(NAMES[chosen], chosenPriceText ? `${chosenPriceText}${per}` : null)}
             </Button>
-            {subscribe.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(subscribe.error)}</p>}
-            {canTry && (
-              <button type="button" onClick={() => setDirect(false)} style={{ border: 'none', background: 'none', height: 40, fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
-                {t.offers.ratherTry(trialDays)}
-              </button>
-            )}
-            <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>
-              {t.offers.paddle}
+            {subscribe.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(subscribe.error, t.offers.purchaseFailed)}</p>}
+            {late && <p role="status" style={{ fontSize: 14, textAlign: 'center' }}>{t.offers.late}</p>}
+            <p className="muted" style={{ fontSize: 11.5, textAlign: 'center', lineHeight: 1.4 }}>
+              {canTry ? t.offers.trialTerms(trialDays, `${chosenPriceText}${per}`) : t.offers.renewal(`${chosenPriceText}${per}`)}
             </p>
           </>
-        ) : canTry ? (
-          <>
-            <Button disabled={trial.isPending} onClick={() => trial.mutate()} sound="pop">
-              {trial.isPending ? <Mascot mood="think" size={36} /> : t.offers.tryFree(trialDays)}
-            </Button>
-            <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>
-              {t.offers.trialNote}
-            </p>
-            {selling && (
-              <button type="button" onClick={() => setDirect(true)} style={{ border: 'none', background: 'none', height: 40, fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>
-                {t.offers.subscribeDirect(NAMES[chosen])}
-              </button>
-            )}
-          </>
+        ) : selling && store.isPending ? (
+          <Button disabled><Mascot mood="think" size={36} /></Button>
         ) : (
           <>
             <Button variant="soft" onClick={() => nav(-1)}>
               {t.common.back}
             </Button>
-            {!mine.data?.billing_enabled && (
+            {current !== 'max' && (
               <p className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-                {t.offers.comingSoon}
+                {!isNative ? t.offers.appOnly : storeAvailable && store.isError ? apiErrorMessage(store.error, t.offers.storeDown) : t.offers.comingSoon}
               </p>
             )}
           </>
         )}
+        {storeAvailable && !subscribed && current !== 'max' && (
+          <>
+            {restoring.isError && <p role="alert" style={{ color: 'var(--rose-ink)', fontSize: 14, textAlign: 'center' }}>{apiErrorMessage(restoring.error, t.offers.restoreFailed)}</p>}
+            {restoring.isSuccess && !restoring.data.subscription && <p role="status" style={{ fontSize: 14, textAlign: 'center' }}>{t.offers.nothingToRestore}</p>}
+          </>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '0 14px' }}>
+          {storeAvailable && !subscribed && current !== 'max' && (
+            <button type="button" onClick={() => restoring.mutate()} disabled={restoring.isPending || subscribe.isPending} style={linkStyle}>
+              {restoring.isPending ? t.offers.restoring : t.offers.restore}
+            </button>
+          )}
+          <button type="button" onClick={() => openExternal(TERMS_URL)} style={linkStyle}>{t.offers.terms}</button>
+          {PRIVACY_URL && <button type="button" onClick={() => openExternal(PRIVACY_URL)} style={linkStyle}>{t.offers.privacy}</button>}
+        </div>
       </div>
     </Screen>
   )
