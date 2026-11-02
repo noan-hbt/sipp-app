@@ -150,6 +150,28 @@ export function HabitSettings() {
       </div>
 
       <div style={{ ...block, borderTop: '1.5px solid var(--bg-deep)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span id="email-nudges" style={{ ...title, flex: 1 }}>{t.account.emailNudges}</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={s?.email_nudges ?? true}
+            aria-labelledby="email-nudges"
+            disabled={!s || save.isPending}
+            onClick={() => {
+              const next = !(s?.email_nudges ?? true)
+              track('email_nudges_set', { on: next })
+              save.mutate({ email_nudges: next })
+            }}
+            style={{ border: 'none', width: 52, height: 32, borderRadius: 16, padding: 3, display: 'flex', flexShrink: 0, justifyContent: s?.email_nudges ?? true ? 'flex-end' : 'flex-start', background: s?.email_nudges ?? true ? 'var(--primary)' : 'var(--bg-deep)' }}
+          >
+            <span style={{ width: 26, height: 26, borderRadius: 13, background: '#fff' }} />
+          </button>
+        </span>
+        <span style={hint}>{t.account.emailNudgesHint}</span>
+      </div>
+
+      <div style={{ ...block, borderTop: '1.5px solid var(--bg-deep)' }}>
         <span style={title}>{t.habits.appearance}</span>
         <Chips
           label={t.habits.theme}

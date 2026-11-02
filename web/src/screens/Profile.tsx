@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChangePassword } from '../components/ChangePassword'
 import { HabitSettings } from '../components/HabitSettings'
+import { LegalLinks } from '../components/LegalLinks'
 import { Mascot } from '../components/Mascot'
 import { illustration } from '../components/SipIcon'
 import { CountUp } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { Button, Icon, Star } from '../components/ui'
+import { COMPANY } from '../legal/company'
 import { Api, ApiError, apiErrorMessage, setTokens, type Plan } from '../lib/api'
 import { setSoundEnabled, soundEnabled } from '../lib/sound'
 import { track } from '../lib/telemetry'
@@ -242,7 +245,7 @@ export function Profile() {
                 {rowIcon('var(--sky)', 'var(--sky-ink)', 'M12 4v11M7 10l5 5 5-5M5 20h14')}
                 {exportData.isPending ? t.profile.exporting : t.profile.export}
               </button>
-              <a href="mailto:hello@sipp.app" style={{ ...rowStyle, borderTop: '1.5px solid var(--bg-deep)' }}>
+              <a href={`mailto:${COMPANY.email}`} style={{ ...rowStyle, borderTop: '1.5px solid var(--bg-deep)' }}>
                 {rowIcon('var(--butter)', 'var(--butter-ink)', 'M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9.5a2.5 2.5 0 114 2c-1 .6-1.5 1.2-1.5 2.5M12 17h.01')}
                 {t.profile.help}
               </a>
@@ -255,6 +258,7 @@ export function Profile() {
           </motion.section>
 
           <motion.section variants={item} aria-label={t.profile.account} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <ChangePassword disabled={busy} />
             <button
               type="button"
               disabled={busy}
@@ -311,6 +315,10 @@ export function Profile() {
               </form>
             )}
           </motion.section>
+
+          <motion.nav variants={item} aria-label={t.legal.section} style={{ padding: '0 6px' }}>
+            <LegalLinks center />
+          </motion.nav>
         </motion.div>
       </div>
     </Screen>

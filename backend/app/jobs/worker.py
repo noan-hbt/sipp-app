@@ -4,7 +4,7 @@ import asyncio
 import logging
 import signal
 
-from app import billing, push
+from app import billing, emails, nudges, push
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import queue
@@ -170,10 +170,27 @@ async def main() -> None:
             except TimeoutError:
                 pass
 
+    async def email_nudges() -> None:
+        """The "come back" email, checked every 5 minutes; each break gets at most one."""
+        while not stop.is_set():
+            if emails.enabled():
+                try:
+                    async with SessionLocal() as session:
+                        n = await nudges.send_due_nudges(session)
+                    if n:
+                        log.info("emails: %d come-back nudges sent", n)
+                except Exception:  # noqa: BLE001
+                    log.exception("email nudges failed")
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=300)
+            except TimeoutError:
+                pass
+
     log.info("worker started (concurrency=%d)", s.worker_concurrency)
     tasks = [asyncio.create_task(slot()) for _ in range(s.worker_concurrency)]
     tasks.append(asyncio.create_task(billing_sync()))
     tasks.append(asyncio.create_task(reminders()))
+    tasks.append(asyncio.create_task(email_nudges()))
     await stop.wait()
     log.info("shutdown: releasing in-flight jobs")
     for t in tasks:

@@ -73,6 +73,10 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 | GET | `/auth/me/stats?tz=Europe/Paris` | streak days, stars, lessons completed |
 | GET | `/auth/me/usage` | sips and LLM cost over the last 24h vs limits |
 | DELETE | `/auth/me` | `{password}` → deletes the account and all its data |
+| POST | `/auth/password/forgot` | `{email}` → 204 whether the account exists or not; emails a one-time link (60 min) |
+| POST | `/auth/password/reset` | `{token, password}` → new tokens; every other session and link is revoked |
+| POST | `/auth/me/password` | `{current_password, new_password}` → new tokens; other devices signed out |
+| POST | `/auth/email/unsubscribe` | `{token}` (from the email link, no sign-in) → turns the "come back" email off |
 | POST | `/sips` | `{input}` → 202, `status: queued → generating (stage) → ready / failed` |
 | GET | `/sips` | list with progress and `next_lesson_id` |
 | GET | `/sips/{id}` | roadmap: profile, modules, lessons with status |
@@ -83,6 +87,13 @@ All routes except `/auth/register|login|refresh|logout` and `/health` need
 
 Block shapes: `app/pipeline/blocks.py` (14 primitives incl. `code` and `math`, `type` discriminator).
 Inline math: any text field may contain LaTeX between single dollars (`$d_k$`); `\$` is a literal dollar.
+
+## Emails
+
+`app/emails.py` sends through Resend (`RESEND_API_KEY`, `EMAIL_FROM`); while the key is empty, emails are
+only logged. Welcome (sign-up), reset link, "password changed", and the "come back" nudge the worker sends
+once per break (`app/nudges.py`: 3 days without a lesson, at 18:00 local time, breaks older than 14 days
+skipped). Setup: `docs/emails-setup.md`.
 
 ## Notes
 

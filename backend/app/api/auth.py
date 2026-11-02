@@ -1,13 +1,19 @@
 import logging
+import secrets
+from datetime import timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import delete, select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.schemas import (
+    ChangePasswordIn,
     Credentials,
+    ForgotPasswordIn,
+    ResetPasswordIn,
+    UnsubscribeIn,
     DeleteAccountIn,
     PlanInfo,
     PlanOut,
@@ -21,6 +27,7 @@ from app.api.schemas import (
     UserOut,
 )
 from app.auth import (
+    _sha256,
     current_user,
     hash_password_async,
     issue_tokens,
@@ -29,12 +36,12 @@ from app.auth import (
     rotate_refresh_token,
     verify_password_async,
 )
-from app import push
+from app import emails, push
 from app.billing import live_subscription
 from app.concepts import sync_cards
 from app.config import get_settings
 from app.db import get_session
-from app.models import ConceptCard, Lesson, Module, Note, Sip, User, utcnow
+from app.models import ConceptCard, Lesson, Module, Note, PasswordReset, RefreshToken, Sip, User, utcnow
 from app.paddle import PaddleClient, PaddleError, get_paddle
 from app.plans import FREE_FEATURES, plan_status, start_trial
 from app.progress import stats
@@ -46,11 +53,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenOut, status_code=201, dependencies=[Depends(limit_auth_attempts)])
-async def register(body: Credentials, session: AsyncSession = Depends(get_session)):
+async def register(body: Credentials, background: BackgroundTasks, session: AsyncSession = Depends(get_session)):
     email = body.email.lower()
     if (await session.execute(select(User).where(User.email == email))).scalar_one_or_none():
         raise HTTPException(status.HTTP_409_CONFLICT, "email already registered")
-    user = User(email=email, password_hash=await hash_password_async(body.password))
+    user = User(email=email, password_hash=await hash_password_async(body.password), language=body.language)
     session.add(user)
     try:
         await session.flush()
@@ -62,7 +69,9 @@ async def register(body: Credentials, session: AsyncSession = Depends(get_sessio
         ):
             raise HTTPException(status.HTTP_409_CONFLICT, "email already registered") from exc
         raise
-    return await issue_tokens(session, user)
+    tokens = await issue_tokens(session, user)
+    background.add_task(emails.send, emails.welcome(user))
+    return tokens
 
 
 @router.post("/login", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
@@ -78,6 +87,85 @@ async def login(body: Credentials, session: AsyncSession = Depends(get_session))
 @router.post("/refresh", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
 async def refresh(body: RefreshIn, session: AsyncSession = Depends(get_session)):
     return await rotate_refresh_token(session, body.refresh_token)
+
+
+async def _set_password(session: AsyncSession, user: User, password: str) -> None:
+    """New password: every session and pending reset link is revoked (the caller issues a fresh session)."""
+    now = utcnow()
+    user.password_hash = await hash_password_async(password)
+    await session.execute(
+        update(RefreshToken).where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None)).values(revoked_at=now)
+    )
+    await session.execute(
+        update(PasswordReset).where(PasswordReset.user_id == user.id, PasswordReset.used_at.is_(None)).values(used_at=now)
+    )
+
+
+@router.post("/password/forgot", status_code=204, dependencies=[Depends(limit_auth_attempts)])
+async def forgot_password(body: ForgotPasswordIn, background: BackgroundTasks, session: AsyncSession = Depends(get_session)):
+    """Emails a one-time link to choose a new password. Same answer whether the account exists or not."""
+    s = get_settings()
+    user = (await session.execute(select(User).where(User.email == body.email.lower()))).scalar_one_or_none()
+    if user is None:
+        return
+    now = utcnow()
+    recent = await session.scalar(
+        select(PasswordReset.id).where(PasswordReset.user_id == user.id, PasswordReset.created_at > now - timedelta(minutes=1))
+    )
+    if recent is not None:  # a double tap sends one email
+        return
+    token = secrets.token_urlsafe(32)
+    session.add(PasswordReset(user_id=user.id, token_hash=_sha256(token), expires_at=now + timedelta(minutes=s.password_reset_minutes)))
+    await session.commit()
+    background.add_task(emails.send, emails.password_reset(user, token, s.password_reset_minutes))
+
+
+@router.post("/password/reset", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
+async def reset_password(body: ResetPasswordIn, background: BackgroundTasks, session: AsyncSession = Depends(get_session)):
+    """Sets the new password from an emailed link, signs out every device, and signs this one in."""
+    now = utcnow()
+    user_id = (
+        await session.execute(
+            update(PasswordReset)
+            .where(PasswordReset.token_hash == _sha256(body.token), PasswordReset.used_at.is_(None), PasswordReset.expires_at > now)
+            .values(used_at=now)
+            .returning(PasswordReset.user_id)
+        )
+    ).scalar_one_or_none()
+    user = await session.get(User, user_id) if user_id else None
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, {"code": "reset_link_invalid", "message": "this link is invalid or expired"})
+    await _set_password(session, user, body.password)
+    tokens = await issue_tokens(session, user)
+    background.add_task(emails.send, emails.password_changed(user))
+    return tokens
+
+
+@router.post("/me/password", response_model=TokenOut, dependencies=[Depends(limit_auth_attempts)])
+async def change_password(
+    body: ChangePasswordIn,
+    background: BackgroundTasks,
+    user: User = Depends(current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Changes the password; other devices are signed out, this one gets a fresh session."""
+    if not await verify_password_async(body.current_password, user.password_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "invalid password")
+    await _set_password(session, user, body.new_password)
+    tokens = await issue_tokens(session, user)
+    background.add_task(emails.send, emails.password_changed(user))
+    return tokens
+
+
+@router.post("/email/unsubscribe", status_code=204)
+async def unsubscribe(body: UnsubscribeIn, session: AsyncSession = Depends(get_session)):
+    """The link at the bottom of a reminder email: no sign-in needed, it only turns those emails off."""
+    user_id = emails.read_unsubscribe_token(body.token)
+    user = await session.get(User, user_id) if user_id else None
+    if user is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, {"code": "unsubscribe_link_invalid", "message": "invalid link"})
+    user.email_nudges = False
+    await session.commit()
 
 
 @router.post("/logout", status_code=204)
@@ -133,6 +221,7 @@ def _settings_out(user: User) -> SettingsOut:
         language=user.language,
         push_enabled=user.push_subscription is not None,
         push_public_key=s.vapid_public_key or None,
+        email_nudges=user.email_nudges,
     )
 
 
@@ -157,6 +246,8 @@ async def put_settings(body: SettingsIn, user: User = Depends(current_user), ses
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown timezone") from e
     if body.language:
         user.language = body.language
+    if body.email_nudges is not None:
+        user.email_nudges = body.email_nudges
     await session.commit()
     return _settings_out(user)
 
@@ -278,7 +369,10 @@ async def me_export(user: User = Depends(current_user), session: AsyncSession = 
             {"lesson": titles.get(n.lesson_id), "quote": n.quote, "text": n.text, "created_at": n.created_at}
             for n in notes
         ],
-        "settings": {"daily_goal": user.daily_goal, "reminder_hour": user.reminder_hour, "timezone": user.timezone},
+        "settings": {
+            "daily_goal": user.daily_goal, "reminder_hour": user.reminder_hour, "timezone": user.timezone,
+            "email_reminders": user.email_nudges,
+        },
     }
 
 

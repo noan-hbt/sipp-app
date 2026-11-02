@@ -12,6 +12,17 @@ class Settings(BaseSettings):
     vapid_public_key: str = ""
     vapid_private_key: str = ""
     vapid_subject: str = "mailto:hello@sipp.app"
+    # Emails through Resend (https://resend.com); logged instead of sent while the key is empty.
+    resend_api_key: str = ""
+    # The sending domain must be verified in Resend.
+    email_from: str = "Sipp <bonjour@sipp.app>"
+    support_email: str = "hello@sipp.app"
+    password_reset_minutes: int = Field(default=60, ge=5)
+    # "Come back" email: once per break, after this many days without a lesson, at this local hour.
+    # Breaks older than nudge_window_days get nothing (no mass mailing of long-gone accounts).
+    nudge_after_days: int = Field(default=3, ge=1)
+    nudge_window_days: int = Field(default=14, ge=2)
+    nudge_local_hour: int = Field(default=18, ge=0, le=23)
     # Error tracking; off when empty.
     sentry_dsn: str = ""
     sentry_traces_sample_rate: float = Field(default=0.1, ge=0, le=1)
@@ -25,7 +36,9 @@ class Settings(BaseSettings):
     access_token_minutes: int = 60
     refresh_token_days: int = 60
     auth_rate_limit_window_seconds: int = Field(default=60, ge=1)
-    auth_rate_limits: dict[str, int] = {"register": 5, "login": 20, "refresh": 30}
+    auth_rate_limits: dict[str, int] = {
+        "register": 5, "login": 20, "refresh": 30, "forgot": 5, "reset": 10, "password": 10,
+    }
     auth_password_workers: int = Field(default=2, ge=1)
 
     # OpenRouter
@@ -147,7 +160,9 @@ class Settings(BaseSettings):
     @field_validator("auth_rate_limits")
     @classmethod
     def _auth_limits(cls, v: dict[str, int]) -> dict[str, int]:
-        if set(v) != {"register", "login", "refresh"} or any(limit < 1 for limit in v.values()):
+        # An override written before the password routes existed keeps working: they take their defaults.
+        v = {"forgot": 5, "reset": 10, "password": 10, **v}
+        if not {"register", "login", "refresh"} <= set(v) or any(limit < 1 for limit in v.values()):
             raise ValueError("auth_rate_limits must contain positive register, login and refresh limits")
         return v
 

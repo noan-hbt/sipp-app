@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, false
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, false, true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import get_settings
@@ -51,6 +51,22 @@ class User(TimestampMixin, Base):
     language: Mapped[str | None] = mapped_column(String(8))
     # Agreed that requests go to AI model providers (App Store 5.1.2(i)); required to send new ones.
     ai_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Emails: the "come back" nudge can be turned off (link in each one, or the profile); account emails always go.
+    email_nudges: Mapped[bool] = mapped_column(Boolean, default=True, server_default=sa_true())
+    nudged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PasswordReset(Base):
+    """A one-time link to choose a new password; only its hash is kept."""
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class RefreshToken(Base):

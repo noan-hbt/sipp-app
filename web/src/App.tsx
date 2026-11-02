@@ -28,7 +28,22 @@ const LessonDone = lazy(() => import('./screens/LessonDone').then((m) => ({ defa
 const Review = lazy(() => import('./screens/Review').then((m) => ({ default: m.Review })))
 const ModuleQuiz = lazy(() => import('./screens/ModuleQuiz').then((m) => ({ default: m.ModuleQuiz })))
 const Demo = lazy(() => import('./screens/Demo').then((m) => ({ default: m.Demo })))
+const Legal = lazy(() => import('./screens/Legal').then((m) => ({ default: m.Legal })))
+const ForgotPassword = lazy(() => import('./screens/PasswordReset').then((m) => ({ default: m.ForgotPassword })))
+const ResetPassword = lazy(() => import('./screens/PasswordReset').then((m) => ({ default: m.ResetPassword })))
+const Unsubscribe = lazy(() => import('./screens/Unsubscribe').then((m) => ({ default: m.Unsubscribe })))
 const BlockGallery = lazy(() => import('./screens/BlockGallery').then((m) => ({ default: m.BlockGallery })))
+
+/** Pages reachable signed in or not, and before the AI consent: legal texts and the links sent by email. */
+const OPEN_PATHS = /^\/(legal\/|forgot-password$|reset-password$|unsubscribe$)/
+const openRoutes = (
+  <>
+    <Route path="/legal/:slug" element={<Legal />} />
+    <Route path="/forgot-password" element={<ForgotPassword />} />
+    <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/unsubscribe" element={<Unsubscribe />} />
+  </>
+)
 
 function useLoggedIn() {
   return useSyncExternalStore(onTokens, () => getTokens() !== null)
@@ -86,9 +101,11 @@ function useNeedsAiConsent(loggedIn: boolean) {
 export default function App() {
   const location = useLocation()
   const loggedIn = useLoggedIn()
-  const consent = useNeedsAiConsent(loggedIn)
+  const needs = useNeedsAiConsent(loggedIn)
+  const open = OPEN_PATHS.test(location.pathname)
+  const consent = open ? { needed: false, known: true } : needs
   useEffect(() => updateOnNavigation(location.pathname), [location.pathname])
-  usePendingWish(loggedIn && consent.known && !consent.needed)
+  usePendingWish(loggedIn && needs.known && !needs.needed && !open)
   return (
     <div className={loggedIn && !consent.needed && isTabPath(location.pathname) ? 'app tabs' : 'app'}>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -102,6 +119,7 @@ export default function App() {
               <Route path="/demo" element={<Demo />} />
               <Route path="/signup" element={<Auth initial="register" />} />
               <Route path="/login" element={<Auth initial="login" />} />
+              {openRoutes}
               <Route path="*" element={<Navigate to="/" replace />} />
             </>
           ) : (
@@ -123,6 +141,7 @@ export default function App() {
               <Route path="/lessons/:lessonId" element={<Lesson />} />
               <Route path="/lessons/:lessonId/done" element={<LessonDone />} />
               <Route path="/modules/:moduleId/quiz" element={<ModuleQuiz />} />
+              {openRoutes}
               <Route path="*" element={<Navigate to="/" replace />} />
             </>
           )}
@@ -130,7 +149,7 @@ export default function App() {
         )}
         </Suspense>
       </AnimatePresence>
-      {loggedIn && !consent.needed && <TabBar />}
+      {loggedIn && !consent.needed && !open && <TabBar />}
     </div>
   )
 }
