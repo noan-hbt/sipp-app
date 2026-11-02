@@ -168,7 +168,7 @@ export function SipMap() {
   }
 
   return (
-    <Screen>
+    <Screen width="narrow">
       {(sip.isError || sip.isPaused || remove.isError) && (
         <div style={{ padding: 12, flexShrink: 0 }}>
           {(sip.isError || sip.isPaused) && (

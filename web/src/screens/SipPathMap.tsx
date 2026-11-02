@@ -47,6 +47,8 @@ const NODE_END = 72;
 const DOCK = 104;
 /** The landscape is drawn wider than the screen so its edges frame the road. */
 const LAND_SCALE = 1.24;
+/** Widest the path itself gets: past this, the screen shows more landscape, not a longer zigzag. */
+const LANE = 520;
 
 type State = "done" | "now" | "locked";
 interface Pt {
@@ -73,12 +75,16 @@ interface Zone {
 type Corridor = readonly (readonly [number, number])[];
 
 /** Landscape tiles stacked from the bottom; every other one mirrored so long Sips don't feel repeated. */
-function tiles(width: number, height: number) {
+/** Landscape tiles behind the path, bottom up. With room on the sides (`side` px each), more columns continue it,
+ * each the mirror of its neighbour so the edges meet. */
+function tiles(width: number, height: number, side = 0) {
   const w = width * LAND_SCALE;
   const h = w * 1.5;
+  const extra = side > 0 ? Math.ceil((side - (w - width) / 2) / w) : 0;
   const out: { top: number; left: number; w: number; h: number; flip: boolean }[] = [];
   for (let i = 0, bottom = height; bottom > 0; i++, bottom -= h)
-    out.push({ top: bottom - h, left: (width - w) / 2, w, h, flip: i % 2 === 1 });
+    for (let k = -extra; k <= extra; k++)
+      out.push({ top: bottom - h, left: (width - w) / 2 + k * w, w, h, flip: (i + Math.abs(k)) % 2 === 1 });
   return out;
 }
 
@@ -201,12 +207,19 @@ export function SipPathMap({
   onOpen: (lessonId: string) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(() => Math.min(window.innerWidth, 480));
-  useEffect(() => {
-    const onResize = () => setWidth(Math.min(window.innerWidth, 480));
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+  // The path is laid out in a lane at most LANE wide; on a large screen the landscape carries on either side of it.
+  const [full, setFull] = useState(() => window.innerWidth);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const measure = () => setFull(el.clientWidth || window.innerWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
+  const width = Math.min(full, LANE);
+  const offset = Math.max(0, (full - width) / 2);
 
   const topic = topicOf(title, theme).key;
   const landKey = topic in LANDS ? topic : "general" in LANDS ? "general" : null;
@@ -256,8 +269,9 @@ export function SipPathMap({
     >
       <div ref={scroller} className="scroll" style={{ position: "relative" }}>
         <div style={{ position: "relative", height: height + pad, width: "100%", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: offset, width }}>
           {landKey &&
-            tiles(width, height).map((t, i) => (
+            tiles(width, height, offset).map((t, i) => (
               <img
                 key={i}
                 src={illustration("land-" + landKey)}
@@ -331,10 +345,12 @@ export function SipPathMap({
               />
             ),
           )}
+          </div>
         </div>
       </div>
 
       <header
+        className="col"
         style={{
           position: "absolute",
           zIndex: 2,
@@ -481,6 +497,7 @@ export function SipPathMap({
             haptic();
             onOpen(now.lesson.id);
           }}
+          className="col-sheet map-dock"
           style={{
             position: "absolute",
             zIndex: 2,

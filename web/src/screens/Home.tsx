@@ -64,7 +64,7 @@ export function Home() {
   const [l1, l2] = headline(s)
 
   return (
-    <Screen kind="fade">
+    <Screen kind="fade" width="wide">
       <div className="scroll" style={{ padding: 'calc(var(--safe-top) + 20px) 16px 130px' }}>
         <header style={{ padding: '0 4px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontSize: 14, fontWeight: 600, color: 'var(--faint)' }}>
@@ -90,7 +90,7 @@ export function Home() {
         ) : !sips.data ? null : all.length === 0 ? (
           <Empty onStart={() => nav('/new')} onDemo={() => nav('/demo')} />
         ) : (
-          <motion.div variants={list} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 16 }}>
+          <motion.div variants={list} initial="hidden" animate="show" className="bento" style={{ marginTop: 16 }}>
             {resume ? (
               <NextTile sip={resume} onGo={() => nav(`/sips/${resume.id}`)} />
             ) : building ? (
@@ -106,7 +106,7 @@ export function Home() {
                 variants={item}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => nav('/new')}
-                style={{ gridColumn: '1 / -1', border: '2px dashed var(--line-strong)', background: 'transparent', borderRadius: 26, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
+                className="bento-full" style={{ border: '2px dashed var(--line-strong)', background: 'transparent', borderRadius: 26, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left' }}
               >
                 <span style={{ width: 44, height: 44, borderRadius: 22, background: 'var(--primary)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{Icon.plus}</span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -117,7 +117,7 @@ export function Home() {
             )}
 
             {topics.length > 0 && (
-              <motion.div variants={item} style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '14px 6px 4px' }}>
+              <motion.div variants={item} className="bento-full" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '14px 6px 4px' }}>
                 <h2 className="display" style={{ fontSize: 22 }}>
                   {t.home.topics}
                 </h2>
@@ -269,7 +269,8 @@ function NextTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
         play('pop')
         onGo()
       }}
-      style={{ gridColumn: '1 / -1', position: 'relative', overflow: 'hidden', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, minHeight: 214, background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', display: 'flex', flexDirection: 'column', gap: 8 }}
+      className="bento-hero"
+      style={{ position: 'relative', overflow: 'hidden', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, minHeight: 214, background: 'var(--dock)', color: 'var(--dock-ink)', boxShadow: 'inset 0 0 0 1px var(--dock-line)', display: 'flex', flexDirection: 'column', gap: 8 }}
     >
       <motion.span
         aria-hidden="true"
@@ -400,7 +401,7 @@ function ReviewTile({ due, onGo }: { due: number; onGo: (express?: boolean) => v
     <motion.div
       variants={item}
       whileTap={{ scale: 0.97 }}
-      style={{ position: 'relative', gridColumn: '1 / -1', borderRadius: 26, padding: '0 14px 0 18px', minHeight: 84, background: 'var(--lavender)', color: 'var(--lavender-ink)', display: 'flex', alignItems: 'center', gap: 12 }}
+      className="bento-full" style={{ position: 'relative', borderRadius: 26, padding: '0 14px 0 18px', minHeight: 84, background: 'var(--lavender)', color: 'var(--lavender-ink)', display: 'flex', alignItems: 'center', gap: 12 }}
     >
       <button
         type="button"
@@ -455,7 +456,8 @@ function BuildingTile({ sip, onGo }: { sip: SipSummary; onGo: () => void }) {
       variants={item}
       whileTap={{ scale: 0.97 }}
       onClick={onGo}
-      style={{ gridColumn: '1 / -1', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 14 }}
+      className="bento-hero"
+      style={{ border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, background: 'var(--lavender)', display: 'flex', alignItems: 'center', gap: 14 }}
     >
       <Mascot mood="think" size={76} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
@@ -475,7 +477,8 @@ function NewTile({ done, onGo }: { done: boolean; onGo: () => void }) {
       variants={item}
       whileTap={{ scale: 0.97 }}
       onClick={onGo}
-      style={{ gridColumn: '1 / -1', position: 'relative', overflow: 'hidden', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, minHeight: 150, background: 'var(--primary)', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}
+      className="bento-hero"
+      style={{ position: 'relative', overflow: 'hidden', border: 'none', textAlign: 'left', borderRadius: 30, padding: 20, minHeight: 150, background: 'var(--primary)', color: '#fff', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 10 }}
     >
       <img src={illustration('scene-welcome')} alt="" width={130} height={130} style={{ position: 'absolute', right: -4, bottom: -8 }} />
       <span className="display" style={{ position: 'relative', fontSize: 25, lineHeight: 1.04, maxWidth: '60%' }}>
@@ -520,13 +523,13 @@ function Empty({ onStart, onDemo }: { onStart: () => void; onDemo: () => void })
 
 function Skeleton() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 16 }}>
+    <div className="bento" style={{ marginTop: 16 }}>
       {[214, 172, 172].map((h, i) => (
         <motion.div
           key={i}
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
-          style={{ gridColumn: i === 0 ? '1 / -1' : undefined, height: h, borderRadius: 30, background: 'var(--bg-deep)' }}
+          className={i === 0 ? 'bento-hero' : undefined} style={{ height: h, borderRadius: 30, background: 'var(--bg-deep)' }}
         />
       ))}
     </div>

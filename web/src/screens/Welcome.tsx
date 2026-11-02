@@ -101,12 +101,12 @@ export function Welcome() {
   const nav = useNavigate()
   return (
     <Screen kind="fade">
-      <div className="scroll" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div aria-hidden="true" style={{ position: 'relative', flexShrink: 0, height: 'calc(var(--safe-top) + 400px)', borderRadius: '0 0 44px 44px', background: '#d9622b', overflow: 'hidden' }}>
+      <div className="scroll welcome-scroll" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div aria-hidden="true" className="welcome-hero" style={{ position: 'relative', flexShrink: 0, height: 'calc(var(--safe-top) + 400px)', borderRadius: '0 0 44px 44px', background: '#d9622b', overflow: 'hidden' }}>
           <span style={{ position: 'absolute', left: '50%', bottom: -60, width: 340, height: 340, marginLeft: -170, borderRadius: 170, background: '#e5763f' }} />
           <Showcase />
         </div>
-        <div style={{ padding: '24px 24px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="welcome-text" style={{ padding: '24px 24px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <h1 className="display" style={{ fontSize: 36, lineHeight: 0.98, letterSpacing: '-0.05em' }}>
             <RevealLines lines={[{ text: t.welcome.title[0] }, { text: t.welcome.title[1], color: 'var(--primary)' }]} delay={0.3} />
           </h1>
@@ -119,7 +119,7 @@ export function Welcome() {
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.55 }}
-        className="bottom-bar"
+        className="bottom-bar welcome-actions"
         style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 12 }}
       >
         <Button onClick={() => nav('/start')} sound="pop">

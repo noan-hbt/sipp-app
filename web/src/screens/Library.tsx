@@ -70,13 +70,13 @@ export function Library() {
   const loaded = sips.data !== undefined && programs.data !== undefined
 
   return (
-    <Screen kind="fade">
+    <Screen kind="fade" width="wide">
       <header className="topbar" style={{ padding: 'calc(var(--safe-top) + 18px) 20px 4px' }}>
         <h1 className="display" style={{ fontSize: 40, lineHeight: 0.98, letterSpacing: '-0.045em' }}>
           <RevealLines lines={[{ text: t.library.title }]} />
         </h1>
       </header>
-      <div role="tablist" aria-label={t.tabs.library} style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
+      <div role="tablist" aria-label={t.tabs.library} className="col-box" style={{ margin: '8px 16px 0', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', padding: 4, borderRadius: 24, background: 'var(--bg-deep)' }}>
         {(
           [
             ['sips', t.library.tabs.sips],
@@ -160,7 +160,7 @@ export function Library() {
             ))}
           </HScroll>
 
-          <motion.div key={filter} variants={list} initial="hidden" animate="show" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 10, rowGap: 18, marginTop: 24 }}>
+          <motion.div key={filter} variants={list} initial="hidden" animate="show" className="tiles" style={{ rowGap: 18, marginTop: 24 }}>
             {shownProgs.map((pr, i) => (
               <ProgramTile key={pr.id} program={pr} index={i} onOpen={() => nav(`/programs/${pr.id}`)} />
             ))}

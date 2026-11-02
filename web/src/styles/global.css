@@ -414,13 +414,19 @@ button:focus-visible, a:focus-visible {
   overflow: hidden;
 }
 .sheet-modal::backdrop { background: transparent; }
+@media (min-width: 640px) {
+  .sheet-modal { max-width: 560px; }
+}
 
 .app {
   height: 100%;
-  max-width: 480px;
-  margin: 0 auto;
   position: relative;
   overflow: hidden;
+  /* Width of the reading column on large screens; each screen can set its own. */
+  --col: 680px;
+  /* Side margin, clear of the notch when the phone is held sideways. */
+  --gut: max(24px, env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px));
+  --rail: 0px;
 }
 
 .screen {
@@ -588,4 +594,59 @@ button:focus-visible, a:focus-visible {
 /* Sip map landscapes: drawn for light mode, turned into a night scene in dark mode. */
 .land {
   filter: var(--land-filter);
+}
+
+/* Grids of tiles: two columns on a phone, as many as fit on a large screen. */
+.bento, .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bento-hero, .bento-full { grid-column: 1 / -1; }
+@media (min-width: 640px) {
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  /* Today on a large screen: the next lesson beside the streak and the goal, then the topics four across. */
+  .bento { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .bento-hero { grid-column: span 2; }
+}
+@media (min-width: 640px) and (max-width: 759.98px) {
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento-hero { grid-column: 1 / -1; }
+}
+
+/* Large screens (tablets, phones held sideways): the screen's background fills the display, its content sits in a
+ * centered column (--col, set per screen), and the tabs become a rail on the left. Below this width the phone layout
+ * simply stretches. Matches WIDE_QUERY in lib/layout.ts. */
+@media (min-width: 640px) {
+  .app.tabs { --rail: calc(92px + env(safe-area-inset-left, 0px)); }
+  .app.tabs .screen { left: var(--rail); }
+  /* Nothing floats at the bottom any more: the room kept for the floating tab bar goes. */
+  .app.tabs .screen .scroll { padding-bottom: calc(var(--safe-bottom) + 40px) !important; }
+  .screen > .scroll, .screen > .topbar, .screen > .bottom-bar, .screen > .bottom-fade, .screen .col {
+    padding-left: max(var(--gut), calc((100% - var(--col)) / 2)) !important;
+    padding-right: max(var(--gut), calc((100% - var(--col)) / 2)) !important;
+  }
+  /* A boxed element (own background) is centered by its margins instead. */
+  .screen .col-box {
+    margin-left: max(var(--gut), calc((100% - var(--col)) / 2)) !important;
+    margin-right: max(var(--gut), calc((100% - var(--col)) / 2)) !important;
+  }
+  /* A panel rising from the bottom (answer feedback): as wide as the column, centered. */
+  .screen .col-sheet { max-width: calc(var(--col) + 48px); margin: 0 auto; }
+  .wide-only { display: revert; }
+  .narrow-only { display: none !important; }
+}
+@media (max-width: 639.98px) {
+  .wide-only { display: none !important; }
+}
+
+/* Short screens (a phone held sideways): big illustrations shrink so the text stays clear of the bottom button. */
+@media (max-height: 520px) {
+  .hook-art { zoom: 0.5; }
+  .map-dock { zoom: 0.78; }
+}
+
+/* Welcome on a phone held sideways: the showcase on the left, the pitch and the buttons on the right. */
+@media (min-width: 640px) and (max-height: 520px) {
+  .screen:has(> .welcome-scroll) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr auto; }
+  .screen > .welcome-scroll { display: contents !important; }
+  .welcome-hero { grid-column: 1; grid-row: 1 / span 2; height: 100% !important; border-radius: 0 44px 44px 0 !important; overflow-y: auto !important; }
+  .welcome-text { grid-column: 2; grid-row: 1; align-self: end; padding: 16px max(24px, env(safe-area-inset-right, 0px)) 0 32px !important; }
+  .screen > .bottom-bar.welcome-actions { grid-column: 2; grid-row: 2; padding: 8px max(24px, env(safe-area-inset-right, 0px)) calc(var(--safe-bottom) + 12px) 32px !important; gap: 6px !important; }
 }

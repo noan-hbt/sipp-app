@@ -156,7 +156,7 @@ export function Review() {
   }
 
   return (
-    <Screen kind="modal" bg="var(--lavender)">
+    <Screen kind="modal" bg="var(--lavender)" width="narrow">
       <header className="topbar">
         <IconButton label={t.review.quit} onClick={close}>
           {Icon.close}
@@ -172,7 +172,7 @@ export function Review() {
       </header>
       {(session.isError || session.isPaused) && <ErrorNotice message={apiErrorMessage(session.error, t.review.refreshFailed)} retry={() => void session.refetch()} busy={session.isFetching} />}
 
-      <div style={{ flex: 1, padding: '30px 22px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="col" style={{ flex: 1, padding: '30px 22px 0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ position: 'relative', flex: 1, maxHeight: 520, perspective: 1400 }}>
           {i + 2 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 18, right: 18, top: -16, bottom: 26, borderRadius: 32, background: 'var(--lavender-strong)', transform: 'rotate(4deg)' }} />}
           {i + 1 < cards.length && <span aria-hidden="true" style={{ position: 'absolute', left: 8, right: 8, top: -8, bottom: 16, borderRadius: 32, background: 'var(--surface)', opacity: 0.6, transform: 'rotate(-3deg)' }} />}
@@ -196,7 +196,7 @@ export function Review() {
         </div>
       </div>
 
-      <div style={{ padding: '30px 16px calc(var(--safe-bottom) + 24px)' }}>
+      <div className="col" style={{ padding: '30px 16px calc(var(--safe-bottom) + 24px)' }}>
         {answer.isError && <ErrorNotice message={apiErrorMessage(answer.error, t.review.answerFailed)} retry={() => rate(answer.variables!.k)} busy={answer.isPending} />}
         {choices ? (
           picked && picked !== card.id ? (
