@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { LegalLinks } from '../components/LegalLinks'
 import { RevealLines } from '../components/motion'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
@@ -114,6 +115,9 @@ export function Welcome() {
             {t.welcome.body}
           </motion.p>
         </div>
+        <nav aria-label={t.legal.section} style={{ marginTop: 'auto', padding: '20px 24px 12px' }}>
+          <LegalLinks />
+        </nav>
       </div>
       <motion.div
         initial={{ y: 40, opacity: 0 }}

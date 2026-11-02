@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { illustration } from '../components/SipIcon'
@@ -309,6 +309,9 @@ export function Offers() {
                 {t.offers.consent}
               </span>
             </label>
+            <Link to="/legal/refunds" style={{ alignSelf: 'center', fontSize: 13, fontWeight: 600, color: 'var(--muted)', textDecoration: 'underline', textUnderlineOffset: 3, padding: '2px 0' }}>
+              {t.legal.offers}
+            </Link>
             <Button disabled={!consent || subscribe.isPending || chosenPrice == null} onClick={() => subscribe.mutate()} sound="pop">
               {subscribe.isPending
                 ? <Mascot mood="think" size={36} />

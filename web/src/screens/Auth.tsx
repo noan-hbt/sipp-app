@@ -1,6 +1,6 @@
 import { motion, useAnimationControls } from 'motion/react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Mascot } from '../components/Mascot'
 import { Screen } from '../components/Screen'
 import { RevealLines } from '../components/motion'
@@ -179,7 +179,23 @@ export function Auth({ initial = 'register' }: { initial?: 'login' | 'register' 
           <Button type="submit" disabled={busy || !email || password.length < 8} sound={null} style={{ marginTop: 6 }}>
             {busy ? '…' : mode === 'login' ? t.auth.loginCta : t.auth.registerCta}
           </Button>
-          {mode === 'register' && <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.4 }}>{t.safety.age}</p>}
+          {mode === 'login' && (
+            <Link
+              to={email.trim() ? `/forgot-password?email=${encodeURIComponent(email.trim())}` : '/forgot-password'}
+              style={{ alignSelf: 'center', fontSize: 14, fontWeight: 700, color: 'var(--primary)', padding: '8px 4px' }}
+            >
+              {t.account.forgot}
+            </Link>
+          )}
+          {mode === 'register' && (
+            <p className="muted" style={{ fontSize: 12, textAlign: 'center', lineHeight: 1.5 }}>
+              {t.legal.signup[0]}
+              <Link to="/legal/terms" style={{ color: 'inherit', textDecoration: 'underline' }}>{t.legal.signup[1]}</Link>
+              {t.legal.signup[2]}
+              <Link to="/legal/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>{t.legal.signup[3]}</Link>
+              {t.legal.signup[4]}
+            </p>
+          )}
         </motion.form>
       </div>
     </Screen>

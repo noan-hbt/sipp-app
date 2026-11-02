@@ -167,6 +167,8 @@ export interface Settings {
   language: string | null
   push_enabled: boolean
   push_public_key: string | null
+  /** The "come back" email after a few days without a lesson. */
+  email_nudges?: boolean
 }
 export interface Note {
   id: string
@@ -326,6 +328,10 @@ export function setTokens(t: Tokens | null) {
   sessionListeners.forEach((l) => l())
   storeTokens(t)
 }
+/** New tokens for the same account (after a password change): the session, its cache and its requests carry on. */
+export function updateTokens(t: Tokens) {
+  storeTokens(t)
+}
 const consentListeners = new Set<() => void>()
 /** The server refused a request until the account agrees to AI processing (whatever the cached profile said). */
 export function onConsentRequired(l: () => void) {
@@ -480,7 +486,13 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
 
 export const Api = {
   register: (email: string, password: string) =>
-    api<Tokens>('/auth/register', { method: 'POST', json: { email, password } }),
+    api<Tokens>('/auth/register', { method: 'POST', json: { email, password, language: lang } }),
+  forgotPassword: (email: string) => api<void>('/auth/password/forgot', { method: 'POST', json: { email } }),
+  resetPassword: (token: string, password: string) =>
+    api<Tokens>('/auth/password/reset', { method: 'POST', json: { token, password } }),
+  changePassword: (current_password: string, new_password: string) =>
+    api<Tokens>('/auth/me/password', { method: 'POST', json: { current_password, new_password } }),
+  unsubscribe: (token: string) => api<void>('/auth/email/unsubscribe', { method: 'POST', json: { token } }),
   login: (email: string, password: string) =>
     api<Tokens>('/auth/login', { method: 'POST', json: { email, password } }),
   logout: () => {
@@ -519,7 +531,7 @@ export const Api = {
   complete: (id: string, body: { answers: unknown[]; score: { correct: number; total: number } }) =>
     api<CompleteOut>(`/lessons/${id}/complete?tz=${encodeURIComponent(TZ)}`, { method: 'POST', json: body }),
   settings: () => api<Settings>('/auth/me/settings'),
-  saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string; language?: string }) =>
+  saveSettings: (body: { daily_goal?: number; reminder_hour?: number; timezone?: string; language?: string; email_nudges?: boolean }) =>
     api<Settings>('/auth/me/settings', { method: 'PUT', json: body }),
   savePush: (sub: PushSubscriptionJSON) => api<Settings>('/auth/me/push', { method: 'PUT', json: sub }),
   deletePush: () => api<Settings>('/auth/me/push', { method: 'DELETE' }),
