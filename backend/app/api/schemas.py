@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool, model_v
 class Credentials(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=200)
+    # Interface language at sign-up, so the welcome email is in it (ignored on login).
+    language: Literal["fr", "en"] | None = None
 
 
 class RefreshIn(BaseModel):
@@ -16,6 +18,24 @@ class RefreshIn(BaseModel):
 
 class DeleteAccountIn(BaseModel):
     password: str
+
+
+class ForgotPasswordIn(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
+    password: str = Field(min_length=8, max_length=200)
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
+class UnsubscribeIn(BaseModel):
+    token: str = Field(max_length=1000)
 
 
 class UsageOut(BaseModel):
@@ -317,6 +337,7 @@ class SettingsIn(BaseModel):
     reminder_hour: int | None = Field(default=None, ge=-1, le=23)
     timezone: str | None = Field(default=None, max_length=64)
     language: Literal["fr", "en"] | None = None
+    email_nudges: bool | None = None
 
 
 class SettingsOut(BaseModel):
@@ -326,6 +347,7 @@ class SettingsOut(BaseModel):
     language: str | None
     push_enabled: bool
     push_public_key: str | None
+    email_nudges: bool = True
 
 
 class PushIn(BaseModel):
