@@ -24,7 +24,7 @@ export function Hook({ b, title, art }: { b: B.HookBlock; title?: string; art?: 
   const words = typo(b.question).split(/[ \t\n]+/)
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 14, color: '#fff', minHeight: '100%' }}>
-      <div style={{ position: 'relative', height: 250, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
+      <div className="hook-art" style={{ position: 'relative', height: 250, flexShrink: 0, display: 'grid', placeItems: 'center' }}>
         <motion.span
           aria-hidden="true"
           initial={reduce ? false : { scale: 0.2 }}

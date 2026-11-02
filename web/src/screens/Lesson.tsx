@@ -482,7 +482,7 @@ export function LessonPlayer({
         </AnimatePresence>
         <ComboBadge combo={combo} />
       </header>
-      {saveNotice && <div style={{ position: 'relative', padding: '0 20px' }}>{saveNotice}</div>}
+      {saveNotice && <div className="col" style={{ position: 'relative', padding: '0 20px' }}>{saveNotice}</div>}
 
       <div ref={scrollRef} className="scroll" style={{ position: 'relative', padding: `10px 20px ${sheetOpen ? 340 : 150}px`, overflowX: 'hidden' }}>
         <AnimatePresence mode="wait" initial={false} custom={dir}>
@@ -544,6 +544,7 @@ export function LessonPlayer({
         {sheetOpen && fb && (
           <motion.section
             aria-live="polite"
+            className="col-sheet"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence } from 'motion/react'
 import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { TabBar } from './components/TabBar'
+import { isTabPath, TabBar } from './components/TabBar'
 import { Api, getTokens, onConsentRequired, onTokens } from './lib/api'
 import { play } from './lib/sound'
 import { AiConsent } from './screens/AiConsent'
@@ -90,7 +90,7 @@ export default function App() {
   useEffect(() => updateOnNavigation(location.pathname), [location.pathname])
   usePendingWish(loggedIn && consent.known && !consent.needed)
   return (
-    <div className="app">
+    <div className={loggedIn && !consent.needed && isTabPath(location.pathname) ? 'app tabs' : 'app'}>
       <AnimatePresence mode="popLayout" initial={false}>
         <Suspense key={location.pathname} fallback={null}>
         {consent.needed ? <AiConsent /> : !consent.known ? null : (
